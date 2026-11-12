@@ -1,0 +1,133 @@
+---
+title: 'Formulario de cotas'
+description: 'Todas las cotas del final de CS3014: optimalidad dinámica, memoria, enteros, RMQ/LCA, grafos dinámicos y strings.'
+---
+
+import EnSimple from '../../components/EnSimple.astro';
+
+<EnSimple>
+Una cota sin su **modelo** no significa nada: $O(\lg w)$ es en word RAM, $O(\log_B N)$ cuenta **transferencias**, no operaciones. Lee cada tabla con su primera columna en mente: **¿qué se está contando?**
+</EnSimple>
+
+## Notación rápida
+
+| Símbolo | Significado |
+| --- | --- |
+| $n$ | cantidad de llaves o largo del texto |
+| $N$, $M$, $B$ | tamaño de la entrada, de la memoria y del bloque (memoria externa) |
+| $u = 2^w$ | tamaño del universo; $w$ = bits por palabra |
+| $\langle P(n), Q(n)\rangle$ | preprocesamiento y consulta |
+| $m$, $\lvert P\rvert$ | largo del patrón |
+| $z$ | cantidad de ocurrencias reportadas |
+| $\sigma$ | tamaño del alfabeto |
+
+## 1 · Optimalidad dinámica (modelo BST)
+
+| Resultado | Enunciado |
+| --- | --- |
+| Vista geométrica | ejecución válida ⇔ conjunto arboralmente satisfecho |
+| Rectángulos independientes | $\text{OPT} \ge \lvert I\rvert + \tfrac12\,\text{MIS}$; con signo, $\text{OPT}^\pm \ge \lvert I\rvert + \text{MIS}^\pm$ |
+| Wilber-1 | alternancias izq/der en un árbol de referencia fijo; bit-reversal ⇒ $\text{OPT} = \Theta(n\lg n)$ |
+| Wilber-2 | alternancias entre puntos visibles; conjeturado $\Theta(\text{OPT})$; Splay óptimo llave-independiente |
+| Tango Trees | $O(\lg\lg n)$-competitivo; cruces de camino = alternancias de Wilber-1; cada cruce $O(\lg\lg n)$ |
+| Signed-Greedy | $\max\{\text{Greedy}^+, \text{Greedy}^-\}$ = Θ(mejor cota de rectángulos) (factor 4); no es algoritmo |
+
+## 2 · Jerarquía de memoria (se cuentan transferencias)
+
+| Problema | Memoria externa | Cache-oblivious |
+| --- | --- | --- |
+| Escanear | $\Theta(\lceil N/B\rceil)$ | igual |
+| Buscar | $\Theta(\log_{B+1} N)$ (B-Tree) | igual: layout vEB, $\le 4\log_B N$ |
+| Ordenar | $\Theta\!\left(\frac NB\log_{M/B}\frac NB\right)$ (mezcla múltiple) | igual con funnelsort, si $M = \Omega(B^{1+\varepsilon})$ |
+| Permutar | $\Theta(\min\{N, \text{ordenar}\})$ | el mínimo es imposible |
+| Búsqueda binaria | $\Theta(\lg(N/B))$ | — |
+| Diccionario dinámico | B-Tree: $O(\log_{B+1}N)$ | vEB + OFM + indirección: $O(\log_{B+1}N)$ amort. |
+| OFM / PMA | — | $O(\lg^2 N)$ celdas movidas, $O(1 + \frac{\lg^2 N}{B})$ transf., amort. |
+
+| List Labeling, espacio de etiquetas | Costo |
+| --- | --- |
+| lineal ($\le N\lg N$) | $O(\lg^2 N)$ |
+| polinomial ($N^{O(1)}$) | $\Theta(\lg N)$ |
+| exponencial ($2^N$) | $\Theta(1)$ |
+| Order Maintenance (dos niveles) | $O(1)$ consulta y actualización amortizada |
+
+## 3 · Enteros (word RAM, predecesor)
+
+| Estructura | Consulta | Actualización | Espacio |
+| --- | --- | --- | --- |
+| BST balanceado | $O(\lg n)$ | $O(\lg n)$ | $\Theta(n)$ |
+| vEB | $O(\lg w)$ | $O(\lg w)$ | $\Theta(u)$ |
+| vEB con hash | $O(\lg w)$ | $O(\lg w)$ | $O(n\lg w)$ |
+| X-fast tree | $O(\lg w)$ | $\Theta(w)$ | $O(nw)$ |
+| Y-fast tree | $O(\lg w)$ | $O(\lg w)$ amort. | $\Theta(n)$ |
+| Fusion tree (estático) | $O(\log_w n)$ | — | $O(n)$ |
+| Mejor de ambos | $O(\min\{\lg w, \log_w n\}) = O(\sqrt{\lg n})$ | | |
+
+Recurrencias clave: $T(u) = T(\sqrt u) + O(1) = O(\lg\lg u)$; $T(u) = 2T(\sqrt u) + O(1) = O(\lg u)$; $S(u) = (\sqrt u + 1)S(\sqrt u) + O(1) = \Theta(u)$.
+
+| Ordenar enteros | Tiempo | Condición |
+| --- | --- | --- |
+| Counting sort | $O(n + 2^w)$ | $w = O(\lg n)$ |
+| Radix sort | $O(n w/\lg n)$ | $w = O(\lg n)$ |
+| vEB / Y-fast | $O(n\lg w)$ | |
+| Signature sort | $O(n)$ | $w = \Omega(\lg^{2+\epsilon} n)$ |
+| Han / Han–Thorup | $O(n\lg\lg n)$ / $O(n\sqrt{\lg\lg n})$ | det. / aleat. |
+
+## 4 · Árboles estáticos
+
+| Método | $\langle P, Q\rangle$ |
+| --- | --- |
+| Sin preprocesar | $\langle O(1), O(n)\rangle$ |
+| Tabla completa | $\langle O(n^2), O(1)\rangle$ |
+| Segment tree | $\langle O(n), O(\lg n)\rangle$ |
+| Sparse Table | $\langle O(n\lg n), O(1)\rangle$ (solo idempotentes) |
+| Bloques + Sparse Table | memoria $O(n)$, consulta interna pendiente |
+| ±1 RMQ con cuatro rusos ($b = \frac12\lg n$) | $\langle O(n), O(1)\rangle$ |
+| RMQ y LCA generales | $\langle O(n), O(1)\rangle$ vía cartesian tree y Euler tour |
+
+Identidades: $\text{RMQ}_A(i,j) = \text{LCA}_{T_A}(i,j) = E[\text{RMQ}_D(\text{first}[i], \text{first}[j])]$; Euler tour de $2n - 1$ entradas; $d(u,v) = d(u) + d(v) - 2d(\text{LCA})$.
+
+## 5 · Grafos dinámicos
+
+| Método | Resultado |
+| --- | --- |
+| HLD: arista liviana | El subárbol del hijo mide menos de la mitad del subárbol del padre |
+| HLD: camino | $O(\lg n)$ cadenas; consulta o actualización con segment tree $O(\lg^2 n)$ |
+| HLD: subárbol | Rango $[\text{pos}(v),\text{pos}(v)+\text{sz}(v))$, consulta o actualización $O(\lg n)$ |
+| HLD: LCA | $O(\lg n)$ tiempo, $O(n)$ memoria |
+| Centroides: existencia | Todo árbol tiene un centroide; cada componente tras quitarlo tiene a lo más $n/2$ nodos |
+| Centroides: árbol | Profundidad $O(\lg n)$; construcción $O(n\lg n)$ |
+| Centroides: separador | Todo camino pasa por el centroide que primero separa sus extremos |
+
+## 6 · Strings
+
+| Algoritmo / estructura | Costo |
+| --- | --- |
+| Búsqueda ingenua | $O(nm)$ |
+| Función prefijo | $O(m)$ (agregado) |
+| KMP | $O(n + m)$; periodo mínimo $= n - \pi[n-1]$ |
+| Trie | insertar y buscar $O(\lvert S\rvert)$ |
+| Aho–Corasick | construir $O(N\lvert\Sigma\rvert)$; buscar $O(n + z)$; contar todo $O(n + N)$ |
+| Suffix array ingenuo | $O(n^2\lg n)$ |
+| Duplicación (Manber–Myers) | $O(n\lg n)$ con counting sort ($O(n\lg^2 n)$ con sort) |
+| DC3 | $O(n)$: $T(n) = T(2n/3) + O(n)$ |
+| SA-IS | $O(n)$, constante baja (bibliotecas) |
+| Kasai (LCP) | $O(n)$ |
+| Búsqueda en SA | $O(\lvert P\rvert\lg n)$; con LCP $O(\lvert P\rvert + \lg n)$ |
+| Suffix tree | $\le 2n + 1$ nodos; búsqueda $O(\lvert P\rvert)$ |
+| Ukkonen | $O(n)$ online (con arreglo de hijos) u $O(n\lg\sigma)$ con mapas |
+
+Fórmulas: subcadenas distintas $= \frac{n(n+1)}{2} - \sum_k \text{LCP}[k]$; $\text{lcp}(\text{SA}[k], \text{SA}[l]) = \min\{\text{LCP}[k+1..l]\}$; repetida más larga $= \max_k \text{LCP}[k]$.
+
+## Las ideas que se repiten
+
+| Idea | Dónde aparece |
+| --- | --- |
+| **Indirección** (grupos pequeños abajo, estructura cara arriba) | B-Tree cache-oblivious, Order Maintenance, Y-fast, RMQ por bloques |
+| **Partir a la mitad recursivamente** ($\sqrt{\cdot}$) | árbol vEB (bits), layout vEB (altura), msb en fusion trees |
+| **Cuatro rusos / pocos tipos distintos** | ±1 RMQ, sketches en fusion trees |
+| **Cotas por información** | buscar $\Omega(\log_{B+1} N)$, ordenar $\Omega(\frac NB\log_{M/B}\frac NB)$ |
+| **Amortización por holgura** | PMA, Y-fast, B-Tree |
+| **Partir caminos en rangos** | HLD: $O(\lg n)$ cadenas, un segment tree para caminos y subárboles |
+| **Separar recursivamente por mitades** | centroides: componentes de tamaño a lo más $n/2$ y profundidad $O(\lg n)$ |
+| **No retroceder** (autómata) | KMP, Aho–Corasick, Ukkonen (punto activo) |

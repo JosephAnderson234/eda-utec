@@ -1,0 +1,210 @@
+---
+title: 'Modelo de memoria externa'
+description: 'Jerarquía de Memoria I (semana 10): por qué el modelo RAM no basta, el modelo de Aggarwal y Vitter (N, M, B y transferencias), escanear Θ(N/B), la cota inferior de búsqueda Ω(log_{B+1} N), merge sort, mezcla múltiple y la cota óptima de ordenar, y por qué permutar no es un escaneo.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+
+<EnSimple>
+Imagina que estudias en tu escritorio (la **memoria**, pequeña y rápida) y los libros están en un **depósito** lejano (el **disco**, enorme y lento). Cada viaje al depósito tarda muchísimo, pero puedes traer **una caja entera de libros** por viaje.
+- Lo que importa no es cuántas páginas lees, sino **cuántos viajes** haces.
+- Si los libros que necesitas uno tras otro están **en la misma caja**, un viaje te sirve para muchos. Si están desperdigados, cada libro es un viaje.
+- El **modelo de memoria externa** cuenta exactamente eso: viajes (transferencias de bloques). Con él aparecen las dos cotas que organizan toda la unidad: escanear cuesta $N/B$ y ordenar cuesta $\frac{N}{B}\log_{M/B}\frac{N}{B}$.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Explicar por qué el modelo RAM no distingue un arreglo de una lista enlazada, y qué cambia con bloques.',
+		'Definir $N$, $M$, $B$ y contar transferencias de un <strong>escaneo</strong>, una <strong>mezcla</strong> y una <strong>búsqueda binaria</strong>.',
+		'Derivar la cota inferior de búsqueda $\\Omega(\\log_{B+1} N)$ con el argumento de información.',
+		'Diseñar el ordenamiento por <strong>mezcla múltiple</strong>, calcular sus pasadas con números y explicar por qué es óptimo y por qué permutar no es lineal.',
+	]}
+	prerrequisitos={[{ t: 'Merge sort y logaritmos', href: '/formulario/' }]}
+	perfiles={['visual', 'laboratorio', 'socratico']}
+/>
+
+## 1. La jerarquía de memoria
+
+<MemoriaFig fig="jerarquia">
+**Cómo leerlo.** Cada nivel es más rápido y **mucho** más pequeño que el de abajo, y solo conversa directamente con sus vecinos. Los datos viajan entre niveles en **bloques** (líneas de caché de 64 B, páginas de 4 KB, sectores de disco). Del registro al disco hay unos siete órdenes de magnitud de diferencia en latencia (valores aproximados de la diapositiva).
+</MemoriaFig>
+
+### Dos programas, el mismo Θ(N)
+
+Sumar los $N$ elementos de un **arreglo** y sumar los $N$ nodos de una **lista enlazada** cuestan $\Theta(N)$ en el modelo RAM: son indistinguibles. En la máquina real no.
+
+<MemoriaFig fig="arreglo-lista">
+**Cómo leerlo.** El arreglo aprovecha **cada bloque completo**: trae $B$ elementos útiles por transferencia. La lista puede necesitar **un bloque nuevo por cada nodo**, porque nodos consecutivos de la lista quedan en lugares distintos de la memoria. Hace falta un modelo que vea esa diferencia.
+</MemoriaFig>
+
+## 2. El modelo de memoria externa (Aggarwal y Vitter)
+
+Tres números:
+
+- $N$: el tamaño de la entrada (en palabras);
+- $M$: lo que cabe en memoria;
+- $B$: el tamaño de un bloque.
+
+Se supone $1 \le B \le M/2$ y, para que sea interesante, $N > M$. **Solo se cuentan las transferencias de bloques** entre memoria y disco; el cómputo en memoria es gratis. También se llama *modelo de E/S* o *Disk Access Model*.
+
+**¿Qué es «memoria» y qué es «disco»?** Lo decide la escala del problema. Para una base de datos, la memoria es la RAM y el disco es el disco. Para una simulación que cabe en RAM, la «memoria» es la caché L2 y el «disco» es la RAM. El modelo aproxima **el salto más lento** de la jerarquía, que es el que domina el tiempo.
+
+### Relación con el modelo RAM
+
+- **Cota superior gratis:** un algoritmo que hace $T(N)$ operaciones en RAM hace a lo más $T(N)$ transferencias (en el peor caso, una por operación).
+- **Lo mejor que se puede soñar:** si cada bloque traído se aprovecha completo, el costo baja a $T(N)/B$.
+
+Entre $T(N)$ y $T(N)/B$ puede haber un factor de mil o de un millón. **¿De qué depende a cuál extremo se parece un algoritmo?** De su **localidad**: de si los datos que usa uno después de otro están también uno al lado del otro.
+
+## 3. Escanear: Θ(⌈N/B⌉)
+
+Recorrer $N$ elementos consecutivos toca $\lceil N/B \rceil$ bloques. El **techo** importa: aunque $N < B$, se paga al menos una transferencia.
+
+**Varios escaneos a la vez.** Mezclar dos corridas ordenadas $A$ y $C$ son tres escaneos que avanzan juntos (uno por cada entrada y uno por la salida); basta un bloque en memoria para cada uno. Costo $O(\lceil (\lvert A\rvert + \lvert C\rvert)/B\rceil)$ siempre que $M \ge 3B$. **Con $k$ entradas a la vez**, la mezcla sigue costando un escaneo mientras $k + 1 \le M/B$.
+
+## 4. Buscar: ¿cuánto cuesta, como mínimo?
+
+<Predice pregunta="Con $N = 10^9$ elementos ordenados y bloques de $B = 10^3$, ¿cuántas transferencias hace una búsqueda binaria sobre el arreglo? (Pista: los últimos pasos caen en un mismo bloque.)">
+Unas $\lg(N/B) = \lg 10^6 \approx 20$. La búsqueda binaria hace $\lg N \approx 30$ comparaciones, pero los últimos $\lg B \approx 10$ pasos ocurren dentro de un mismo bloque. El problema: de cada bloque que trae, **mira un solo elemento** de los $B$ que llegan.
+</Predice>
+
+**Buscar es obtener información.** Para ubicar un elemento entre $N$ ordenados hay $N + 1$ respuestas posibles: hacen falta $\lg(N+1)$ bits.
+
+<MemoriaFig fig="zonas">
+**Cómo leerlo.** Un bloque trae $B$ elementos, que parten el orden en $B + 1$ zonas. Compararse con todos ellos (gratis, está en memoria) dice **en cuál zona** está la consulta: a lo más $\lg(B+1)$ bits de información por transferencia.
+</MemoriaFig>
+
+**Teorema.** En el modelo de comparaciones, buscar entre $N$ elementos requiere
+
+$$\Omega\!\left(\frac{\lg(N+1)}{\lg(B+1)}\right) = \Omega(\log_{B+1} N)$$
+
+transferencias en el peor caso.
+
+| Con $N = 10^9$, $B = 10^3$ | Fórmula | Transferencias |
+| --- | --- | --- |
+| Búsqueda binaria | $\lg(N/B)$ | $\approx 20$ |
+| La cota inferior | $\log_{B+1} N$ | $3$ |
+
+¿Existe una estructura que alcance la cota? Sí: el **B-Tree** ([siguiente página](/memoria/btree/)).
+
+## 5. Ordenar
+
+### Merge sort, tal cual
+
+Mezclar dos corridas es un escaneo: cada nivel de la recursión cuesta $O(N/B)$. La recursión se detiene cuando el subproblema cabe en un bloque: $\lg(N/B)$ niveles, y en total
+
+$$O\!\left(\frac NB \lg \frac NB\right) \text{ transferencias.}$$
+
+Ya ganamos el factor $B$ del escaneo. ¿Se puede atacar también el logaritmo?
+
+### Mezclar muchas corridas a la vez
+
+<MemoriaFig fig="multiway">
+**Cómo leerlo.** Un bloque en memoria por corrida y uno para la salida. En cada paso sale el menor de los $k$ frentes; cuando un bloque de entrada se agota, se trae el siguiente de esa corrida. Cabe mientras $k + 1 \le M/B$: se mezclan $\Theta(M/B)$ corridas **con el costo de un escaneo**.
+</MemoriaFig>
+
+**Ordenamiento por mezcla múltiple:**
+1. **Formar corridas:** leer la entrada de a $M$ elementos, ordenar cada pedazo en memoria y escribirlo: $N/M$ corridas, con un escaneo.
+2. **Mezclar** de a $M/B$ corridas por pasada, hasta que quede una: $\log_{M/B}(N/M)$ pasadas, cada una de costo $N/B$.
+
+**Teorema.** Ordenar $N$ elementos en memoria externa cuesta
+
+$$O\!\left(\frac NB\left(1 + \log_{M/B}\frac NM\right)\right) = O\!\left(\frac NB \log_{M/B}\frac NB\right)$$
+
+transferencias. El «1» es la formación de corridas, y $\log_{M/B}\frac NM + 1 = \log_{M/B}\frac NB$ (porque $\frac NM \cdot \frac MB = \frac NB$).
+
+<Practica nivel={1} titulo="Resuelto: ¿cuánto se gana, con números? ($N = 10^{11}$, $M = 10^9$, $B = 10^5$)">
+Entonces $N/B = 10^6$, $N/M = 100$ y $M/B = 10^4$.
+
+| Algoritmo | Pasadas | Transferencias |
+| --- | --- | --- |
+| Merge sort binario | $\lg(N/B) \approx 20$ | $\approx 2\cdot 10^7$ |
+| Corridas de $M$, mezcladas de a dos | $1 + \lg(N/M) \approx 1 + 6{,}6 \approx 8$ | $\approx 8\cdot 10^6$ |
+| Corridas de $M$, mezcla múltiple | $1 + 1 = 2$ | $\approx 2\cdot 10^6$ |
+
+Hay 100 corridas y se pueden mezclar hasta $10^4$ a la vez: **una sola mezcla** termina. En la práctica $\log_{M/B}\frac NB$ casi nunca pasa de 2 o 3: ordenar cuesta «un par de escaneos».
+</Practica>
+
+<Practica nivel={2} titulo="Complétalo: $N = 2^{40}$, $M = 2^{30}$, $B = 2^{10}$">
+- $N/B = 2^{\_\_}$, $N/M = 2^{\_\_}$, $M/B = 2^{\_\_}$.
+- Merge sort binario: $\lg(N/B) =$ **\_\_** pasadas.
+- Mezcla múltiple: $1 + \lceil \log_{M/B}(N/M) \rceil = 1 + \lceil \_\_/\_\_ \rceil =$ **\_\_** pasadas.
+<Solucion>
+$N/B = 2^{30}$, $N/M = 2^{10}$, $M/B = 2^{20}$. Binario: 30 pasadas. Múltiple: $1 + \lceil 10/20 \rceil = 2$ pasadas (formar $2^{10}$ corridas y una mezcla de las $2^{10} \le 2^{20}$ corridas). Ejemplo propio.
+</Solucion>
+</Practica>
+
+### ¿Se puede ordenar con menos?
+
+**Teorema (Aggarwal y Vitter).** En el modelo de comparaciones, todo algoritmo de ordenamiento en memoria externa hace $\Omega\!\left(\frac NB \log_{M/B}\frac NB\right)$ transferencias en el peor caso.
+
+*La idea, sin los detalles:* hay $N!$ órdenes posibles, así que hacen falta $\lg(N!) \approx N\lg N$ bits. Cuando entra un bloque a memoria, lo único nuevo que se puede aprender es cómo se **intercalan** sus $B$ elementos con los que ya estaban: a lo más $\binom{M}{B}$ posibilidades, unos $B\lg\frac MB$ bits. Dividiendo salen del orden de $\frac{N\lg N}{B\lg(M/B)} = \frac NB\log_{M/B} N$ transferencias; el argumento completo afina el $N$ de dentro del logaritmo a $N/B$. **La mezcla múltiple es óptima.**
+
+## 6. Permutar no es un escaneo
+
+**El problema:** $N$ elementos en disco y, para cada uno, la posición donde debe quedar.
+
+Dos formas: moverlos **uno por uno**, $O(N)$ (una transferencia por elemento); u **ordenarlos por su posición de destino**, $O\!\left(\frac NB\log_{M/B}\frac NB\right)$.
+
+<Predice pregunta="Sabemos exactamente a dónde va cada elemento. ¿No debería costar un escaneo, $N/B$?">
+**No.** El óptimo es $\Theta\!\left(\min\left\{N, \frac NB\log_{M/B}\frac NB\right\}\right)$. Los elementos de un mismo bloque de entrada van a bloques de salida distintos; juntar por destino los elementos de un bloque **es, en esencia, ordenar**. Saber el destino no ahorra el trabajo de agruparlos.
+</Predice>
+
+<Practica nivel={3} titulo="Solo: ¿cuántas transferencias cuesta recorrer una lista enlazada de $N$ nodos dispersos, y cuántas si la «compactas» primero en un arreglo?">
+<Solucion>
+Recorrerla tal cual: hasta $N$ transferencias (un bloque por nodo). Compactarla en un arreglo es, en esencia, **permutar** (cada nodo va a la posición de su rango en la lista): $\Theta(\min\{N, \text{ordenar}\})$, más barato que $N$ cuando $B$ es grande. Después, cada recorrido cuesta $N/B$. Si se va a recorrer muchas veces, compactar se paga solo.
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: ¿qué pasa con la mezcla múltiple si $M = 3B$ (solo caben 3 bloques)?">
+<Solucion>
+Solo se pueden mezclar $k = M/B - 1 = 2$ corridas a la vez: la mezcla múltiple degenera en merge sort binario, con $\log_2$ en lugar de $\log_{M/B}$. Toda la ganancia viene de que $M/B$ sea grande; la cota $\frac NB\log_{M/B}\frac NB$ refleja exactamente eso.
+</Solucion>
+</Practica>
+
+<Errores
+	errores={[
+		{ mal: '«En memoria externa se cuentan comparaciones.»', bien: 'Solo se cuentan <strong>transferencias de bloques</strong>; el trabajo en memoria es gratis.' },
+		{ mal: '«La búsqueda binaria es óptima también en disco.»', bien: 'Hace $\\Theta(\\lg(N/B))$ transferencias; la cota es $\\Theta(\\log_{B+1} N)$, unas $\\lg B$ veces menos.' },
+		{ mal: '«Escanear N &lt; B elementos es gratis.»', bien: 'Es $\\lceil N/B \\rceil \\ge 1$: el techo importa.' },
+		{ mal: '«Permutar cuesta N/B porque se conoce el destino.»', bien: 'Cuesta $\\Theta(\\min\\{N, \\text{ordenar}\\})$: agrupar por destino es ordenar.' },
+		{ mal: '«El logaritmo del ordenamiento es en base 2.»', bien: 'Es en base $M/B$: con mezcla múltiple casi nunca pasa de 2 o 3 pasadas.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="modelo-externo"
+	preguntas={[
+		{ q: 'Escanear $N$ elementos contiguos cuesta…', opts: ['$\\Theta(N)$', '$\\Theta(\\lceil N/B\\rceil)$', '$\\Theta(\\log_B N)$', '$\\Theta(N/M)$'], ok: 1 },
+		{ q: '¿Cuántos bits de información da, como mucho, una transferencia al buscar?', opts: ['1', '$\\lg B$', '$\\lg(B+1)$', '$B$'], ok: 2, why: 'Los $B$ elementos definen $B+1$ zonas.' },
+		{ q: 'Con mezcla múltiple, ¿cuántas corridas se mezclan por pasada?', opts: ['2', '$\\Theta(M/B)$', '$\\Theta(B)$', '$\\Theta(N/M)$'], ok: 1 },
+		{ q: 'La cota de ordenar en memoria externa es…', opts: ['$\\frac NB\\lg N$', '$\\frac NB\\log_{M/B}\\frac NB$', '$N\\log_B N$', '$\\frac NM$'], ok: 1 },
+		{ q: 'Mezclar $k$ corridas cuesta un escaneo mientras…', opts: ['$k \\le B$', '$k + 1 \\le M/B$', '$k \\le N/M$', '$M \\ge 3B$ siempre'], ok: 1 },
+		{ q: 'Permutar cuesta…', opts: ['$\\Theta(N/B)$', '$\\Theta(\\min\\{N, \\text{ordenar}\\})$', '$\\Theta(N\\lg N)$', '$\\Theta(\\log_B N)$'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica a un compañero por qué ordenar en disco cuesta «un par de escaneos» y no $\lg N$ pasadas."
+	claves={[
+		'El costo se mide en transferencias de bloques; un escaneo cuesta $N/B$.',
+		'Primero se forman corridas de tamaño $M$ (ordenadas en memoria): $N/M$ corridas en un escaneo.',
+		'Cada pasada mezcla $\\Theta(M/B)$ corridas a la vez (un bloque por corrida), con el costo de un escaneo.',
+		'Pasadas $= \\log_{M/B}(N/B)$, que con números reales es 2 o 3; y es óptimo por el argumento de información.',
+	]}
+/>
+
+<Dominio client:visible id="modelo-externo" />
+
+<Fuente archivos={['Sem10_Memory_Hierarchy_I.pdf (Jerarquía de Memoria I, 13/10/2026)', 'Aggarwal y Vitter (1988); Vitter (2008)']} />

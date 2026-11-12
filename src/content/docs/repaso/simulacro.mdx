@@ -1,0 +1,167 @@
+---
+title: 'Simulacro mixto'
+description: 'Simulacro del final de CS3014 con preguntas mixtas de optimalidad, memoria, enteros, árboles, grafos dinámicos y strings, con soluciones.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+
+<EnSimple>
+Hazlo **como examen**: 90 minutos, sin abrir las soluciones, papel al lado. Las preguntas están mezcladas a propósito: parte del examen es reconocer **qué herramienta aplica**. Después corrige con las soluciones y marca en tu [panel](/ruta/) los temas donde fallaste.
+</EnSimple>
+
+Las preguntas son **de elaboración propia** a partir del material del curso; no son preguntas de exámenes anteriores. Los valores numéricos se verificaron con un script.
+
+## Parte A · Cálculo (rápidas)
+
+### A1 · Contar transferencias
+
+Con $N = 10^6$ elementos, bloques de $B = 10^3$ y memoria $M = 10^5$, estima el número de transferencias de: (a) escanear, (b) buscar con un B-Tree, (c) búsqueda binaria en un arreglo ordenado, (d) ordenar con mezcla múltiple.
+
+<Solucion>
+(a) $N/B = 10^3$. (b) $\log_{B+1} N = \log_{1001} 10^6 \approx 2$. (c) $\lg(N/B) = \lg 10^3 \approx 10$: cinco veces peor que el B-Tree. (d) $\frac NB \log_{M/B}\frac NB = 10^3 \cdot \log_{100} 10^3 = 10^3 \cdot 1.5 = 1500$: **ordenar cuesta apenas 1.5 escaneos**, mucho menos que $N\log_{B} N$ de insertar uno por uno en un B-Tree ($\approx 2\cdot 10^6$).
+</Solucion>
+
+### A2 · Sucesor en vEB
+
+$u = 16$ y $S = \{2, 3, 7, 14\}$ (clusters de tamaño $\sqrt{16} = 4$, el mínimo se guarda fuera de los clusters). Calcula Sucesor(5) y Sucesor(8) indicando qué estructura se consulta en cada paso.
+
+<Solucion>
+**Sucesor(5):** $\text{high}(5) = 1$, $\text{low}(5) = 1$. El cluster 1 contiene $\{3\}$ (por el 7). Su máximo $3 > 1$, así que el sucesor está **dentro** del cluster: Sucesor$_{\text{cluster }1}(1) = 3$ → $1\cdot 4 + 3 = 7$.
+
+**Sucesor(8):** $\text{high}(8) = 2$, $\text{low} = 0$. El cluster 2 está vacío. Se pregunta al **summary**: Sucesor$_{\text{summary}}(2) = 3$; el mínimo del cluster 3 es $2$ → $3\cdot 4 + 2 = 14$.
+
+En ambos casos hay **una sola** llamada recursiva: eso da $T(u) = T(\sqrt u) + O(1)$.
+</Solucion>
+
+### A3 · Sparse Table
+
+$A = [5, 2, 4, 7, 1, 3, 6]$ (índices desde 0). Responde RMQ(1, 5) indicando las dos entradas de la Sparse Table que se consultan.
+
+<Solucion>
+Largo $= 5$, $k = \lfloor \lg 5\rfloor = 2$ (bloques de $2^2 = 4$). Se consultan $M[1][2] = \min A[1..4]$ y $M[5 - 4 + 1][2] = M[2][2] = \min A[2..5]$. Los rangos se **solapan** en $[2..4]$, lo que no importa porque el mínimo es idempotente. Resultado: valor $1$ en el índice $4$.
+</Solucion>
+
+### A4 · Función prefijo
+
+Calcula $\pi$ para $P = \texttt{aabaaab}$ y el periodo mínimo de $P$.
+
+<Solucion>
+$\pi = [0, 1, 0, 1, 2, 2, 3]$. El paso interesante es $i = 5$: con $k = 2$ se compara $P[5] = \texttt{a}$ con $P[2] = \texttt{b}$, falla, se retrocede a $k = \pi[1] = 1$, y $P[1] = \texttt{a}$ coincide → $\pi[5] = 2$. Periodo mínimo $= 7 - \pi[6] = 7 - 3 = 4$ (en efecto, $\texttt{aaba}\,\texttt{aab}$).
+</Solucion>
+
+### A5 · Suffix array y LCP
+
+Para $T = \texttt{abaab}$ da el SA, el arreglo LCP entre sufijos vecinos, el número de subcadenas distintas y la subcadena repetida más larga.
+
+<Solucion>
+Sufijos ordenados: $\texttt{aab}\,(2)$, $\texttt{ab}\,(3)$, $\texttt{abaab}\,(0)$, $\texttt{b}\,(4)$, $\texttt{baab}\,(1)$. SA $= [2, 3, 0, 4, 1]$; LCP entre vecinos $= [1, 2, 0, 1]$.
+
+Subcadenas distintas $= \frac{5\cdot 6}{2} - (1 + 2 + 0 + 1) = 15 - 4 = 11$. La repetida más larga mide $\max \text{LCP} = 2$: $\texttt{ab}$ (aparece en 0 y en 3).
+</Solucion>
+
+### A6 · Aho–Corasick
+
+Patrones $\{\texttt{he}, \texttt{she}, \texttt{his}, \texttt{hers}\}$, texto $\texttt{ushers}$. ¿Cuántas veces aparece cada patrón? ¿Por qué hace falta el **enlace de salida** (o recorrer la cadena de fallas) para no perder ocurrencias?
+
+<Solucion>
+$\texttt{he}$: 1, $\texttt{she}$: 1, $\texttt{his}$: 0, $\texttt{hers}$: 1. Al leer $\texttt{ushe}$ el autómata está en el nodo $\texttt{she}$; ahí **también** termina $\texttt{he}$, que no está en el camino actual sino en su enlace de falla. Si solo se reportara el nodo actual, se perdería $\texttt{he}$. El enlace de salida salta directo al siguiente nodo terminal de la cadena de fallas, y así el reporte cuesta $O(1 + \text{ocurrencias})$.
+</Solucion>
+
+### A7 · Heavy-Light en el árbol de clase
+
+En el árbol de 11 nodos de [Heavy-Light](/grafos/heavy-light/), escribe los rangos inclusivos que cubren el camino 10→9 y cuántos nodos distintos aparecen.
+
+<Solucion>
+El programa de verificación produce $[4,4]$ para 9, $[5,6]$ para 6 y 10, y $[1,2]$ para 2 y 5. Son tres rangos y cinco nodos distintos.
+</Solucion>
+
+## Parte B · Explica y justifica
+
+### B1 · ¿Por qué el layout vEB?
+
+Un árbol binario completo de $N$ nodos se guarda en orden BFS y, alternativamente, con layout vEB. Explica por qué la búsqueda en el layout vEB cuesta $O(\log_B N)$ transferencias **sin conocer $B$**, y cuánto cuesta en BFS.
+
+<Solucion>
+Se corta recursivamente el árbol a la mitad de su altura. Considera el nivel de la recursión en que los subárboles tienen altura entre $\tfrac12\lg B$ y $\lg B$: cada uno tiene a lo sumo $B$ nodos y está **contiguo**, así que ocupa a lo sumo 2 bloques. Un camino raíz–hoja de altura $\lg N$ cruza a lo sumo $\lg N / (\tfrac12 \lg B) = 2\log_B N$ de esos subárboles → $\le 4\log_B N$ transferencias. El argumento usa $B$ solo en el análisis, no en el algoritmo: por eso es **cache-oblivious**. En BFS, salvo los primeros $\lg B$ niveles, cada nivel cae en un bloque distinto: $\approx \lg N - \lg B = \lg(N/B)$.
+</Solucion>
+
+### B2 · Densidades del PMA
+
+Explica por qué los umbrales de densidad del PMA se **relajan** hacia la raíz (las ventanas grandes toleran densidades más extremas) y no al revés. ¿Qué pasaría si todos los niveles tuvieran el mismo umbral?
+
+<Solucion>
+Cuando una ventana viola su umbral, se sube hasta un ancestro que lo cumple y se **redistribuye** de forma pareja: tras eso, todas las ventanas hijas quedan con la densidad del padre, que está **estrictamente dentro** de su propio umbral, más estricto. La diferencia entre el umbral del hijo y el del padre ($\Theta(1/h)$ por nivel) es la **holgura** que hay que consumir con inserciones antes de que el hijo vuelva a fallar: al menos $\Theta(m/h)$ actualizaciones para una ventana de $m$ celdas, lo que paga los $O(m)$ movimientos de la redistribución con $O(h)$ por actualización y nivel, $O(\lg^2 N)$ en total. Con un umbral uniforme, una redistribución podría dejar al hijo justo en el borde y una sola inserción más volvería a disparar una redistribución grande: no habría amortización.
+</Solucion>
+
+### B3 · Y-fast: indirección
+
+¿Por qué un X-fast tree no se puede actualizar en $O(\lg w)$ y cómo lo arregla el Y-fast tree? Indica el espacio y el costo resultante.
+
+<Solucion>
+El X-fast guarda **todos los prefijos** de cada llave en tablas hash ($w$ por llave): insertar o borrar toca $\Theta(w)$ entradas y ocupa $O(nw)$. El Y-fast agrupa las llaves en bloques de $\Theta(w)$ elementos guardados en BSTs balanceados y mete en el X-fast **solo un representante por bloque**: $n/w$ representantes → espacio $O(n)$. Una búsqueda es X-fast ($O(\lg w)$) + BST de tamaño $w$ ($O(\lg w)$). Una actualización cambia el BST en $O(\lg w)$; solo cuando un bloque se parte o se fusiona se toca el X-fast ($O(w)$), y eso ocurre cada $\Omega(w)$ operaciones → $O(1)$ amortizado extra.
+</Solucion>
+
+### B4 · RMQ ↔ LCA
+
+Explica la cadena de reducciones que da RMQ general en $\langle O(n), O(1)\rangle$. ¿Por qué no se aplica directamente el truco de los cuatro rusos a $A$?
+
+<Solucion>
+RMQ en $A$ → LCA en el **cartesian tree** de $A$ (construible en $O(n)$ con una pila) → RMQ en el arreglo de **profundidades** del Euler tour ($2n - 1$ entradas), donde vecinos difieren en $\pm 1$ → ±1 RMQ con bloques de $b = \tfrac12\lg n$: Sparse Table sobre los mínimos de bloque ($O(\frac nb\lg n) = O(n)$) y tablas precalculadas para los interiores. Los cuatro rusos funcionan porque un bloque ±1 queda determinado (salvo un desplazamiento) por sus $b - 1$ signos: solo hay $2^{b-1} = O(\sqrt n)$ tipos. En un $A$ arbitrario los bloques pueden tener cualquier orden relativo y no hay pocos tipos distintos que tabular.
+</Solucion>
+
+### B5 · Fusion trees
+
+¿Qué problema resuelven los **sketches**, y por qué el resultado de comparar sketches no da directamente el predecesor?
+
+<Solucion>
+Un nodo con $k = w^{1/5}$ llaves de $w$ bits no cabe en una palabra. Pero para distinguir $k$ llaves bastan los $r \le k - 1$ **bits ramificadores** (donde se separan en el trie). El sketch extrae esos bits, se comprimen las $k$ llaves en una palabra y se compara la consulta contra todas en paralelo con una resta. El problema: la consulta $x$ no es una de las llaves, y su sketch puede caer en una posición equivocada porque $x$ se sale del trie en un bit **no** ramificador. Se corrige: se encuentra el vecino $y$ con el prefijo común más largo (msb de $x \oplus y$), se arma $e = $ prefijo común seguido de $0111\ldots$ o $1000\ldots$, y se vuelve a comparar con el sketch de $e$.
+</Solucion>
+
+### B6 · Optimalidad dinámica
+
+(a) ¿Qué demuestra la cota de Wilber-1 sobre la secuencia bit-reversal? (b) ¿Por qué Tango Trees es $O(\lg\lg n)$-competitivo y no $O(1)$?
+
+<Solucion>
+(a) Sobre el árbol de referencia perfecto, la secuencia bit-reversal produce una alternancia izquierda/derecha en **cada** nodo del camino de cada acceso, así que la cota de Wilber-1 es $\Omega(n\lg n)$: **ningún** BST, ni el óptimo offline, la atiende en menos que $\Theta(n\lg n)$. (b) Tango mantiene los caminos preferidos del árbol de referencia como árboles auxiliares. El número de cambios de hijo preferido en todo el recorrido es (salvo $O(n)$) la cantidad de alternancias de Wilber-1, y Wilber-1 es una cota **inferior** de OPT, así que hay $O(\text{OPT} + n)$ cambios. Cada cambio cuesta una búsqueda en un árbol auxiliar de tamaño $\le \lg n$ (la altura del árbol de referencia), o sea $O(\lg\lg n)$. Total $O((\text{OPT} + n)\lg\lg n)$. La pérdida viene de que Wilber-1 puede estar lejos de OPT y de ese costo por cruce.
+</Solucion>
+
+### B7 · Profundidad de los centroides
+
+Explica por qué la profundidad del árbol de centroides es $O(\lg n)$ y por qué eso no implica que un camino del árbol original tenga longitud $O(\lg n)$.
+
+<Solucion>
+Al quitar un centroide de una componente de tamaño $s$, cada componente hija tiene a lo más $s/2$ nodos. Tras $d$ niveles, la componente tiene a lo más $n/2^d$ nodos; por eso solo hay $O(\lg n)$ niveles. Esa es la altura del **árbol de centroides**, no la longitud de caminos originales: una cadena original puede tener $n-1$ aristas.
+</Solucion>
+
+## Parte C · Diseño
+
+### C1 · Elige la estructura
+
+Para cada escenario, elige una estructura y justifica con su cota:
+
+1. Diccionario de enteros de 64 bits, $n = 10^6$, muchas consultas de predecesor e inserciones.
+2. Arreglo fijo de $10^7$ números, $10^8$ consultas de mínimo en rango.
+3. Buscar las ocurrencias de 5000 palabras prohibidas en un flujo de texto.
+4. Responder muchas preguntas «¿aparece $P$ en $T$?» sobre un genoma fijo $T$ con memoria ajustada.
+5. Índice en disco de $10^{10}$ registros, sin saber el tamaño de página del hardware.
+
+<Solucion>
+1. **Y-fast tree**: $O(\lg w) = O(\lg 64) = 6$ niveles, espacio $O(n)$; frente a $\lg 10^6 \approx 20$ de un BST. (Fusion tree daría $\log_{64} 10^6 \approx 3.3$, pero es estático en la versión vista.)
+2. **RMQ en $\langle O(n), O(1)\rangle$**, o en la práctica una Sparse Table si caben $n\lg n$ palabras (aquí $\approx 2.4\cdot 10^8$: puede no caber; por eso existe la versión por bloques).
+3. **Aho–Corasick**: autómata de los patrones una sola vez, luego $O(n + z)$ sobre el flujo, sin retroceder: sirve para texto que llega en línea.
+4. **Suffix array + LCP**: $O(\lvert P\rvert + \lg n)$ por consulta y $\approx 4n$–$8n$ bytes, mucho menos que un suffix tree (con $\le 2n + 1$ nodos y punteros).
+5. **B-Tree cache-oblivious** (layout vEB + PMA con indirección): $O(\log_{B+1} N)$ transferencias para cualquier $B$ y en todos los niveles de la jerarquía a la vez.
+</Solucion>
+
+## Autocorrección
+
+| Pregunta | Tema | Si fallaste, repasa |
+| --- | --- | --- |
+| B6 | 1 · Optimalidad | [Wilber](/optimalidad/wilber/), [Tango](/optimalidad/tango/) |
+| A1, B1, B2 | 2 · Jerarquía de memoria | [Modelo](/memoria/modelo-externo/), [Layout vEB](/memoria/layout-veb/), [PMA](/memoria/pma/) |
+| A2, B3, B5 | 3 · Enteros | [vEB](/enteros/veb/), [X/Y-fast](/enteros/xfast-yfast/), [Fusion](/enteros/fusion/) |
+| A3, B4 | 4 · Árboles estáticos | [RMQ y LCA](/estaticos/rmq-lca/) |
+| A7, B7 | 5 · Grafos dinámicos | [Heavy-Light](/grafos/heavy-light/), [Centroides](/grafos/centroides/) |
+| A4, A6, A5 | 6 · Strings | [KMP](/strings/kmp/), [Aho–Corasick](/strings/aho-corasick/), [Suffix array](/strings/suffix-array/) |
+| C1 | Integración | [Formulario](/formulario/) |

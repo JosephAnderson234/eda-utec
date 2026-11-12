@@ -1,0 +1,152 @@
+---
+title: 'Bordes, función prefijo y KMP'
+description: 'Strings I: bordes, función prefijo, búsqueda KMP, periodos y conteo de prefijos.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import StringsFig from '../../../components/fig/StringsFig.astro';
+import PrefixFunctionSim from '../../../components/sim/PrefixFunctionSim.tsx';
+
+<EnSimple>
+Imagina que buscas una palabra en una cinta larga. Si ya comprobaste `ababa` y la siguiente letra falla, **no hace falta volver a leer esas cinco letras**: el final `aba` coincide con el comienzo `aba`. KMP guarda cuánto del comienzo sobrevive al fallo. Así el dedo que recorre la cinta nunca retrocede.
+</EnSimple>
+
+<Objetivos objetivos={[
+  'Reconocer un <strong>borde</strong> y calcular la función prefijo π a mano.',
+  'Ejecutar KMP sin retroceder en el texto y justificar $O(n+m)$.',
+  'Obtener el periodo mínimo y contar las ocurrencias de cada prefijo.',
+]} perfiles={['visual','simulador','laboratorio','feynman']} />
+
+## 1. Bordes: lo que sobrevive al fallo
+
+Una **cadena** es una secuencia de caracteres. Un **prefijo** empieza en la primera posición; un **sufijo** termina en la última. Son **propios** si no son la cadena completa. Buscamos un patrón $P$ de longitud $m$ en un texto $T$ de longitud $n$, con índices desde cero.
+
+La búsqueda ingenua prueba cada inicio y puede costar $O(nm)$: en un texto de muchas `a`, el patrón `aaa…ab` falla casi al final en cada posición. Un **borde** de $X$ es un prefijo propio, no vacío, que también es sufijo propio. **Ejemplo propio:** en `ababa`, `aba` y `a` son bordes. En `abaab`, solo `ab` lo es.
+
+Definimos $\pi[i]$ como la longitud del borde más largo de $P[0..i]$, o cero si no existe.
+
+<StringsFig fig="borde">**Cómo leerlo.** Las tres casillas azules del inicio son iguales a las tres verdes del final. Por eso el borde máximo de `ababa` tiene longitud 3.</StringsFig>
+
+<Predice pregunta="Ejemplo propio: si P = abababa y acabas de reconocer sus siete letras, ¿qué longitudes de borde quedan al seguir π desde 5?">
+La cadena es $5\to3\to1\to0$: `ababa`, `aba`, `a` y la cadena vacía. Cada salto usa $k\leftarrow\pi[k-1]$.
+</Predice>
+
+<StringsFig fig="bordes">**Cómo leerlo.** Cada caja es un candidato de prefijo que puede sobrevivir tras un fallo. Las flechas eliminan candidatos imposibles sin volver a leer el texto.</StringsFig>
+
+## 2. Construir la función prefijo
+
+```text
+Prefijo(P):
+  π[0] ← 0; k ← 0
+  para i ← 1 hasta m−1:
+    mientras k > 0 y P[i] ≠ P[k]: k ← π[k−1]
+    si P[i] = P[k]: k ← k+1
+    π[i] ← k
+  devolver π
+```
+
+El **invariante** antes de comparar $P[i]$ dice que $k$ es la longitud del borde más largo de $P[0..i-1]$. Si $P[i]$ no extiende ese borde, solo pueden servir bordes del propio borde; el mayor de ellos mide $\pi[k-1]$. Al coincidir, el borde crece una posición. Para `ababaca`, $\pi=[0,0,1,2,3,0,1]$.
+
+| $i$ | letra | evolución de $k$ | $\pi[i]$ |
+| --- | --- | --- | --- |
+| 1 | b | 0 | 0 |
+| 2 | a | 0 → 1 | 1 |
+| 3 | b | 1 → 2 | 2 |
+| 4 | a | 2 → 3 | 3 |
+| 5 | c | 3 → 1 → 0 | 0 |
+| 6 | a | 0 → 1 | 1 |
+
+En $i=5$, `c` falla contra $P[3]$ y luego contra $P[1]$. Los saltos son $3\leftarrow\pi[2]=1$ y $1\leftarrow\pi[0]=0$. $k$ aumenta a lo sumo una vez por iteración; cada vuelta del `mientras` lo disminuye. Como nunca es negativo, hay $O(m)$ saltos en total.
+
+<PrefixFunctionSim client:visible />
+
+## 3. Buscar con KMP
+
+El estado $k$ ahora es la cantidad de letras del patrón que coinciden con el **sufijo** del texto leído. Tras reportar una coincidencia completa bajamos $k$ de inmediato; así nunca se indexa $P[m]$.
+
+```text
+KMP(P, T):                         // P no vacío
+  π ← Prefijo(P); k ← 0
+  para i ← 0 hasta n−1:
+    mientras k > 0 y T[i] ≠ P[k]: k ← π[k−1]
+    si T[i] = P[k]: k ← k+1
+    si k = m:
+      reportar i−m+1
+      k ← π[m−1]                   // conserva coincidencias superpuestas
+```
+
+**Correctitud.** Antes de leer $T[i]$, $k$ representa el prefijo de $P$ más largo que es sufijo de $T[0..i-1]$. Tras un fallo, cualquier candidato más largo que $\pi[k-1]$ ya fue descartado. Si $k=m$, el patrón termina en $i$. El texto avanza una vez por carácter y las bajadas de $k$ suman $O(n)$; con el preprocesamiento, el costo es $O(n+m)$ y el espacio $O(m)$.
+
+<Practica nivel={1} titulo="Resuelto · ejemplo propio: buscar aba en ababa">
+$\pi(\texttt{aba})=[0,0,1]$. Se lee `a,b,a`: $k=1,2,3$, y se reporta inicio 0. Se baja a $\pi[2]=1$; las letras siguientes `b,a` llevan a $k=2,3$ y se reporta inicio 2. Las ocurrencias se superponen.
+</Practica>
+
+## 4. Aplicaciones de π
+
+Un **periodo** $p$ cumple $S[i]=S[i+p]$ siempre que ambos índices existen. El borde de longitud $n-p$ expresa exactamente esa igualdad. Por tanto, el periodo mínimo es $p_{\min}=n-\pi[n-1]$. Una cadena es una potencia de un bloque más corto solo si además $p_{\min}$ divide a $n$. `ababa` tiene periodo mínimo 2, pero 2 no divide a 5: no es una potencia exacta.
+
+Para contar cuántas veces aparece cada prefijo de $S$ dentro de $S$, asignamos una ocurrencia propia a cada longitud y propagamos por la cadena de bordes:
+
+```text
+para L ← 1 hasta n: cnt[L] ← 1
+para L ← n hasta 1:
+  si π[L−1] > 0: cnt[π[L−1]] ← cnt[π[L−1]] + cnt[L]
+```
+
+Un prefijo de longitud $L$ aparece una vez al inicio; cada aparición de un prefijo más largo también contiene, al final, una aparición de su borde. El recorrido descendente garantiza que todas las contribuciones lleguen a sus bordes. Para `ababa`, las cuentas de longitudes 1 a 5 son $[3,2,2,1,1]$.
+
+<Practica nivel={2} titulo="Completa · ejemplo propio: π y el periodo de abab">
+La función prefijo es $[0,0,\_\_,\_\_]$. Luego $p_{\min}=4-\_\_$. ¿Es potencia de un bloque más corto?
+<Solucion>$\pi=[0,0,1,2]$; $p_{\min}=2$ y $2\mid4$, de modo que `abab` = `ab` repetido dos veces.</Solucion>
+</Practica>
+
+<Practica nivel={3} titulo="Solo · ejemplo propio: cuenta cada prefijo de aabaa">
+Escribe $\pi$ y el arreglo `cnt` de longitudes 1 a 5.
+<Solucion>$\pi=[0,1,0,1,2]$ y `cnt` $=[4,2,1,1,1]$. `a` aparece en posiciones 0, 1, 3 y 4; `aa` aparece en 0 y 3.</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante · ejemplo propio: por qué falla reiniciar k a cero">
+Usa $P=\texttt{aaa}$ y $T=\texttt{aaaa}$.
+<Solucion>Las respuestas son 0 y 1. Si tras reportar en 0 se fija $k=0$, solo queda una letra por leer y se pierde la ocurrencia en 1. El valor correcto es $k=\pi[2]=2$.</Solucion>
+</Practica>
+
+<Detective titulo="Una bajada que salta demasiado" sintoma="En ababaca, π[5] sale 1 aunque la letra c no coincide con ningún prefijo." pista="Observa la comparación después de pasar de k=3 a k=1.">
+La implementación hace solo un `si` y no un `mientras`. En $i=5$ hay dos fallos: desde 3 se baja a 1 y desde 1 a 0. Corrige con el bucle del pseudocódigo; comprueba que $\pi[5]=0$.
+</Detective>
+
+## 5. Práctica del curso
+
+| Problema | Idea útil |
+| --- | --- |
+| CSES — String Matching | KMP para contar apariciones |
+| CSES — Finding Borders | seguir la cadena de $\pi[n-1]$ |
+| CSES — Finding Periods | probar $p$ mediante el borde de longitud $n-p$ |
+
+<Errores errores={[
+  {mal:'«Un borde puede ser toda la cadena».',bien:'Debe ser un <strong>prefijo y sufijo propios</strong>; para una cadena de longitud uno, π vale 0.'},
+  {mal:'«El periodo mínimo siempre produce una potencia».',bien:'La potencia exacta requiere además que el periodo <strong>divida</strong> la longitud.'},
+  {mal:'«Tras reportar una coincidencia, k vuelve a cero».',bien:'Baja a π[m−1] para conservar ocurrencias superpuestas.'},
+]} />
+
+<Quiz client:visible id="str-kmp" preguntas={[
+  {q:'¿Cuál es π para abab?',opts:['0,0,1,2','0,1,2,3','0,0,0,0'],ok:0,why:'Los prefijos aba y abab tienen bordes a y ab.'},
+  {q:'¿Cuál es el borde máximo de ababa?',opts:['aba','ab','ababa'],ok:0,why:'aba es prefijo propio y sufijo propio de longitud 3.'},
+  {q:'¿Qué hace KMP cuando falla una comparación?',opts:['Retrocede el texto','Baja k a π[k−1]','Reinicia el patrón siempre'],ok:1,why:'La cadena de bordes representa los únicos candidatos aún posibles.'},
+  {q:'¿Cuántas veces aparece aba en ababa?',opts:['1','2','3'],ok:1,why:'Empieza en 0 y en 2.'},
+  {q:'¿Cuál es el periodo mínimo de ababa?',opts:['2','3','5'],ok:0,why:'π[4]=3, así que 5−3=2; no divide 5.'},
+  {q:'¿Cuántas veces aparece el prefijo a en aabaa?',opts:['3','4','5'],ok:1,why:'Ocupa las posiciones 0, 1, 3 y 4.'},
+]} />
+
+<Feynman consigna="Explica por qué KMP no relee caracteres del texto aunque haya fallos." claves={['Define borde y π.','Describe k como prefijo que coincide con el sufijo leído.','Cada fallo baja k; cada lectura avanza i.','Menciona las coincidencias superpuestas.']} />
+<Dominio client:visible id="kmp" />
+<Fuente archivos={['Sem12_Strings_I.pdf']} />

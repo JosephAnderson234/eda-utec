@@ -1,0 +1,152 @@
+---
+title: 'Construcción lineal: DC3 y SA-IS'
+description: 'Strings II: estrategia recursiva lineal, DC3 completo y panorama conceptual de SA-IS.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import StringsFig from '../../../components/fig/StringsFig.astro';
+
+<EnSimple>
+Ordenar todos los sufijos parece costoso. DC3 hace algo parecido a ordenar dos de cada tres tarjetas y deducir dónde insertar la tercera. Para ordenar esas dos partes crea un problema más pequeño del mismo tipo. Si reducir el tamaño y combinar cuestan lo suficiente, el trabajo total es proporcional al texto.
+</EnSimple>
+
+<Objetivos objetivos={[
+  'Explicar la forma $T(n)=T(\\alpha n)+O(n)$ con $\\alpha<1$.',
+  'Reconstruir las cinco etapas de DC3 y sus dos comparaciones de mezcla.',
+  'Distinguir duplicación, DC3 y SA-IS según idea, tiempo y uso.',
+]} prerrequisitos={[{t:'Suffix array y rangos',href:'/strings/suffix-array/'}]} perfiles={['visual','laboratorio','feynman']} />
+
+## 1. La estrategia de reducción
+
+En la duplicación de Manber–Myers se hacen $O(\lg n)$ rondas lineales. Un algoritmo lineal necesita que el problema recursivo sea **estrictamente menor**: si $0<\alpha<1$ es constante y combinar cuesta $O(n)$, entonces
+
+$$T(n)=T(\alpha n)+O(n)=O(n),$$
+
+porque $n+\alpha n+\alpha^2n+\cdots$ es una serie geométrica. DC3 toma aproximadamente dos tercios de los sufijos; SA-IS toma una familia especial de sufijos LMS.
+
+| Autores | Año | Tiempo | Idea |
+| --- | --- | --- | --- |
+| Manber y Myers | 1990 | $O(n\lg n)$ | duplicación |
+| Itoh y Tanaka | 1999 | superlineal | ordenamiento inducido |
+| Kärkkäinen y Sanders, DC3 | 2003 | $O(n)$ | residuos módulo 3 |
+| Ko y Aluru | 2003 | $O(n)$ | ordenamiento inducido |
+| Nong, Zhang y Chan, SA-IS | 2009 | $O(n)$ | inducido y reducción |
+
+## 2. DC3: escoger dos tercios
+
+Sea $B_k$ el conjunto de posiciones $i$ con $i\bmod3=k$. Tomamos $C=B_1\cup B_2$. Su tamaño es aproximadamente $2n/3$. Basta conocer el orden de los sufijos de $C$ para ordenar los de $B_0$ y mezclar todo en tiempo lineal. Los índices que salen del texto usan un símbolo de relleno menor que cualquier carácter real; una implementación puede añadir una posición ficticia para ajustar los tamaños.
+
+<StringsFig fig="dc3">**Cómo leerlo.** Los colores representan residuos 0, 1 y 2. La recursión solo ordena los sufijos de colores 1 y 2; los de color 0 se insertan después.</StringsFig>
+
+**Paso 1: tripletas.** Para cada $i\in C$ se toma $(S[i],S[i+1],S[i+2])$, con relleno al salir de la cadena. Tres pasadas de **radix sort** (ordenar establemente por el tercer, segundo y primer componente) ordenan las tripletas en $O(n)$; las iguales reciben el mismo nombre o rango.
+
+**Paso 2: cadena reducida.** Se escriben los nombres de las tripletas de $B_1$ en orden de posición y luego los de $B_2$. Esta cadena $R=R_1R_2$ tiene longitud $\approx2n/3$. Cada sufijo de $C$ queda representado por un sufijo de $R$: tras una tripleta se continúa tres posiciones después, dentro de la misma mitad de $R$. Si los nombres se repiten, el orden completo requiere ordenar recursivamente los sufijos de $R$. Si todos son distintos, basta el orden directo de los nombres.
+
+**Paso 3: rangos de $C$.** La respuesta recursiva da $rnk[i]$, la posición en el orden de los sufijos muestreados. Se convierten los índices de $R$ a sus posiciones originales de $B_1$ y $B_2$.
+
+**Paso 4: ordenar $B_0$.** Para $i\in B_0$, el sufijo se ordena por $(S[i],rnk[i+1])$. Tras quitar el primer carácter, la posición $i+1$ está en $B_1$ y ya tiene rango. Radix sort de dos componentes vuelve a costar $O(n)$.
+
+**Paso 5: mezclar.** Se mezclan la lista ordenada de $C$ y la de $B_0$ como en merge sort. La comparación entre $x\in B_0$ y $y\in C$ es constante:
+
+- Si $y\in B_1$, compara $(S[x],rnk[x+1])$ con $(S[y],rnk[y+1])$.
+- Si $y\in B_2$, compara $(S[x],S[x+1],rnk[x+2])$ con $(S[y],S[y+1],rnk[y+2])$.
+
+En ambos casos, tras leer uno o dos caracteres, los dos restos están en $C$ y los rangos deciden el orden.
+
+<StringsFig fig="merge">**Cómo leerlo.** Cada caja muestra exactamente qué se compara al mezclar un sufijo de $B_0$ con uno de $C$. El sufijo completo nunca se vuelve a recorrer.</StringsFig>
+
+```text
+DC3(S):
+  partir posiciones en B0, B1, B2; C ← B1 ∪ B2
+  ordenar C por tripletas con radix sort
+  R ← nombres de tripletas de B1 seguidos por los de B2
+  si hay nombres repetidos: SAR ← DC3(R)
+  si no: SAR ← orden directo por nombre
+  rnk ← rangos de los sufijos de C dados por SAR
+  ordenar B0 por (S[i], rnk[i+1]) con radix sort
+  devolver mezcla de B0 y C usando las dos comparaciones constantes
+```
+
+**Correctitud y costo.** El orden recursivo es el orden verdadero de $C$ porque el orden de sus tripletas y de la continuación se preserva en $R$. El par ordena correctamente $B_0$ y las comparaciones de mezcla miran un prefijo corto seguido del rango exacto del resto. Cada nivel usa radix sort y mezcla lineales, así $T(n)=T(2n/3+O(1))+O(n)=O(n)$, con memoria lineal.
+
+El archivo `dc3.cpp` implementa las pasadas estables en `counting_sort_with_offset`, crea `reduced_string`, obtiene `rnk`, ordena $B_0$ en `special_radix_sort` y ejecuta las dos ramas de comparación en la mezcla final. Cuando $n\bmod3=1$ añade una posición ficticia a la muestra y la omite en la respuesta. A diferencia del pseudocódigo de las diapositivas, llama recursivamente sobre `reduced_string` incluso si todos los nombres son distintos; sigue siendo lineal. `lcp_construction` calcula después el LCP con Kasai.
+
+<Predice pregunta="En banana$, ¿qué posiciones están en B0 y cuáles se ordenan recursivamente?">
+$B_0=\{0,3,6\}$, $B_1=\{1,4\}$ y $B_2=\{2,5\}$. La muestra $C$ contiene $1,4,2,5$; al volver, se ordenan $0,3,6$ y se mezclan.
+</Predice>
+
+<Practica nivel={1} titulo="Resuelto · ejemplo propio: comparar dos sufijos de clases diferentes">
+En `banana$`, $x=0\in B_0$ da `banana$` y $y=1\in B_1$ da `anana$`. Se comparan primero $S[0]=\texttt b$ y $S[1]=\texttt a$. Como `a` precede a `b`, el sufijo 1 va antes que el 0 sin consultar rangos.
+</Practica>
+
+<Practica nivel={2} titulo="Completa una comparación">
+Si $x\in B_0$ y $y\in B_2$, los dos caracteres explícitos son $S[x],\_\_$ y $S[y],\_\_$. Después se comparan $rnk[x+\_\_]$ y $rnk[y+\_\_]$.
+<Solucion>Son $S[x+1]$, $S[y+1]$ y los rangos en $x+2$, $y+2$. Esas dos últimas posiciones pertenecen a $C$.</Solucion>
+</Practica>
+
+<Practica nivel={3} titulo="Solo · ejemplo propio: particiona abcabxabcd">
+Escribe $B_0$, $B_1$ y $B_2$ para las diez posiciones 0 a 9.
+<Solucion>$B_0=\{0,3,6,9\}$, $B_1=\{1,4,7\}$, $B_2=\{2,5,8\}$.</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: ¿qué pasa si las tripletas tienen el mismo nombre?">
+Explica por qué no basta ordenar solo los nombres de las tripletas de $C$.
+<Solucion>Dos tripletas iguales empatan en los primeros tres caracteres, pero sus sufijos pueden diferir después. La recursión sobre $R$ compara la sucesión de nombres posteriores y rompe el empate correctamente.</Solucion>
+</Practica>
+
+<Detective titulo="Radix sort en sentido incorrecto" sintoma="La lista de tripletas sale ordenada por el tercer carácter, incluso cuando el primero difiere." pista="¿Cuál componente debe ser la clave dominante al final?">
+Se ordenaron de izquierda a derecha. Radix sort de claves de varios componentes exige pasadas estables desde el componente menos significativo: tercero, segundo, primero. Corrige el orden y verifica que `dc3.cpp` coincide con `manber-myers.cpp`.
+</Detective>
+
+## 3. SA-IS: en clase solo se menciona
+
+SA-IS clasifica un sufijo como **tipo S** si es menor que el siguiente, y **tipo L** si es mayor; en igualdad hereda el tipo del siguiente. Un **LMS** (*leftmost S*) es una posición S precedida por una L. El algoritmo ordena primero las subcadenas LMS, reduce sus nombres a un problema más corto, y luego **induce** el orden de los sufijos L y S recorriendo cubetas. El detalle formal del ordenamiento inducido no se desarrolla en clase.
+
+El archivo `sais.cpp` refleja esa estructura: `type` clasifica, `lms` reúne posiciones especiales, `induced_sort` llena cubetas, y la llamada recursiva ordena los nombres de las subcadenas LMS. Usa arreglos estáticos con límite `N = 500000 + 2`, que hay que ajustar para entradas mayores. Devuelve SA sin el centinela implícito y calcula LCP con Kasai. Para `banana`, los tres programas del curso producen $SA=[5,3,1,0,4,2]$ y LCP siguiente $[1,3,0,0,2]$.
+
+| Método | Tiempo | Idea y uso |
+| --- | --- | --- |
+| Duplicación con counting sort | $O(n\lg n)$ | sencilla, habitual en concursos |
+| DC3 | $O(n)$ | muestra módulo 3; demostración clara |
+| SA-IS | $O(n)$ | orden inducido; útil en bibliotecas e instancias grandes |
+
+Después de cualquiera de ellos, Kasai obtiene LCP en $O(n)$.
+
+## 4. Práctica del curso
+
+| Problema | Idea |
+| --- | --- |
+| Library Checker — Suffix Array | implementar duplicación o DC3 |
+| Library Checker — Number of Substrings | SA + LCP |
+| CSES 2110 — Substring Distribution | conteo por longitud con LCP |
+| CSES 1113 — String Transform | transformada de Burrows–Wheeler |
+| CSES 3225 — Inverse Suffix Array | reconstrucción desde SA |
+
+<Errores errores={[
+  {mal:'«DC3 ordena solo tripletas y ya tiene el SA».',bien:'Las tripletas pueden empatar; la <strong>recursión</strong> ordena el resto de cada sufijo de C.'},
+  {mal:'«Las dos ramas de mezcla usan el mismo par».',bien:'Con y en B₂ hay que mirar <strong>dos</strong> caracteres antes del rango.'},
+  {mal:'«SA-IS se desarrolla completamente en las diapositivas».',bien:'En clase <strong>solo se menciona</strong>; aquí se presenta su idea, no una prueba detallada.'},
+]} />
+
+<Quiz client:visible id="str-sa-lineal" preguntas={[
+  {q:'¿Qué fracción aproximada de posiciones toma C en DC3?',opts:['1/3','2/3','todas'],ok:1,why:'C une B1 y B2.'},
+  {q:'¿Cómo se ordenan tripletas en tiempo lineal?',opts:['Radix sort estable','Comparar sufijos completos','Búsqueda binaria'],ok:0,why:'Tres pasadas sobre un alfabeto entero acotado.'},
+  {q:'¿Qué se hace si los nombres de tripletas empatan?',opts:['Se ignoran','Se recurre sobre R','Se ordena B0 primero'],ok:1,why:'La continuación de los sufijos rompe el empate.'},
+  {q:'¿Qué clave ordena B0?',opts:['S[i] sola','S[i] y rnk[i+1]','Tres caracteres'],ok:1,why:'Tras el primer carácter, i+1 pertenece a B1.'},
+  {q:'¿Cuántos caracteres explícitos mira la mezcla con y en B2?',opts:['Uno','Dos','Tres'],ok:1,why:'Después de dos, ambos restos tienen rango en C.'},
+  {q:'¿Qué significa LMS?',opts:['S precedida por L','L precedida por S','Mayor sufijo'],ok:0,why:'Es la posición S más a la izquierda tras una posición L.'},
+]} />
+
+<Feynman consigna="Explica por qué DC3 es lineal sin describir detalles de implementación." claves={['Se ordenan dos tercios recursivamente.','Las tripletas se renombran con radix sort.','B0 y la mezcla usan rangos para comparar en O(1).','La recurrencia T(n)=T(2n/3)+O(n) suma O(n).']} />
+<Dominio client:visible id="sa-lineal" />
+<Fuente archivos={['Sem13_Strings_II.pdf','dc3.cpp','sais.cpp','manber-myers.cpp']} />

@@ -1,0 +1,134 @@
+---
+title: 'Cotas de Wilber 1 y 2'
+description: 'Dynamic Optimality IV (semana 9): Wilber-2 (alternancias entre puntos visibles, optimalidad llave-independiente de Splay) y Wilber-1 (alternancias sobre un árbol de referencia fijo), con la secuencia bit-reversal que fuerza Θ(n lg n) y el límite Ω(lg lg n) que heredan los Tango Trees.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
+
+<EnSimple>
+Las dos cotas de Wilber son dos formas **concretas y calculables** de encontrar muchos rectángulos independientes, y por lo tanto de decir «ningún árbol puede costar menos que esto».
+- **Wilber-1:** fija un árbol de referencia y, en cada nodo, cuenta cuántas veces las búsquedas **cambian de lado** (izquierda ↔ derecha). Cada cambio obliga a trabajo.
+- **Wilber-2:** para cada acceso, mira los accesos anteriores «que se ven» desde él y cuenta cuántas veces alternan entre estar a su izquierda y a su derecha.
+- Idea común: **zigzaguear cuesta**. Una secuencia que salta de un lado a otro todo el tiempo no puede ser barata para ningún BST.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Calcular <strong>Wilber-1</strong> de una secuencia sobre un árbol de referencia dado, nodo por nodo.',
+		'Describir <strong>Wilber-2</strong> (puntos visibles, alternancias de signo) y su relación con la optimalidad llave-independiente de Splay.',
+		'Explicar con la secuencia <strong>bit-reversal</strong> por qué existe una secuencia con $\\text{OPT} = \\Theta(n\\lg n)$.',
+		'Explicar por qué fijar el árbol de referencia sin conocer la secuencia limita la técnica a $O(\\lg\\lg n)$-competitividad.',
+	]}
+	prerrequisitos={[{ t: 'Rectángulos independientes', href: '/optimalidad/rectangulos/' }]}
+	perfiles={['laboratorio', 'visual', 'socratico']}
+/>
+
+## 1. Wilber-2
+
+**Idea de análisis.** Para cada punto $p$ (un acceso): mira los puntos **«visibles» hacia abajo** (anteriores en el tiempo) — aquellos cuyo rectángulo con $p$ no contiene ningún otro punto —, ordenados por $y$ decreciente, y cuenta las **alternancias de signo** de $x_i - p$ (si quedan a la izquierda o a la derecha de $p$).
+
+<OptimalidadFig fig="wilber2">
+**Cómo leerlo.** Desde $p$ se miran hacia abajo los puntos visibles. Leídos del más reciente al más antiguo quedan izquierda, derecha, izquierda, derecha, izquierda: **4 alternancias** (esquema ilustrativo). Cada alternancia da un rectángulo independiente más.
+</OptimalidadFig>
+
+**La cota.** La suma de esas alternancias, sobre todos los puntos $p$ de la entrada, es una cota inferior de OPT: cada alternancia aporta un rectángulo independiente más.
+
+- **Conjetura:** se cree que $\text{Wilber-2} = \Theta(\text{OPT})$. **Abierto.**
+- **Optimalidad llave-independiente:** si las llaves fueran «sin significado» (se pudieran permutar al azar), entonces $\text{OPT} = \Theta(\text{cota del conjunto de trabajo})$. Por eso los **Splay Trees son óptimos llave-independientes**.
+- **El porqué (esbozo):** bajo una permutación aleatoria, $E[\text{Wilber-2}(x_i)] = \Theta(\lg t_i)$, donde $t_i$ es el número de llaves distintas accedidas desde el último acceso a $x_i$: el número esperado de cambios de máximo ya es la cota del conjunto de trabajo, que Splay alcanza.
+
+## 2. Wilber-1: la que usaremos con Tango Trees
+
+**Idea de análisis.** Fijar un **árbol de referencia** $P$ con las llaves de la entrada. Para cada nodo $y$ de $P$: contar las **alternancias** en la secuencia de accesos entre el subárbol izquierdo y el derecho de $y$ (ignorando accesos a $y$ mismo o fuera de su subárbol). Sumar sobre todos los $y$.
+
+**Por qué es cota inferior:** cada alternancia agrega un rectángulo independiente más. En la próxima página veremos que es exactamente lo que hay que contar como **«cambios de hijo preferido»** en los Tango Trees.
+
+<OptimalidadFig fig="wilber1">
+**Cómo leerlo.** Árbol de referencia perfecto con llaves 0–6 y la secuencia $0, 4, 2, 6, 1, 5$ (ejemplo propio). En la raíz (3), los accesos caen izquierda, derecha, izquierda, derecha, izquierda, derecha: 5 alternancias. El nodo 1 ve solo $0, 2, 1$ (el 1 se ignora): una alternancia; igual el nodo 5. Las hojas no tienen dos lados. Wilber-1 $= 5 + 1 + 1 = 7$.
+</OptimalidadFig>
+
+<Practica nivel={2} titulo="Complétalo: Wilber-1 de la secuencia $0, 1, 2, 3, 4, 5, 6$ sobre el mismo árbol">
+- Raíz 3: accesos de su subárbol sin contarla: $0,1,2$ (izq) y $4,5,6$ (der) → lados: **\_\_\_\_\_\_\_\_\_\_\_\_** → alternancias: **\_\_**.
+- Nodo 1: ve $0$ y $2$ → **\_\_**. Nodo 5: ve $4$ y $6$ → **\_\_**.
+- Total: **\_\_**.
+<Solucion>
+Raíz: izq, izq, izq, der, der, der → 1 alternancia. Nodo 1: izq, der → 1. Nodo 5: 1. **Total 3**: la secuencia ordenada casi no zigzaguea, y en efecto es barata (un BST puede recorrerla en $O(n)$ total). Verificado con un script.
+</Solucion>
+</Practica>
+
+## 3. Un caso extremo: la secuencia bit-reversal
+
+**Construcción.** Toma $0, 1, 2, \dots$ en binario e **invierte los bits** de cada uno:
+
+$$0,1,2,3,4,5,6,7 \;\to\; 000, 100, 010, 110, 001, 101, 011, 111 \;\Rightarrow\; 0, 4, 2, 6, 1, 5, 3, 7.$$
+
+Usando esto como secuencia de accesos sobre un árbol perfecto, el número de alternancias en cada nodo $y$ resulta ser (del orden de) **el tamaño del subárbol de $y$**: el bit más significativo de la versión invertida es el menos significativo del contador, que cambia en **cada** paso, así que en la raíz se alterna izquierda/derecha todo el tiempo; en el siguiente nivel, cada dos pasos; etc.
+
+<Predice pregunta="Si en cada nodo las alternancias son del orden del tamaño de su subárbol, ¿cuánto vale Wilber-1 sumado sobre todo el árbol perfecto de $n$ nodos?">
+En cada **nivel** del árbol, los subárboles son disjuntos y suman $\approx n$ nodos. Hay $\lg n$ niveles. Total: $\text{Wilber-1} = \Theta(n\lg n)$, y como es cota inferior y cualquier árbol balanceado cuesta $O(n \lg n)$: $\text{OPT} = \Theta(n\lg n)$. **Esta secuencia no se puede atender mejor que con un árbol balanceado.**
+</Predice>
+
+<Practica nivel={3} titulo="Solo: ¿por qué la secuencia bit-reversal es mala para el árbol balanceado y también para cualquier otro?">
+<Solucion>
+Wilber-1 es cota inferior para **todo** BST, no solo para el árbol de referencia. Como en este ejemplo da $\Theta(n\lg n)$, ningún BST, ni siquiera uno que conozca la secuencia y rote libremente, puede bajar de $\Omega(n\lg n)$. El árbol de referencia solo es la «regla» con la que se mide.
+</Solucion>
+</Practica>
+
+## 4. La consecuencia y el límite de la técnica
+
+$$\text{Wilber-1} = \Theta(n\lg n) \;\Rightarrow\; \text{OPT} = \Theta(n\lg n) \quad\text{(para bit-reversal).}$$
+
+**Pregunta abierta:** ¿para toda secuencia $x$ existe algún árbol de referencia $P$ tal que $\text{Wilber-1}(x) = \Theta(\text{OPT}(x))$?
+
+**Adelanto:** los Tango Trees fijan $P$ **sin conocer la secuencia** (como debe ser, al ser un algoritmo online). Por eso su garantía será $O(\lg\lg n)$-competitiva, no $O(1)$: Wilber-1 con un $P$ fijado de antemano puede quedar **$\Omega(\lg\lg n)$ lejos** de OPT. Ese es el límite real de esta técnica.
+
+<Practica nivel={4} titulo="Variante: ¿Wilber-1 depende del árbol de referencia? Calcula la secuencia $0, 4, 2, 6, 1, 5$ sobre una cadena (árbol degenerado) $0 \to 1 \to \cdots \to 6$ con hijos derechos">
+<Solucion>
+En una cadena donde cada nodo $y$ solo tiene hijo derecho, su subárbol izquierdo está vacío: **todos** los accesos de su subárbol caen a la derecha (o son $y$ mismo). No hay alternancias en ningún nodo: Wilber-1 $= 0$. La cota sigue siendo válida (OPT $\ge |I| + 0$), pero es **inútil**. La calidad de Wilber-1 depende muchísimo de $P$; un árbol perfecto suele dar cotas mucho mejores. (Ejemplo propio.)
+</Solucion>
+</Practica>
+
+<Errores
+	errores={[
+		{ mal: '«Wilber-1 mide el costo del árbol de referencia.»', bien: 'Es una cota inferior para <strong>cualquier</strong> BST; el árbol de referencia solo es la regla de conteo.' },
+		{ mal: '«Al contar alternancias en $y$ se incluyen los accesos a $y$.»', bien: 'Se ignoran los accesos a $y$ y los que caen fuera de su subárbol.' },
+		{ mal: '«Wilber-2 = Θ(OPT) está demostrado.»', bien: 'Es una <strong>conjetura</strong>; lo demostrado es la optimalidad llave-independiente.' },
+		{ mal: '«Tango es O(lg lg n)-competitivo por un mal análisis.»', bien: 'Es un límite de Wilber-1 con $P$ fijado sin conocer la secuencia: puede quedar $\\Omega(\\lg\\lg n)$ lejos de OPT.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="wilber"
+	preguntas={[
+		{ q: 'Wilber-1 cuenta…', opts: ['rotaciones', 'alternancias izquierda/derecha en cada nodo de un árbol de referencia fijo', 'puntos visibles', 'accesos repetidos'], ok: 1 },
+		{ q: 'La secuencia bit-reversal de 0..7 es…', opts: ['0 1 2 3 4 5 6 7', '0 4 2 6 1 5 3 7', '7 6 5 4 3 2 1 0', '0 2 4 6 1 3 5 7'], ok: 1 },
+		{ q: 'Para bit-reversal sobre un árbol perfecto, Wilber-1 es…', opts: ['$\\Theta(n)$', '$\\Theta(n\\lg n)$', '$\\Theta(n\\lg\\lg n)$', '$\\Theta(\\lg n)$'], ok: 1 },
+		{ q: 'Wilber-2 explica que Splay es…', opts: ['dinámicamente óptimo', 'óptimo llave-independiente', '$O(\\lg\\lg n)$-competitivo', 'peor que un árbol estático'], ok: 1 },
+		{ q: '¿Por qué Tango no logra $O(1)$-competitividad con esta técnica?', opts: ['por las rotaciones', 'porque fija $P$ sin conocer la secuencia y Wilber-1 puede quedar $\\Omega(\\lg\\lg n)$ lejos de OPT', 'porque usa árboles rojo-negro', 'porque es offline'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica qué cuenta Wilber-1 y por qué la secuencia bit-reversal obliga a cualquier BST a pagar $\Omega(n\lg n)$."
+	claves={[
+		'Un árbol de referencia fijo; en cada nodo, alternancias entre accesos a su subárbol izquierdo y derecho (ignorando el nodo y lo de afuera).',
+		'Cada alternancia aporta un rectángulo independiente: es cota inferior para todo BST.',
+		'En bit-reversal, las alternancias en cada nodo son del orden del tamaño de su subárbol; por nivel suman $\\approx n$ y hay $\\lg n$ niveles.',
+		'Entonces $\\text{OPT} = \\Theta(n\\lg n)$.',
+	]}
+/>
+
+<Dominio client:visible id="wilber" />
+
+<Fuente archivos={['CS3014 · Dynamic Optimality IV (semana 9, 7/10/2026)', 'Wilber (1989); Iacono (2005)', 'Conteos de Wilber-1 verificados con un script propio']} />

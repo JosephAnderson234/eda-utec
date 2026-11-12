@@ -1,0 +1,153 @@
+---
+title: 'Trie y Aho–Corasick'
+description: 'Strings I: búsqueda de muchos patrones con trie, enlaces de falla, autómata y propagación de frecuencias.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import StringsFig from '../../../components/fig/StringsFig.astro';
+
+<EnSimple>
+Piensa en buscar mil palabras en un libro. KMP una por una leería el libro mil veces. Un **trie** comparte los comienzos de esas palabras, como un árbol de carpetas. Los **enlaces de falla** dicen a qué comienzo todavía útil saltar cuando la siguiente letra no encaja. Aho–Corasick combina ambas ideas y lee el libro una sola vez.
+</EnSimple>
+
+<Objetivos objetivos={[
+  'Construir un trie y explicar qué representa el estado después de leer un prefijo del texto.',
+  'Calcular enlaces de falla, transiciones completas y enlaces de diccionario.',
+  'Buscar en $O(n+z)$ y contar ocurrencias con propagación inversa por BFS.',
+]} prerrequisitos={[{t:'Función prefijo y KMP',href:'/strings/kmp/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
+
+## 1. Trie: guardar prefijos comunes una sola vez
+
+Un **trie** es un árbol enraizado. Cada arista lleva un carácter; de un nodo no salen dos aristas con el mismo carácter. El camino desde la raíz forma un prefijo y un nodo **terminal** marca una palabra completa. Insertar o buscar una palabra cuesta $O(|P|)$. Si hay $N$ nodos y los patrones suman $M$ caracteres, $N\le 1+M$.
+
+Para `he`, `she`, `his` y `hers`, hay 10 nodos incluida la raíz. El prefijo `h` se comparte entre tres patrones.
+
+<StringsFig fig="trie">**Cómo leerlo.** Cada círculo nombra el prefijo de su camino desde la raíz $\varepsilon$. Los círculos verdes son patrones completos; `he` también puede ser prefijo de `hers`.</StringsFig>
+
+## 2. El estado y los enlaces de falla
+
+Después de leer $T[0..i]$, el estado es el nodo cuyo prefijo es el **sufijo más largo** de ese texto que también es prefijo de algún patrón. Ese es el invariante central. Un **enlace de falla** $\operatorname{fail}(v)$ apunta al sufijo propio más largo de la palabra del nodo $v$ que aparece como nodo del trie; la raíz se enlaza consigo misma.
+
+En el ejemplo, $\operatorname{fail}(\texttt{sh})=\texttt{h}$, $\operatorname{fail}(\texttt{she})=\texttt{he}$, $\operatorname{fail}(\texttt{his})=\texttt{s}$ y $\operatorname{fail}(\texttt{hers})=\texttt{s}$. Los demás enlaces van a la raíz.
+
+<StringsFig fig="fallas">**Cómo leerlo.** Las aristas grises construyen los patrones. Las flechas rojas punteadas saltan al mayor sufijo que todavía puede iniciar un patrón.</StringsFig>
+
+En particular, `s` es sufijo de `hers` y prefijo de `she`; por eso su enlace no va a la raíz. En cambio, $\operatorname{fail}(\texttt{her})$ sí llega a la raíz.
+
+<Predice pregunta="Tras leer ushe, el estado es she. ¿Qué patrones terminan ahí?">
+Terminan `she` en la posición 3 y `he` en la misma posición: $\operatorname{fail}(\texttt{she})=\texttt{he}$, que es terminal.
+</Predice>
+
+## 3. Construir el autómata completo
+
+Un **autómata** es un estado más una regla de transición para cada carácter. Llamamos $\delta(v,c)$ al estado después de leer $c$ desde $v$. Si existe el hijo por $c$, se toma; si no, se usa $\delta(\operatorname{fail}(v),c)$. En la raíz, una letra sin hijo vuelve a la raíz. Se calculan fallas y todas las transiciones por **BFS**, recorrido por niveles: los enlaces de un nodo siempre apuntan a nodos de menor profundidad ya procesados.
+
+```text
+Construir-AC(trie, Σ):
+  para c en Σ:
+    si raíz tiene hijo u por c: fail[u] ← raíz; δ[raíz,c] ← u; encolar u
+    si no: δ[raíz,c] ← raíz
+  mientras la cola no esté vacía:
+    v ← desencolar
+    para c en Σ:
+      si v tiene hijo u por c:
+        fail[u] ← δ[fail[v],c]
+        δ[v,c] ← u; encolar u
+      si no:
+        δ[v,c] ← δ[fail[v],c]
+```
+
+La **correctitud** sigue del invariante: si no hay hijo, el sufijo válido más largo debe prolongar algún sufijo propio de la palabra actual. La cadena de fallas recorre esos candidatos de mayor a menor. La tabla completa cuesta $O(N|\Sigma|)$ tiempo y espacio; después, cada letra del texto consume exactamente una transición.
+
+Para reportar sin examinar todos los enlaces de falla, definimos $\operatorname{dic}(v)$ como el primer nodo terminal en la cadena de fallas de $v$, o vacío si no existe. Se calcula en BFS: si $\operatorname{fail}(v)$ es terminal, ese es `dic(v)`; en otro caso se hereda `dic(fail(v))`.
+
+```text
+Buscar-AC(T):
+  v ← raíz
+  para i ← 0 hasta n−1:
+    v ← δ[v,T[i]]
+    u ← v si es terminal; si no, dic(v)
+    mientras u exista:
+      reportar patrón(u) terminado en i
+      u ← dic(u)
+```
+
+Cada vuelta del segundo bucle produce una ocurrencia. Si se reportan $z$ ocurrencias, la búsqueda cuesta $O(n+z)$ después de construir el autómata. Para patrones duplicados, un nodo terminal puede representar varios identificadores y cada uno se reporta.
+
+<Practica nivel={1} titulo="Resuelto: he, she, his, hers en ushers">
+Los estados tras `u,s,h,e,r,s` son $\varepsilon,\texttt{s},\texttt{sh},\texttt{she},\texttt{her},\texttt{hers}$. En `she` se reportan `she` (inicio 1) y `he` (inicio 2). En `hers` se reporta `hers` (inicio 2). `his` no aparece.
+</Practica>
+
+## 4. Contar sin enumerar
+
+Si solo se necesita el número de apariciones de cada patrón, mantener $\operatorname{vis}[v]$: una visita por estado del recorrido del texto. Luego se suman las visitas hacia arriba por fallas, recorriendo los nodos en **orden BFS inverso**:
+
+```text
+para cada carácter c del texto:
+  v ← δ[v,c]; vis[v] ← vis[v]+1
+para v en orden BFS inverso, sin la raíz:
+  vis[fail[v]] ← vis[fail[v]] + vis[v]
+respuesta(P) ← vis[nodo_terminal(P)]
+```
+
+Si el texto termina en un estado $v$, también termina en todos los patrones terminales de su cadena de fallas. Propagar una vez por arista de falla cuenta todas esas apariciones en $O(n+N)$, sin depender de $z$. El orden inverso es esencial: primero deben llegar a $v$ las visitas de sus descendientes.
+
+El archivo `black-order-712.cpp` implementa exactamente esto con `trie` como tabla $\delta$, `suffix_link` como fallas, `order` como BFS y `freq` como visitas. Lee $n$ patrones y un texto, e imprime `YES`/`NO` por patrón. `black-order-712 (1).cpp` usa las mismas frecuencias para imprimir el **conteo**. `black-order-712 (2).cpp` agrega a cada estado el extremo izquierdo y derecho de las visitas y los combina por fallas; al extremo donde termina el patrón se le resta $|P|-1$ para obtener su posición inicial. Los tres asumen letras minúsculas inglesas y $|\Sigma|=26$.
+
+<Practica nivel={2} titulo="Completa la propagación">
+Si el texto llega una vez al nodo `she`, `vis[she]=1`. ¿A qué nodo terminal debe llegar esa cuenta por `fail`? ¿Qué patrón representa?
+<Solucion>Llega a `he` porque $\operatorname{fail}(\texttt{she})=\texttt{he}$. Representa una aparición de `he` que termina junto con `she`.</Solucion>
+</Practica>
+
+<Practica nivel={3} titulo="Solo: predice los cuatro conteos en ushers">
+Escribe el resultado en el orden `he, she, his, hers`.
+<Solucion>$[1,1,0,1]$. Los inicios respectivos son 2, 1, ninguno y 2.</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante · ejemplo propio: dos patrones iguales">
+Inserta `he` dos veces con identificadores distintos. ¿Qué cambia en el trie, la frecuencia y el reporte?
+<Solucion>Ambos identificadores terminan en el mismo nodo `he`; el trie y `vis[he]` no cambian. Cada identificador recibe el mismo conteo y, si se enumeran ocurrencias, se reportan ambos.</Solucion>
+</Practica>
+
+<Detective titulo="Propagación en orden equivocado" sintoma="En ushers, she aparece una vez, pero he aparece cero." pista="El estado she sí se visitó: ¿cuándo se procesa su enlace a he?">
+Se recorrieron las fallas en orden BFS normal, antes de acumular los descendientes. Hay que invertir `order`, como hace `bottom_up()` en el código. Comprueba que `vis[he]=1`.
+</Detective>
+
+## 5. AC = KMP + trie y práctica
+
+Con un patrón, el trie es una cadena: el estado se reduce a la longitud $k$, las fallas corresponden a $\pi[k-1]$ y la transición completa implementa el mismo retroceso de KMP. Con muchos patrones, el estado es un nodo.
+
+| Problema | Idea útil |
+| --- | --- |
+| CSES — Word Combinations | trie y programación dinámica |
+| Library Checker — Multiple Pattern Matching | AC y enlaces de diccionario |
+| Búsqueda de patrones del código del curso | propagación de `freq` en BFS inverso |
+
+<Errores errores={[
+  {mal:'«Solo se reporta el nodo actual».',bien:'También pueden terminar patrones en sus <strong>fallas terminales</strong>; usa enlaces de diccionario.'},
+  {mal:'«Una visita del estado she no cuenta para he».',bien:'Sí cuenta: la visita se propaga por el enlace de falla.'},
+  {mal:'«Construir δ completa no cuesta memoria adicional».',bien:'La tabla completa ocupa $O(N|\\Sigma|)$; a cambio la lectura usa una transición por carácter.'},
+]} />
+
+<Quiz client:visible id="str-aho-corasick" preguntas={[
+  {q:'¿Cuántos nodos tiene el trie de he, she, his y hers?',opts:['9','10','12'],ok:1,why:'Raíz más nueve prefijos no vacíos.'},
+  {q:'¿Cuál es fail(she)?',opts:['he','sh','s'],ok:0,why:'he es su sufijo propio más largo que es nodo del trie.'},
+  {q:'¿Cuál es fail(hers)?',opts:['s','he','raíz'],ok:0,why:'s es sufijo de hers y prefijo de she.'},
+  {q:'¿Qué se reporta al llegar a she?',opts:['Solo she','she y he','he y hers'],ok:1,why:'he es terminal en la cadena de fallas.'},
+  {q:'¿En qué orden se propagan vis?',opts:['BFS normal','BFS inverso','Orden del texto'],ok:1,why:'Los descendientes deben aportar antes que sus enlaces de falla.'},
+  {q:'¿Cuánto cuesta enumerar z ocurrencias tras construir δ?',opts:['O(n+z)','O(nN)','O(zN)'],ok:0,why:'Una transición por carácter y una iteración por ocurrencia reportada.'},
+]} />
+
+<Feynman consigna="Explica cómo Aho–Corasick generaliza KMP y por qué puede contar sin reportar." claves={['El trie comparte prefijos.','El estado es el mayor sufijo que sigue siendo prefijo de un patrón.','Las fallas generalizan la función prefijo.','Los enlaces de diccionario enumeran; vis en BFS inverso cuenta.']} />
+<Dominio client:visible id="aho-corasick" />
+<Fuente archivos={['Sem12_Strings_I.pdf','black-order-712.cpp','black-order-712 (1).cpp','black-order-712 (2).cpp']} />

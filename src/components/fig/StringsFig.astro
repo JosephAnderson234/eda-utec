@@ -1,0 +1,75 @@
+---
+type Fig = 'borde' | 'bordes' | 'trie' | 'fallas' | 'sa' | 'lcp' | 'dc3' | 'merge' | 'tree-banana' | 'tree-abab' | 'activo';
+interface Props { fig: Fig }
+const { fig } = Astro.props;
+const A = `url(#str-${fig})`;
+const defs = `<defs><marker id="str-${fig}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="head"/></marker></defs>`;
+const sa = [6, 5, 3, 1, 0, 4, 2];
+const lc = [0, 0, 1, 3, 0, 0, 2];
+const s = 'banana$';
+const nodes = [
+  ['ε',380,30,''],['h',170,95,'ε'],['s',570,95,'ε'],['he',80,165,'h'],['hi',260,165,'h'],['sh',570,165,'s'],
+  ['her',80,235,'he'],['his',260,235,'hi'],['she',570,235,'sh'],['hers',80,305,'her']
+] as const;
+const node = (id:string) => nodes.find(n=>n[0]===id)!;
+---
+<figure class="svgfig not-content">
+  <div class="svgfig__scroll">
+    {fig === 'borde' && <svg viewBox="0 0 760 205" role="img" aria-label="Superposición del borde aba en ababa">
+      <text x="35" y="30" class="t l b">P[0..4] = ababa</text>
+      {['a','b','a','b','a'].map((c,i)=><><rect x={80+i*105} y="50" width="96" height="50" rx="7" class={i<3?'c1':'box'}/><text x={128+i*105} y="82" class="t mono b">{c}</text></>)}
+      {['a','b','a'].map((c,i)=><><rect x={290+i*105} y="113" width="96" height="50" rx="7" class="c4"/><text x={338+i*105} y="145" class="t mono b">{c}</text></>)}
+      <text x="380" y="191" class="t s mu">La misma cadena «aba» ocupa ambos extremos: π[4] = 3.</text>
+    </svg>}
+    {fig === 'bordes' && <svg viewBox="0 0 760 185" role="img" aria-label="Cadena de bordes de abababa: 5, 3, 1, 0">
+      <Fragment set:html={defs}/>
+      {[5,3,1,0].map((k,i)=><><rect x={35+i*185} y="55" width="135" height="70" rx="9" class={i===0?'c1':i===3?'c4':'c2'}/><text x={102+i*185} y="82" class="t b mono">{k}</text><text x={102+i*185} y="109" class="t s mono">{['ababa','aba','a','ε'][i]}</text>{i<3&&<line x1={170+i*185} y1="90" x2={216+i*185} y2="90" class="ln" marker-end={A}/>}</>)}
+      <text x="380" y="163" class="t s mu">Cada flecha aplica k ← π[k−1].</text>
+    </svg>}
+    {(fig==='trie'||fig==='fallas')&&<svg viewBox="0 0 760 355" role="img" aria-label="Trie de he, she, his y hers con enlaces de falla">
+      <Fragment set:html={defs}/>
+      {nodes.filter(n=>n[3]).map(n=><><line x1={node(n[3])[1]} y1={node(n[3])[2]+15} x2={n[1]} y2={n[2]-22} class="ln" marker-end={A}/><text x={(node(n[3])[1]+n[1])/2+12} y={(node(n[3])[2]+n[2])/2} class="t s mono">{n[0].at(-1)}</text></>)}
+      {fig==='fallas'&&[['sh','h'],['she','he'],['his','s'],['hers','s']].map(([a,b])=><line x1={node(a)[1]-18} y1={node(a)[2]} x2={node(b)[1]+18} y2={node(b)[2]} class="ln bad dash" marker-end={A}/>)}
+      {nodes.map(n=><><circle cx={n[1]} cy={n[2]} r="23" class={['he','she','his','hers'].includes(n[0])?'c4':'box'}/><text x={n[1]} y={n[2]+5} class="t s mono b">{n[0]}</text></>)}
+      <text x="420" y="340" class="t s mu">{fig==='fallas'?'Rojo: fallas no triviales; las demás llevan a ε.':'Verde: patrones terminales; cada nodo nombra su camino.'}</text>
+    </svg>}
+    {(fig==='sa'||fig==='lcp')&&<svg viewBox="0 0 760 325" role="img" aria-label="Tabla SA y LCP de banana dólar">
+      <text x="380" y="28" class="t b">banana$ · sufijos ordenados</text>
+      {['k','SA[k]','sufijo','LCP[k]'].map((h,j)=><text x={[70,190,430,670][j]} y="60" class="t s b">{h}</text>)}
+      {sa.map((i,k)=><><rect x="35" y={69+k*33} width="690" height="31" rx="4" class={fig==='lcp'&&k===3?'c1':k%2?'box':'cell-off'}/><text x="70" y={91+k*33} class="t s mono">{k}</text><text x="190" y={91+k*33} class="t s mono">{i}</text><text x="430" y={91+k*33} class="t s mono">{s.slice(i)}</text><text x="670" y={91+k*33} class="t s mono b">{lc[k]}</text></>)}
+      <text x="380" y="315" class="t s mu">LCP[k] compara con la fila anterior; LCP[0] = 0.</text>
+    </svg>}
+    {fig==='dc3'&&<svg viewBox="0 0 760 200" role="img" aria-label="Partición DC3 de banana dólar en B cero, B uno y B dos">
+      <text x="380" y="27" class="t b">S = banana$ · i módulo 3</text>
+      {[...s].map((c,i)=><><rect x={55+i*95} y="58" width="80" height="60" rx="7" class={['c1','c2','c3'][i%3]}/><text x={95+i*95} y="83" class="t s mono">{i}</text><text x={95+i*95} y="107" class="t b mono">{c}</text></>)}
+      <text x="380" y="152" class="t s">B₀ = 0, 3, 6 · B₁ = 1, 4 · B₂ = 2, 5</text><text x="380" y="180" class="t s mu">C = B₁ ∪ B₂: cuatro de siete sufijos.</text>
+    </svg>}
+    {fig==='merge'&&<svg viewBox="0 0 760 165" role="img" aria-label="Comparaciones para mezclar B cero con B uno y B dos">
+      <rect x="20" y="25" width="350" height="105" rx="9" class="c1"/><rect x="390" y="25" width="350" height="105" rx="9" class="c2"/>
+      <text x="195" y="54" class="t b">x∈B₀, y∈B₁</text><text x="195" y="84" class="t s mono">(S[x], r[x+1])</text><text x="195" y="110" class="t s mono">vs (S[y], r[y+1])</text>
+      <text x="565" y="54" class="t b">x∈B₀, y∈B₂</text><text x="565" y="84" class="t s mono">(S[x], S[x+1], r[x+2])</text><text x="565" y="110" class="t s mono">vs (S[y], S[y+1], r[y+2])</text>
+      <text x="380" y="155" class="t s mu">El rango resuelve el resto del sufijo.</text>
+    </svg>}
+    {fig==='tree-banana'&&<svg viewBox="0 0 760 330" role="img" aria-label="Suffix tree comprimido de banana dólar">
+      {[[380,35,55,105,'$'],[380,35,220,105,'a'],[380,35,420,105,'banana$'],[380,35,610,105,'na'],[220,105,125,195,'$'],[220,105,275,195,'na'],[275,195,220,280,'$'],[275,195,335,280,'na$'],[610,105,550,195,'$'],[610,105,680,195,'na$']].map(([x,y,u,v,l])=><><line x1={x} y1={Number(y)+12} x2={u} y2={Number(v)-15} class="ln"/><text x={(Number(x)+Number(u))/2} y={(Number(y)+Number(v))/2} class="t s mono">{l}</text></>)}
+      {[[380,35,'ε'],[220,105,'a'],[275,195,'ana'],[610,105,'na']].map(([x,y,l])=><><circle cx={x} cy={y} r="22" class="c2"/><text x={x} y={Number(y)+5} class="t s mono">{l}</text></>)}
+      {[[55,105,'6'],[125,195,'5'],[220,280,'3'],[335,280,'1'],[420,105,'0'],[550,195,'4'],[680,195,'2']].map(([x,y,l])=><><circle cx={x} cy={y} r="19" class="c4"/><text x={x} y={Number(y)+5} class="t s mono">{l}</text></>)}
+      <text x="380" y="319" class="t s mu">Las hojas indican el inicio de cada sufijo.</text>
+    </svg>}
+    {fig==='tree-abab'&&<svg viewBox="0 0 760 265" role="img" aria-label="Suffix tree de abab dólar con suffix links ab a b y b a raíz">
+      <Fragment set:html={defs}/>
+      {[[380,35,190,105,'ab'],[380,35,540,105,'b'],[380,35,670,105,'$'],[190,105,85,195,'ab$'],[190,105,270,195,'$'],[540,105,465,195,'ab$'],[540,105,610,195,'$']].map(([x,y,u,v,l])=><><line x1={x} y1={Number(y)+12} x2={u} y2={Number(v)-15} class="ln"/><text x={(Number(x)+Number(u))/2} y={(Number(y)+Number(v))/2} class="t s mono">{l}</text></>)}
+      {[[380,35,'ε'],[190,105,'ab'],[540,105,'b']].map(([x,y,l])=><><circle cx={x} cy={y} r="23" class="c2"/><text x={x} y={Number(y)+5} class="t s mono">{l}</text></>)}
+      {[[85,195,'0'],[270,195,'2'],[465,195,'1'],[610,195,'3'],[670,105,'4']].map(([x,y,l])=><><circle cx={x} cy={y} r="19" class="c4"/><text x={x} y={Number(y)+5} class="t s mono">{l}</text></>)}
+      <path d="M 210 106 Q 365 45 520 106" class="ln bad dash" marker-end={A}/><path d="M 550 85 Q 665 2 405 28" class="ln bad dash" marker-end={A}/>
+      <text x="380" y="249" class="t s mu">Enlaces rojos: ab → b → ε.</text>
+    </svg>}
+    {fig==='activo'&&<svg viewBox="0 0 760 215" role="img" aria-label="Punto activo raíz arista a longitud dos en abcab">
+      <circle cx="110" cy="82" r="27" class="c2"/><text x="110" y="87" class="t s">raíz</text><line x1="140" y1="82" x2="650" y2="82" class="ln"/>
+      <text x="390" y="63" class="t mono b">a  b  c  a  b</text><circle cx="310" cy="82" r="12" class="c5"/><text x="310" y="118" class="t s b">punto activo</text>
+      <rect x="220" y="143" width="320" height="42" rx="8" class="c1"/><text x="380" y="171" class="t s mono">(raíz, arista a, longitud 2)</text>
+      <text x="380" y="205" class="t s mu">Se consumió «ab» de la arista.</text>
+    </svg>}
+  </div>
+  <figcaption><slot /></figcaption>
+</figure>

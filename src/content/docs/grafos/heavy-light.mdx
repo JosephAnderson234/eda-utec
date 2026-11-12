@@ -1,0 +1,170 @@
+---
+title: 'Heavy-Light: caminos como pocos rangos'
+description: 'Grafos dinámicos I (semana 14): cadenas pesadas, numeración, consultas y actualizaciones de camino, subárboles y LCA.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import GrafosFig from '../../../components/fig/GrafosFig.astro';
+
+<EnSimple>
+Piensa en una ciudad con avenidas largas y calles pequeñas. Para ir de una casa a otra, recorres tramos de avenida y cambias de avenida unas pocas veces. Heavy-Light elige esas «avenidas» en un árbol: convierte un camino en pocos tramos consecutivos de un arreglo.
+</EnSimple>
+
+<Objetivos objetivos={[
+  'Demostrar por qué una arista liviana reduce el tamaño del subárbol a menos de la mitad.',
+  'Construir tamaños, hijo pesado, cabeza y posición con dos DFS.',
+  'Partir un camino en rangos y justificar los costos de consulta, actualización y LCA.',
+  'Reconocer un subárbol como un solo rango.'
+]} prerrequisitos={[{t:'RMQ, cartesian tree y LCA',href:'/estaticos/rmq-lca/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
+
+## 1. De caminos a cadenas
+
+El tiempo de entrada de un DFS vuelve **contiguo** cada subárbol, pero un camino entre dos nodos puede subir y bajar por ramas diferentes. La idea es conservar un hijo principal por nodo.
+
+**Definición formal.** En un árbol enraizado, $\text{sz}(v)$ cuenta los nodos del subárbol de $v$. El **hijo pesado** de $u$ es un hijo de tamaño máximo; se desempata de cualquier forma. Su arista es **pesada** y las demás, **livianas**. Las aristas pesadas forman cadenas disjuntas.
+
+<GrafosFig fig="arbol">
+**Cómo leerlo.** Árbol de 11 nodos de las diapositivas. Las aristas verdes son pesadas. Por ejemplo, desde 2 se sigue a 5 (tamaño 3), mientras 6 (tamaño 2) empieza otra cadena. Debajo de cada nodo está su posición verificada por el programa.
+</GrafosFig>
+
+**Correctitud de la cota.** Si $(u,v)$ es liviana, existe otro hijo $w$ pesado con $\text{sz}(w)\ge\text{sz}(v)$. Los dos subárboles son disjuntos, así que $2\text{sz}(v)\le\text{sz}(u)-1$. Por ello $\text{sz}(v)<\text{sz}(u)/2$. Cada arista liviana al bajar reduce el tamaño a menos de la mitad: hay a lo más $\lfloor\lg n\rfloor$ aristas livianas de raíz a hoja y a lo más $\lfloor\lg n\rfloor+1$ cadenas. Un camino entre dos nodos se compone de dos recorridos hacia su LCA: a lo más $2(\lfloor\lg n\rfloor+1)$ tramos de cadena.
+
+<Predice pregunta="Si el hijo pesado y el liviano tienen el mismo tamaño, ¿se pierde la cota de la mitad?">
+No. Incluso en empate, ambos caben en el padre y queda además el propio padre: $2\text{sz}(v)\le\text{sz}(u)-1$.
+</Predice>
+
+## 2. Dos DFS y tres clases de intervalos
+
+El primer DFS calcula tamaños y el hijo pesado. El segundo visita **primero** al pesado; asigna `pos[v]` y `tope[v]`, la cabeza de su cadena (las diapositivas la llaman **tope**). La numeración sigue siendo un DFS completo.
+
+```text
+dfs_tamaño(v, padre):
+  sz[v] ← 1; pesado[v] ← ninguno
+  para cada hijo w de v:
+    dfs_tamaño(w, v); sz[v] ← sz[v] + sz[w]
+    si sz[w] supera al máximo previo: pesado[v] ← w
+
+descomponer(v, cabeza):
+  tope[v] ← cabeza; pos[v] ← siguiente; siguiente ← siguiente + 1
+  si existe pesado[v]: descomponer(pesado[v], cabeza)
+  para cada otro hijo w: descomponer(w, w)
+```
+
+<GrafosFig fig="cadenas">
+**Cómo leerlo.** El arreglo, de izquierda a derecha, es $1,2,5,8,9,6,10,3,7,11,4$. Cada color marca una cadena; las posiciones inferiores son `pos()`. Las cadenas son tramos contiguos, aunque entre cadenas se intercalen ramas livianas.
+</GrafosFig>
+
+Se obtienen tres tipos de intervalo: tramo de una cadena desde su cabeza hasta $v$, $[\text{pos}(\text{tope}(v)),\text{pos}(v)]$; subárbol de $v$, $[\text{pos}(v),\text{sal}(v))$ con $\text{sal}(v)=\text{pos}(v)+\text{sz}(v)$ (las diapositivas guardan `sal[v]` al terminar el DFS de $v$); y camino entre dos nodos, unión de $O(\lg n)$ tramos de cadena. Los dos primeros usan convenciones distintas: tramo cerrado, subárbol semiabierto.
+
+**Correctitud.** Visitar primero al pesado deja los nodos de una cadena consecutivos. Como el segundo recorrido es DFS, termina todo el subárbol de $v$ antes de salir: ocupa exactamente `sz[v]` posiciones a partir de `pos[v]`.
+
+**Complejidad.** Cada DFS visita nodos y aristas una vez: $O(n)$ tiempo y espacio. Un segment tree sobre el arreglo sirve para los rangos.
+
+## 3. Subir por cadenas y consultar un camino
+
+Mientras las cabezas difieran, se procesa la cadena cuya cabeza es más profunda y se salta al padre de esa cabeza. Al coincidir las cabezas, queda el intervalo entre ambos nodos.
+
+```text
+consultar_camino(u, v):
+  respuesta ← neutro
+  mientras tope[u] ≠ tope[v]:
+    si profundidad[tope[u]] < profundidad[tope[v]]: intercambiar(u, v)
+    combinar respuesta con consultar(pos[tope[u]], pos[u])
+    u ← padre[tope[u]]
+  si profundidad[u] > profundidad[v]: intercambiar(u, v)
+  combinar respuesta con consultar(pos[u], pos[v])
+  devolver respuesta
+```
+
+**Correctitud.** La cabeza más profunda está por debajo del LCA; su tramo hasta el extremo pertenece íntegramente al camino. El salto quita justo ese tramo y cruza una arista liviana. Al final, los extremos están en una cadena y se procesa el tramo restante. Para una operación no conmutativa, como concatenar, hay que guardar por separado el orden de los tramos de cada extremo.
+
+<GrafosFig fig="camino">
+**Cómo leerlo.** El camino 10→9 pasa por 6, 2 y 5. Sus tres tramos son [5,6], [1,2] y [4,4]; la figura resalta los nodos del camino.
+</GrafosFig>
+
+**Traza 8→11 (diapositivas).**
+
+| Paso | Extremo movido | Cabeza | Rango inclusivo | Nodos |
+| --- | --- | --- | --- | --- |
+| 1 | 11 | 3 | [7,9] | 3, 7, 11 |
+| 2, misma cadena | 8 | 1 | [0,3] | 1, 2, 5, 8 |
+
+Resultado: 2 rangos y 7 nodos.
+
+**Traza 10→9 (diapositivas).**
+
+| Paso | Extremo movido | Cabeza | Rango inclusivo | Nodos |
+| --- | --- | --- | --- | --- |
+| 1 | 9 | 9 | [4,4] | 9 |
+| 2 | 10 | 6 | [5,6] | 6, 10 |
+| 3, misma cadena | 5 | 1 | [1,2] | 2, 5 |
+
+Resultado: 3 rangos y los nodos 9, 6, 10, 2, 5. Ambas tablas se reprodujeron con código.
+
+**Complejidad.** Cada iteración cruza una arista liviana de uno de los dos extremos: $O(\lg n)$ rangos. Cada consulta de segment tree cuesta $O(\lg n)$, luego el camino cuesta $O(\lg^2 n)$. Actualizar un camino usa el mismo bucle y una actualización de rango (por ejemplo, suma con propagación perezosa): también $O(\lg^2 n)$. Un subárbol es un solo rango: $O(\lg n)$.
+
+## 4. LCA y comparación de costos
+
+Para hallar el LCA se ejecuta el mismo bucle **sin consultar rangos**. Cuando las cabezas coinciden, el nodo menos profundo es el LCA. El costo es $O(\lg n)$ tiempo con $O(n)$ memoria para la descomposición. Binary lifting también responde en $O(\lg n)$, pero su tabla de saltos ocupa $O(n\lg n)$; Euler tour con RMQ estático puede responder en $O(1)$ después de preprocesar.
+
+El $O(\lg^2 n)$ de caminos puede bajar a $O(\lg n)$ con estructuras más finas por cadena, sesgadas por tamaños, que amortizan conjuntamente saltos y búsquedas. Esa es la idea avanzada que las diapositivas relacionan con Link-Cut Trees; un segment tree estándar conserva la cota $O(\lg^2 n)$.
+
+<Practica nivel={1} titulo="Resuelto: subárbol de 5 en el árbol de clase">
+El programa obtuvo $\text{pos}(5)=2$ y $\text{sz}(5)=3$. Su rango es $[2,5)$: posiciones 2, 3, 4; nodos 5, 8, 9.
+</Practica>
+
+<Practica nivel={2} titulo="Completa: camino de 8 a 11">
+La cabeza de 11 es 3, con rango pendiente **___**. Después se salta a **___**; el rango final es **___**.
+<Solucion>Los huecos son $[7,9]$, nodo 1 y $[0,3]$.</Solucion>
+</Practica>
+
+<Practica nivel={3} titulo="Solo: parte el camino 10→9 en intervalos">
+Escribe cabezas, saltos e intervalos sin mirar la tabla.
+<Solucion>Primero cabeza 9: $[4,4]$, salto a 5. Luego cabeza 6: $[5,6]$, salto a 2. Finalmente ambos están bajo cabeza 1: $[1,2]$.</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante, ejemplo propio: ¿qué cambia si el valor está en la arista?">
+<Solucion>Se guarda cada arista en la posición de su extremo hijo. En el tramo final de la misma cadena se excluye la posición del LCA: para $u$ ancestro de $v$ se consulta $[\text{pos}(u)+1,\text{pos}(v)]$. Los tramos completos al saltar sí incluyen la cabeza, cuya posición representa la arista hacia su padre.</Solucion>
+</Practica>
+
+<Detective titulo="El LCA contado dos veces" sintoma="La suma de valores de un camino falla solo cuando los extremos están en ramas distintas. El programa consulta ambos tramos hasta el LCA, incluyéndolo en los dos." pista="Anota las posiciones que devuelve cada mitad para 10→9.">
+**Causa:** se sumó dos veces el LCA. **Corrección:** usar el bucle de cabezas y un único intervalo final, como en el pseudocódigo. **Verificación:** comparar caminos de ramas distintas y de una misma cadena contra un recorrido directo.
+</Detective>
+
+## 5. Problemas de práctica
+
+| Problema | Herramienta |
+| --- | --- |
+| CSES 1135 — Distance Queries | LCA y profundidades |
+| CSES 1137 — Subtree Queries | rango de subárbol |
+| CSES 1138 — Path Queries | tramos de camino |
+| CSES 2134 — Path Queries II | máximo en camino con segment tree |
+
+<Errores errores={[
+  {mal:'«Un camino es un intervalo DFS.»',bien:'Un subárbol sí; un camino se divide en $O(\\lg n)$ intervalos de cadena.'},
+  {mal:'«Cualquier hijo de una arista liviana puede medir casi todo el árbol.»',bien:'Su tamaño es estrictamente menor que la mitad del tamaño del padre.'},
+  {mal:'«LCA necesita consultar el segment tree.»',bien:'Basta subir cabezas y tomar el extremo menos profundo del tramo final.'}
+]} />
+
+<Quiz client:visible id="graf-heavy-light" preguntas={[
+  {q:'¿Qué hijo se elige pesado?',opts:['El de mayor tamaño de subárbol','El de menor profundidad','El primero del DFS'],ok:0},
+  {q:'¿Cuántas cadenas toca un camino?',opts:['$O(n)$','$O(\\lg n)$','$O(1)$ siempre'],ok:1},
+  {q:'¿Cuántos DFS construyen la numeración?',opts:['Uno','Dos','Tres'],ok:1},
+  {q:'El subárbol de 5 en el ejemplo ocupa…',opts:['$[2,5)$','$[2,5]$','$[5,8)$'],ok:0},
+  {q:'¿Cuánto cuesta un camino con segment tree?',opts:['$O(\\lg n)$','$O(\\lg^2 n)$','$O(n)$'],ok:1},
+  {q:'Para hallar LCA con HLD…',opts:['Se consultan todos los rangos','Se suben cabezas y se compara la profundidad final','Se calcula un nuevo DFS por consulta'],ok:1}
+]} />
+
+<Feynman consigna="Explica por qué un camino cruza pocas cadenas y cómo eso se convierte en consultas de rango." claves={['Define el hijo pesado por tamaño.','Demuestra la reducción de una arista liviana.','Describe cabeza y posición.','Distingue consulta de camino, subárbol y LCA.']} />
+<Dominio client:visible id="heavy-light" />
+<Fuente archivos={['CS3014 · Dynamic Graphs I (semana 14, 10/11/2026)']} />

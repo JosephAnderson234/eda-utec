@@ -1,0 +1,208 @@
+---
+title: 'Suffix tree y Ukkonen'
+description: 'Strings III: árbol de sufijos comprimido, enlaces de sufijo y construcción en línea con Ukkonen.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import StringsFig from '../../../components/fig/StringsFig.astro';
+
+<EnSimple>
+Si escribes todos los finales de una palabra en un árbol, muchas rutas tienen tramos largos sin bifurcaciones. El **suffix tree** reemplaza cada tramo por una sola arista que apunta a un segmento del texto. Así puedes seguir un patrón letra por letra y encontrarlo en tiempo proporcional a su longitud. Ukkonen construye ese árbol mientras recibe los caracteres, sin reconstruirlo desde cero.
+</EnSimple>
+
+<Objetivos objetivos={[
+  'Comprimir un trie de sufijos y razonar el límite de nodos y el costo de búsqueda.',
+  'Relacionar suffix tree con SA + LCP y definir suffix links.',
+  'Seguir las reglas, el resto y el punto activo de Ukkonen fase a fase.',
+]} prerrequisitos={[{t:'Suffix array y LCP',href:'/strings/suffix-array/'},{t:'LCA en árboles',href:'/estaticos/rmq-lca/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
+
+## 1. Del trie de sufijos al árbol comprimido
+
+Para $S$ de longitud $n$ añadimos un `$` único y menor que las demás letras. El **trie de sufijos** inserta cada $S[i..]$ carácter por carácter. Puede ocupar $\Theta(n^2)$ nodos, porque muchos tramos solo tienen un hijo. Al comprimir cada tramo en una arista, la etiqueta se guarda como un par de índices $[l,r)$ del texto: representa $S[l..r-1]$ y ocupa espacio constante.
+
+Un **suffix tree** cumple: aristas no vacías, hijos de un nodo con primeras letras distintas, nodos internos no raíz con al menos dos hijos, y un camino raíz–hoja por cada sufijo. Para un texto original de longitud $n$ hay $n+1$ hojas y a lo sumo $n$ nodos internos, incluida la raíz: **a lo sumo $2n+1$ nodos**. El centinela asegura que ningún sufijo termine en mitad de una arista.
+
+<StringsFig fig="tree-banana">**Cómo leerlo.** Cada hoja lleva la posición inicial de su sufijo de `banana$`. Una arista con varias letras guarda solo sus límites en el texto; los nodos internos representan `a`, `ana` y `na`.</StringsFig>
+
+Para buscar $P$, desde la raíz se elige la arista cuyo primer carácter coincide y se compara el patrón a lo largo de sus etiquetas. Si $P$ se agota, existe: las hojas bajo el punto alcanzado dan sus posiciones. Se leen a lo sumo $|P|$ caracteres, así la decisión cuesta $O(|P|)$ y listar las posiciones añade el costo de salida. `ana` en `banana` conduce a las hojas 3 y 1.
+
+Para dos textos $S$ y $T$, un **árbol generalizado** de `S#T$` usa separadores nuevos y distintos; cada hoja se marca según su origen. El nodo interno más profundo con hojas de ambos orígenes representa una subcadena común más larga. Un recorrido posterior calcula esas marcas en tiempo lineal.
+
+## 2. SA + LCP contiene la misma estructura
+
+Las hojas de izquierda a derecha están en orden SA. La profundidad del ancestro donde se separan dos hojas vecinas es su LCP. A partir de SA y LCP se puede construir el árbol en $O(n)$ con una **pila** de la rama derecha:
+
+```text
+para k ← 0 hasta n−1:
+  ℓ ← LCP[k]
+  desapilar nodos mientras la profundidad del tope > ℓ
+  si la profundidad del tope < ℓ:
+    partir la arista hacia la hoja anterior a profundidad ℓ
+    apilar el nuevo nodo interno
+  añadir la hoja SA[k] como hijo del nodo a profundidad ℓ
+```
+
+La implementación debe conservar la última rama retirada para partir su arista cuando $\ell$ queda entre dos profundidades. Cada nodo se apila y desapila una vez. En `banana$`, SA es $[6,5,3,1,0,4,2]$ y LCP anterior es $[0,0,1,3,0,0,2]$:
+
+| fila $k$ | LCP | operación |
+| --- | --- | --- |
+| 0–1 | 0 | hojas 6 y 5 bajo la raíz |
+| 2 | 1 | partir ruta a hoja 5: nace nodo `a`; añadir hoja 3 |
+| 3 | 3 | partir ruta a hoja 3: nace `ana`; añadir hoja 1 |
+| 4 | 0 | volver a raíz; añadir hoja 0 |
+| 5 | 0 | añadir hoja 4 |
+| 6 | 2 | partir ruta a hoja 4: nace `na`; añadir hoja 2 |
+
+<StringsFig fig="lcp">**Cómo leerlo.** Las profundidades positivas 1, 3 y 2 de la tabla originan exactamente los nodos internos `a`, `ana` y `na` al procesar los sufijos en orden.</StringsFig>
+
+## 3. Enlaces de sufijo
+
+La **etiqueta de un nodo** es la concatenación de aristas desde la raíz. Si la etiqueta de un nodo interno es $x\alpha$, con $x$ un carácter, su **suffix link** apunta al nodo cuya etiqueta es $\alpha$: se quita la primera letra. En `banana$`, la cadena es `ana → na → a → raíz`; en `abab$`, `ab → b → raíz`.
+
+<StringsFig fig="tree-abab">**Cómo leerlo.** Los números de las hojas son los inicios de los cinco sufijos de `abab$`. Las flechas rojas punteadas son enlaces de sufijo: quitan la primera letra de `ab` y luego de `b`.</StringsFig>
+
+¿Por qué existe el nodo destino? Si $x\alpha$ es interno, hay dos continuaciones distintas después de él. Al quitar el primer carácter de ambas apariciones, $\alpha$ conserva esas dos continuaciones; por eso también se bifurca y es un nodo interno, o es la raíz si $\alpha$ es vacío. Los enlaces permiten pasar del sufijo actual al siguiente sin volver a caminar desde la raíz.
+
+## 4. Ukkonen: árbol implícito y tres reglas
+
+Antes de leer `$`, algunos sufijos son prefijos de otros: pueden terminar dentro de una arista o en un nodo interno. El **árbol implícito** representa todos los sufijos del prefijo leído, aunque no todos sean hojas explícitas. Ukkonen procesa una **fase** por carácter nuevo $c=S[i]$.
+
+| Regla | Situación | Acción |
+| --- | --- | --- |
+| 1 | el sufijo ya termina en una hoja | la arista abierta se alarga automáticamente |
+| 2a | termina en un nodo sin arista por $c$ | crear hoja por $c$ |
+| 2b | termina dentro de arista y el siguiente carácter no es $c$ | partir arista y crear hoja |
+| 3 | ya existe continuación por $c$ | avanzar el punto activo y terminar la fase |
+
+Una **arista abierta** de hoja guarda su extremo derecho como «fin actual»: cuando $i$ aumenta, todas esas hojas crecen a la vez en $O(1)$. La regla 3 puede terminar la fase porque todo sufijo más corto del sufijo que ya tiene continuación $c$ también la tiene.
+
+El contador **resto** cuenta los sufijos pendientes, siempre los más cortos del prefijo actual. Sube uno al comenzar la fase, baja uno por cada regla 2 y queda sin resolver tras una regla 3. El **punto activo** localiza el pendiente más largo: $(\text{nodo activo},\text{arista activa},\text{longitud activa})$.
+
+<StringsFig fig="activo">**Cómo leerlo.** Tras leer `abcab`, el sufijo pendiente `ab` acaba dos caracteres dentro de una arista que sale de la raíz por `a`. El punto activo guarda esa ubicación.</StringsFig>
+
+Tras una regla 2, el siguiente pendiente elimina la primera letra. Si el nodo activo es interno, se sigue su suffix link. Si es la raíz, se reduce la longitud activa en uno y se toma la arista que empieza en el siguiente carácter del sufijo pendiente. **Skip/count** permite atravesar una arista completa comparando longitudes, sin revisar sus caracteres: si la longitud activa alcanza la longitud de la arista, se baja al nodo final y se descuenta esa longitud.
+
+```text
+Ukkonen(S):
+  raíz ← nodo inicial; resto ← 0
+  activo ← (raíz, sin arista, 0); finAbierto ← −1
+  para i ← 0 hasta |S|−1:
+    finAbierto ← i; resto ← resto+1; ultimoNuevo ← ninguno
+    mientras resto > 0:
+      si longitudActiva = 0: aristaActiva ← i−resto+1
+      si no hay arista desde nodoActivo por S[aristaActiva]:
+        crear hoja con inicio i−resto+1 y fin abierto      // regla 2a
+        enlazar ultimoNuevo con nodoActivo si existe
+      si hay arista:
+        si longitudActiva ≥ longitud(arista):
+          bajar por skip/count; continuar
+        si carácter siguiente de arista = S[i]:
+          enlazar ultimoNuevo con nodoActivo si procede
+          longitudActiva ← longitudActiva+1; terminar fase // regla 3
+        si no:
+          partir arista; crear nodo interno y hoja          // regla 2b
+          enlazar ultimoNuevo con el nodo nuevo si existe
+          ultimoNuevo ← nodo nuevo
+      resto ← resto−1
+      si nodoActivo = raíz y longitudActiva > 0:
+        longitudActiva ← longitudActiva−1
+        aristaActiva ← i−resto+1
+      si nodoActivo ≠ raíz: nodoActivo ← suffixLink(nodoActivo)
+  cerrar todas las aristas abiertas al terminar
+```
+
+La variable `ultimoNuevo` conecta los nodos internos nacidos en la misma fase: todos representan sufijos consecutivos. Si no queda uno nuevo donde enlazar, se apunta al nodo activo o a la raíz según el caso. El pseudocódigo deja la representación de hijos y extremos abiertos como operaciones abstractas; son detalles de implementación, no pasos adicionales del algoritmo.
+
+<Predice pregunta="En abcab, llegan x y luego a. ¿Por qué la fase x hace más trabajo que la fase a?">
+`x` no prolonga `ab` ni `b`: obliga a partir y añadir hojas hasta vaciar el resto. La `a` siguiente ya aparece como continuación de un sufijo pendiente y activa la regla 3.
+</Predice>
+
+## 5. Traza de abcabxabcd$ fase a fase
+
+La tabla resume los **pendientes al final** de cada fase; las hojas previas se alargan por la regla 1. Los números de reglas 2 incluyen hojas nuevas y, cuando corresponde, particiones.
+
+| $i$ | letra | reglas explícitas | resto final | punto activo al final |
+| --- | --- | --- | --- | --- |
+| 0 | a | 2a | 0 | raíz |
+| 1 | b | 2a | 0 | raíz |
+| 2 | c | 2a | 0 | raíz |
+| 3 | a | 3 | 1 | raíz, a, 1 |
+| 4 | b | 3 | 2 | raíz, a, 2 |
+| 5 | x | 2b para ab; 2b para b; 2a para x | 0 | raíz |
+| 6 | a | 3 | 1 | raíz, a, 1 |
+| 7 | b | 3 | 2 | raíz, a, 2 |
+| 8 | c | 3 tras skip/count | 3 | nodo ab, c, 1 |
+| 9 | d | 2b para abc; 2b para bc; 2b para c; 2a para d | 0 | raíz |
+| 10 | $ | 2a para $ | 0 | raíz |
+
+En la fase 5 se crean los nodos internos `ab` y `b`, enlazados `ab → b → raíz`. En la fase 9 nacen `abc`, `bc` y `c`, con enlaces `abc → bc → c → raíz`; además aparece la hoja `d`. La fase final con `$` convierte todos los sufijos en hojas explícitas.
+
+**Por qué es $O(n)$.** Cada regla 2 crea una hoja y hay como máximo $n$ hojas; cada fase termina con a lo sumo una regla 3. Las aristas abiertas hacen gratuita la regla 1. Cada avance de skip/count y cada seguimiento de suffix link se amortiza contra el progreso y las disminuciones de la longitud activa: en total son $O(n)$ recorridos de aristas. Con acceso $O(1)$ al hijo por carácter y alfabeto acotado, tiempo y espacio son $O(n)$; con mapas balanceados para los hijos, la búsqueda de arista puede añadir $O(\lg|\Sigma|)$.
+
+<Practica nivel={1} titulo="Resuelto: buscar ana en el árbol de banana$">
+Desde la raíz se toma la arista `a` y luego `na`. El patrón se agota en el nodo `ana`; bajo él están las hojas 3 y 1. Se compararon tres letras del patrón: costo $O(3)$ más dos respuestas.
+</Practica>
+
+<Practica nivel={2} titulo="Completa los enlaces de abab$">
+El nodo interno `ab` apunta a $\_\_$. Ese nodo apunta a $\_\_$.
+<Solucion>`ab → b → raíz`. Cada paso quita el primer carácter de la etiqueta.</Solucion>
+</Practica>
+
+<Practica nivel={3} titulo="Solo: fase 5 de abcabxabcd$">
+Antes de leer `x` quedan dos pendientes. ¿Cuántas reglas 2 se ejecutan y qué nodos internos nacen?
+<Solucion>El resto sube de 2 a 3. Se ejecutan tres reglas 2: se parten las rutas de `ab` y `b`, nacen los nodos `ab` y `b`, y se crea la hoja `x`. El resto termina en cero.</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: omitir el centinela">
+¿Qué cambia en el árbol implícito de `abab` si se detiene el algoritmo sin añadir `$`?
+<Solucion>Los sufijos `ab` y `b` son prefijos de sufijos más largos y pueden terminar en puntos implícitos, no en hojas separadas. Con `$`, cada sufijo termina en una hoja propia.</Solucion>
+</Practica>
+
+<Detective titulo="Resto interpretado como índice" sintoma="Al llegar a x en abcabx solo se añade una hoja y desaparecen las apariciones de abx y bx." pista="Tras las reglas 3 de a y b, ¿cuántos sufijos quedaron pendientes?">
+`resto` es la **cantidad** de pendientes, no una posición. Antes de `x` vale 2; al empezar la fase sube a 3. Hay que aplicar tres reglas 2 y reducirlo a cero. Verifica que aparecen los sufijos que empiezan en 3, 4 y 5.
+</Detective>
+
+## 6. SA frente a suffix tree y práctica
+
+| Propiedad | SA + LCP | Suffix tree |
+| --- | --- | --- |
+| Memoria | arreglos de enteros, compacta | hasta $2n+1$ nodos con aristas e hijos |
+| Búsqueda simple | $O(\lvert P\rvert\lg n)$; con ayudas de LCP, $O(\lvert P\rvert+\lg n)$ | $O(\lvert P\rvert)$ |
+| Construcción | $O(n\lg n)$ por duplicación; $O(n)$ con SA-IS | $O(n)$ con Ukkonen |
+| Construcción en línea | no en los métodos vistos | sí, fase por carácter |
+| Consultas estructurales | LCP y RMQ | recorridos y ancestros del árbol |
+
+| Problema | Idea |
+| --- | --- |
+| CSES — Repeating Substring | nodo interno más profundo |
+| CSES — Distinct Substrings | longitudes de aristas o SA + LCP |
+| Library Checker — Suffix Array | construir SA, luego árbol con LCP si hace falta |
+
+<Errores errores={[
+  {mal:'«Cada sufijo del árbol implícito termina en una hoja».',bien:'Antes del centinela algunos terminan <strong>dentro de aristas</strong> o en nodos internos.'},
+  {mal:'«Resto es una posición del texto».',bien:'Cuenta los <strong>sufijos pendientes</strong>; sube uno por fase y baja por cada regla 2.'},
+  {mal:'«Skip/count compara todos los caracteres de una arista».',bien:'Compara longitudes y salta la arista completa de una vez.'},
+]} />
+
+<Quiz client:visible id="str-suffix-tree" preguntas={[
+  {q:'¿Cuántas hojas tiene el árbol de banana$?',opts:['6','7','8'],ok:1,why:'Hay una hoja por cada uno de los siete sufijos, incluido $.'},
+  {q:'¿Qué representa [l,r) en una arista?',opts:['Índices del texto','Dos nodos','Un intervalo del SA'],ok:0,why:'La etiqueta es la subcadena S[l..r−1].'},
+  {q:'¿Qué enlace sale del nodo ab en abab$?',opts:['a','b','raíz'],ok:1,why:'Se elimina la primera letra de ab.'},
+  {q:'¿Qué hace la regla 3?',opts:['Parte una arista','Termina la fase si ya hay continuación','Crea una hoja'],ok:1,why:'Los sufijos más cortos también tienen esa continuación.'},
+  {q:'¿Cuánto vale resto tras leer abcab?',opts:['0','1','2'],ok:2,why:'Las fases a y b terminan con regla 3 y dejan dos pendientes.'},
+  {q:'¿Qué permite buscar un patrón en O(|P|)?',opts:['Seguir aristas comprimidas comparando el patrón','Leer todos los sufijos','Ordenar hojas por separado'],ok:0,why:'Solo se inspeccionan los caracteres del patrón.'},
+]} />
+
+<Feynman consigna="Explica por qué Ukkonen puede construir el árbol en tiempo lineal." claves={['Aristas abiertas alargan hojas sin trabajo por sufijo.','Regla 3 detiene una fase.','Resto y punto activo recuerdan el trabajo pendiente.','Suffix links y skip/count evitan volver a recorrer caminos largos.']} />
+<Dominio client:visible id="suffix-tree" />
+<Fuente archivos={['Sem13_Strings_III.pdf','Sem13_Strings_II.pdf']} />

@@ -1,0 +1,167 @@
+---
+title: 'Tango Trees y Signed-Greedy'
+description: 'Dynamic Optimality V (semana 9): árbol de referencia, hijos preferidos y caminos preferidos, la relación exacta con Wilber-1, árboles auxiliares de tamaño O(lg n), el truco de cortar por profundidad como rango de claves, por qué Tango es O(lg lg n)-competitivo, y Signed-Greedy como cota inferior a un factor 4 de la mejor de rectángulos.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
+
+<EnSimple>
+Un **Tango Tree** es un BST que se «organiza» según por dónde vienen pasando las búsquedas.
+- Imagina un árbol de referencia fijo y perfectamente balanceado. Cada nodo **recuerda por cuál hijo pasó la última búsqueda** (su «hijo preferido»). Siguiendo esas preferencias, el árbol queda partido en **caminos**.
+- Cada camino se guarda **comprimido** en un árbol balanceado pequeño (de $O(\lg n)$ nodos), así que moverse dentro de un camino cuesta solo $O(\lg\lg n)$.
+- Una búsqueda solo paga extra cuando **se sale** de un camino. Y cada salida es exactamente un **zigzag de Wilber-1**, que cualquier árbol también tiene que pagar. Resultado: Tango cuesta como mucho $O(\lg\lg n)$ veces lo que el mejor árbol posible.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Construir los <strong>caminos de hijo preferido</strong> sobre un árbol de referencia y relacionar cada cambio con una alternancia de Wilber-1.',
+		'Explicar el costo de un acceso: $O(\\lg\\lg n)$ por cada cruce entre caminos.',
+		'Justificar el truco de las actualizaciones: <strong>cortar por profundidad es cortar un rango de claves</strong>.',
+		'Definir Signed-Greedy, demostrar que está a un factor 4 de la mejor cota de rectángulos y explicar por qué no es un algoritmo.',
+	]}
+	prerrequisitos={[{ t: 'Cotas de Wilber', href: '/optimalidad/wilber/' }]}
+	perfiles={['visual', 'socratico', 'debate']}
+/>
+
+## 1. Hijos preferidos y caminos preferidos
+
+**Definición.** Se fija un árbol de referencia $P$, **perfectamente balanceado** (altura $\Theta(\lg n)$), sobre las mismas claves. Cada nodo de $P$ tiene un puntero hacia su **hijo preferido**: el hijo por el que pasó el acceso más reciente dentro de su subárbol.
+
+**Observación.** Como la altura de $P$ es $\Theta(\lg n)$, los punteros de hijo preferido forman **caminos disjuntos** de a lo más $O(\lg n)$ nodos cada uno, que particionan todo $P$.
+
+<OptimalidadFig fig="preferidos">
+**Cómo leerlo.** Las flechas verdes gruesas son los hijos preferidos. Siguiéndolas desde arriba salen los caminos $\{r, a, d\}$ y $\{b, e\}$, y los caminos triviales $\{c\}$ y $\{f\}$: todos disjuntos y cubriendo todo $P$ (ejemplo de clase).
+</OptimalidadFig>
+
+<Predice pregunta="Si una búsqueda baja por un hijo que **no** es el preferido de algún nodo $y$, ¿qué dos cosas pasan a la vez?">
+1. El hijo por el que se bajó **se vuelve el nuevo hijo preferido** de $y$.
+2. La cota de **Wilber-1 aumenta exactamente en 1**: es la misma alternancia (izquierda ↔ derecha en $y$) que ya contábamos ahí.
+
+Por eso el número de cambios de hijo preferido **es** Wilber-1 (con el árbol de referencia $P$).
+</Predice>
+
+## 2. ¿Por qué O(lg lg n)-competitivo?
+
+**La estrategia.** Cada camino preferido se guarda en su propio **BBST** (árbol balanceado, el «árbol auxiliar»), ordenado por clave, de tamaño $O(\lg n)$: cada operación dentro de uno cuesta $O(\lg\lg n)$.
+
+**Conectando los árboles auxiliares.** Para poder saltar entre caminos, cada árbol auxiliar guarda, en sus hojas, punteros hacia los árboles auxiliares de los caminos vecinos (hijos) correspondientes.
+
+<OptimalidadFig fig="arboles">
+**Cómo leerlo.** «Árbol de árboles»: cada triángulo es un árbol auxiliar (un camino preferido comprimido), de altura $O(\lg\lg n)$. Sus hojas enlazan a las raíces de los caminos «hijos». Buscar $x$ es bajar por estos árboles, **saltando** de uno a otro cuando el camino actual no contiene a $x$.
+</OptimalidadFig>
+
+**Costo de un acceso.** Cada vez que la búsqueda cruza a un hijo no preferido, sale del camino actual y salta a otro, además de actualizar la estructura de los caminos involucrados. Si ese trabajo cuesta $O(\lg\lg n)$ por cruce, y el número de cruces en un acceso es $1 + (\text{alternancias de Wilber-1 en ese acceso})$, entonces, sumando sobre $m$ accesos:
+
+$$\text{costo(Tango)} = O\big((m + \text{Wilber-1})\cdot\lg\lg n\big) = O\big(\text{OPT}\cdot\lg\lg n\big),$$
+
+porque $\text{OPT} \ge m$ (cada acceso toca al menos un nodo) y $\text{OPT} = \Omega(\text{Wilber-1})$. Es decir, **$O(\lg\lg n)$-competitivo**.
+
+## 3. El problema al actualizar (y su solución)
+
+<Predice pregunta="Al cambiar un hijo preferido, un camino se corta a cierta **profundidad** de $P$ y se pega con otro. Pero los árboles auxiliares están ordenados por **clave** (como exige el modelo BST), no por profundidad. ¿Sigue funcionando el truco de split/join?">
+**Sí.** Cortar un camino por una profundidad $d$ resulta equivalente a cortar **un rango de valores**: los nodos de un camino que están por debajo de la profundidad $d$ son exactamente los que caen dentro del subárbol de $P$ en ese punto, y ese subárbol corresponde a un **intervalo de claves** $[\ell, r]$. Usando el mínimo y el máximo del subárbol en el punto de corte, se simula el split por profundidad con split/join por clave, en $O(\lg\lg n)$.
+</Predice>
+
+<Practica nivel={1} titulo="Resuelto: qué pasa al buscar $e$ y luego $c$ en la figura de hijos preferidos">
+- **Buscar $e$:** desde $r$ (camino $\{r,a,d\}$), $e$ está en el subárbol derecho, pero el preferido de $r$ es $a$: **cruce**. El preferido de $r$ pasa a ser $b$; se corta $\{r, a, d\}$ en $\{r\}$ y $\{a, d\}$, y se une $\{r\}$ con $\{b, e\}$ → caminos $\{r, b, e\}$, $\{a, d\}$, $\{c\}$, $\{f\}$. Un cruce.
+- **Buscar $c$:** desde $r$, $c$ está a la izquierda pero el preferido ahora es $b$: cruce (preferido de $r$ → $a$). En $a$, $c$ está a la izquierda pero el preferido es $d$: otro cruce (preferido de $a$ → $c$). Caminos: $\{r, a, c\}$, $\{b, e\}$, $\{d\}$, $\{f\}$. Dos cruces = dos alternancias nuevas de Wilber-1.
+
+(Ejemplo propio sobre la figura de clase; cada cruce cuesta $O(\lg\lg n)$.)
+</Practica>
+
+<Practica nivel={2} titulo="Complétalo: el costo total de Tango con $n = 2^{16}$ claves">
+- Altura de $P$: **\_\_**. Tamaño máximo de un camino: **\_\_** nodos. Altura de un árbol auxiliar: $O(\lg \_\_) =$ **\_\_**.
+- Si una secuencia tiene $m = 1000$ accesos y Wilber-1 $= 5000$, Tango hace $O((\_\_ + \_\_)\cdot\_\_)$ trabajo.
+<Solucion>
+Altura 16; caminos de $\le 17$ nodos; auxiliares de altura $O(\lg 17) \approx 4$. Costo $O((1000 + 5000)\cdot 4)$, unas $24\,000$ unidades salvo constantes, mientras que $\text{OPT} \ge \max(m, c\cdot\text{Wilber-1})$. Ejemplo propio.
+</Solucion>
+</Practica>
+
+**Resultado:** Tango Trees son $O(\lg\lg n)$-competitivos: el primer avance real **más allá de balancear** (un árbol balanceado es trivialmente $O(\lg n)$-competitivo).
+
+## 4. Signed-Greedy: otra cota inferior
+
+Recordemos que ya vimos cotas para conjuntos de puntos satisfechos positivos y negativos por separado.
+
+- **Greedy⁺:** el algoritmo Greedy (de la vista geométrica), pero considerando **solo rectángulos positivos**.
+- **Greedy⁻:** análogo, solo con rectángulos negativos.
+- **Signed-Greedy** $= \max\{\text{Greedy}^+, \text{Greedy}^-\}$.
+
+**Teorema.** $\max\{\text{Greedy}^+, \text{Greedy}^-\} = \Theta(\text{mayor cota de rectángulos independientes})$.
+
+**Prueba (emparedado).** Sea $\text{OPT}^{\pm}$ = la menor unión de un conjunto satisfecho positivo y uno satisfecho negativo que contienen a $I$. La cadena de la diapositiva usa dos hechos: Greedy⁺ y Greedy⁻ no superan (salvo la constante que absorbe el ½) la cota $|I| + \text{MIS}^{\pm}$ de su signo, y no pueden ser menores que $\text{OPT}^+$ y $\text{OPT}^-$, que son los mínimos:
+
+$$
+\text{OPT}^{\pm} \;\ge\; |I| + \tfrac12\text{MIS} \;\ge\; \tfrac12\max\{\text{Greedy}^+, \text{Greedy}^-\} \;\ge\; \tfrac12\max\{\text{OPT}^+, \text{OPT}^-\} \;\ge\; \tfrac14\left(\text{OPT}^+ + \text{OPT}^-\right) \;\ge\; \tfrac14\,\text{OPT}^{\pm}.
+$$
+
+Todo queda **emparedado dentro de un factor 4**: Signed-Greedy está, salvo constante, tan cerca de la mejor cota de rectángulos independientes como se puede estar.
+
+### Greedy vs. Signed-Greedy
+
+| | Greedy | Signed-Greedy |
+| --- | --- | --- |
+| Qué calcula | un conjunto satisfecho positivo **y** negativo a la vez | dos conjuntos por separado y toma el máximo |
+| Qué es | una **cota superior real**: un algoritmo de verdad (una ejecución válida de BST) | solo una **cota inferior**: ignora la interacción entre rectángulos positivos y negativos |
+
+**Problema abierto:** ¿Greedy y Signed-Greedy están a solo un factor constante de diferencia? (Si sí, Greedy sería dinámicamente óptimo.)
+
+<Practica nivel={3} titulo="Solo: ¿por qué Signed-Greedy no es una ejecución válida de BST?">
+<Solucion>
+Su resultado (por ejemplo, el conjunto de Greedy⁺) solo garantiza que los rectángulos **positivos** estén satisfechos. Un BST válido necesita que **todos** los rectángulos estén arboralmente satisfechos (teorema de la vista geométrica). Por eso Signed-Greedy solo mide (cota inferior); Greedy, que satisface ambos signos, sí es un algoritmo.
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Debate: ¿Tango o Splay para una aplicación real?">
+<Solucion>
+- **Tango:** garantía demostrada $O(\lg\lg n)$-competitiva, pero constantes altas, estructura compleja y $\Theta(\lg n \lg\lg n)$ en el peor caso de un acceso aislado.
+- **Splay:** simple, amortizado $O(\lg n)$, con propiedades como conjunto de trabajo y llave-independencia; se **conjetura** dinámicamente óptimo, pero no está demostrado ni siquiera $o(\lg n)$-competitivo.
+En la práctica suele ganar Splay (o un árbol balanceado) por simplicidad; Tango es importante por lo que **demuestra**.
+</Solucion>
+</Practica>
+
+<Errores
+	errores={[
+		{ mal: '«El árbol de referencia de Tango cambia con los accesos.»', bien: 'P es <strong>fijo</strong>; lo que cambia son los hijos preferidos (y por lo tanto los caminos).' },
+		{ mal: '«Los árboles auxiliares se ordenan por profundidad.»', bien: 'Se ordenan por <strong>clave</strong>; cortar por profundidad se simula como cortar un rango de claves.' },
+		{ mal: '«Tango es O(lg lg n) por acceso.»', bien: 'Es $O(\\lg\\lg n)$ por <strong>cruce</strong>; es $O(\\lg\\lg n)$-<em>competitivo</em> respecto de OPT.' },
+		{ mal: '«Signed-Greedy es un algoritmo de BST.»', bien: 'Es solo una cota inferior: no satisface a la vez los rectángulos positivos y negativos.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="tango"
+	preguntas={[
+		{ q: 'El hijo preferido de un nodo es…', opts: ['el de menor clave', 'el hijo por el que pasó el acceso más reciente en su subárbol', 'el más profundo', 'el que tiene más nodos'], ok: 1 },
+		{ q: 'Cada cambio de hijo preferido corresponde a…', opts: ['una rotación', 'una alternancia de Wilber-1', 'un punto de Greedy', 'un split del árbol de referencia'], ok: 1 },
+		{ q: 'Un árbol auxiliar tiene tamaño…', opts: ['$O(1)$', '$O(\\lg n)$', '$O(\\sqrt n)$', '$O(n)$'], ok: 1 },
+		{ q: 'Tango es…', opts: ['$O(1)$-competitivo', '$O(\\lg\\lg n)$-competitivo', '$O(\\lg n)$-competitivo y nada mejor', 'dinámicamente óptimo'], ok: 1 },
+		{ q: 'Signed-Greedy está a un factor … de la mejor cota de rectángulos independientes', opts: ['2', '4', '$\\lg n$', 'no está demostrado'], ok: 1 },
+		{ q: 'Sigue abierto si…', opts: ['Tango es correcto', 'Greedy y Signed-Greedy difieren en un factor constante', 'Wilber-1 es cota inferior', 'Splay es llave-independiente óptimo'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica en cuatro pasos por qué Tango Trees son $O(\lg\lg n)$-competitivos."
+	claves={[
+		'Árbol de referencia perfecto; hijos preferidos forman caminos disjuntos de $O(\\lg n)$ nodos.',
+		'Cada camino se guarda en un BBST auxiliar por clave: operaciones $O(\\lg\\lg n)$; cortar por profundidad = cortar un rango de claves.',
+		'Un acceso cruza $1 +$ (alternancias de Wilber-1 nuevas) caminos, cada cruce $O(\\lg\\lg n)$.',
+		'Total $O((m + \\text{Wilber-1})\\lg\\lg n) = O(\\text{OPT}\\lg\\lg n)$.',
+	]}
+/>
+
+<Dominio client:visible id="tango" />
+
+<Fuente archivos={['Sem9_Dynamic_Optimality_V.pdf (Dynamic Optimality V, 9/10/2026)', 'Demaine, Harmon, Iacono y Pătraşcu (2004); Wilber (1989)']} />

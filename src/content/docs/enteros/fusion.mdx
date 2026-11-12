@@ -1,0 +1,278 @@
+---
+title: 'Fusion trees'
+description: 'Enteros III (semana 12): B-tree de ramificación w^(1/5), sketches (bits de ramificación), corrección de la búsqueda con el prefijo común más largo y la palabra e, sketch con una multiplicación, comparación en paralelo con una resta, msb en O(1), la combinación O(√lg n) con vEB y el panorama de ordenar enteros.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import EnterosFig from '../../../components/fig/EnterosFig.astro';
+
+<EnSimple>
+Un **B-tree** es rápido porque cada nodo tiene muchas llaves y elige entre muchos caminos de una vez. El problema: para elegir, hay que comparar la consulta con **todas** las llaves del nodo, y eso cuesta.
+- El truco del fusion tree es **resumir** cada llave en unos pocos bits, como si de cada número de teléfono solo guardaras **los dígitos que lo distinguen de los demás**. Ese resumen se llama **sketch** (bosquejo).
+- Los resúmenes de todas las llaves de un nodo caben **juntos en una sola palabra** de la máquina.
+- Con **una resta** de palabras se compara la consulta contra todas las llaves a la vez, y con **una multiplicación** se calcula el resumen. Así cada nodo se resuelve en $O(1)$, y el árbol entero en $O(\log_w n)$.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Explicar por qué un B-tree de ramificación $w^{1/5}$ da $O(\\log_w n)$ <strong>si</strong> cada nodo se busca en $O(1)$.',
+		'Calcular el <strong>sketch</strong> de un conjunto pequeño de llaves y mostrar que conserva el orden.',
+		'Corregir la búsqueda de una consulta $q$ que no es llave usando el prefijo común más largo y la palabra $e$.',
+		'Ejecutar la comparación en paralelo (resta con centinelas) y la idea del msb en $O(1)$.',
+		'Demostrar que $\\min\\{\\lg w, \\log_w n\\} = O(\\sqrt{\\lg n})$.',
+	]}
+	prerrequisitos={[
+		{ t: 'B-Trees', href: '/memoria/btree/' },
+		{ t: 'X-fast y Y-fast', href: '/enteros/xfast-yfast/' },
+	]}
+	perfiles={['visual', 'laboratorio', 'socratico']}
+/>
+
+## 1. La idea general: todo el trabajo está en el nodo
+
+Un **B-tree** con hasta $k = w^{1/5}$ llaves por nodo tiene altura
+
+$$\log_{w^{1/5}} n = 5 \log_w n = \Theta(\log_w n).$$
+
+Cualquier potencia pequeña de $w$ serviría; se elige $1/5$ para que las cuentas siguientes **quepan en una palabra**.
+
+<Predice pregunta="¿Cuánto cuesta, ingenuamente, buscar $q$ entre las $k = w^{1/5}$ llaves de un nodo? ¿Por qué no basta con «leerlas»?">
+Las $k$ llaves de $w$ bits ocupan $k\cdot w = w^{6/5} > w$ bits: **ni siquiera caben en una palabra**, así que leerlas ya cuesta más de $O(1)$ operaciones de palabra. Si logramos resolver cada nodo en $O(1)$, el predecesor completo cuesta $O(\log_w n)$: todo el trabajo está en el nodo. Hay que **comprimir** las llaves.
+</Predice>
+
+## 2. ¿Cuántos bits de una llave importan? El sketch
+
+Mira las $k$ llaves como hojas de un **trie binario** (árbol de sus bits, de izquierda a derecha). Con $k$ llaves hay exactamente $k - 1$ nodos donde el trie **ramifica** (tiene los dos hijos). Por lo tanto, a lo más $k - 1$ **posiciones de bit** $c_0 < c_1 < \cdots$ distinguen a las llaves.
+
+**Sketch perfecto:** $\text{sk}(x)$ = los bits de $x$ en las posiciones $c_0, c_1, \dots$ (en orden), es decir, $r \le k - 1$ bits.
+
+<EnterosFig fig="trie4">
+**Cómo leerlo.** Llaves $0000, 0010, 1100, 1111$ (ejemplo de clase). El trie ramifica en la raíz (bit 0 desde la izquierda) y en los prefijos `00` y `11`, ambos en el bit 2. Así que los bits que importan son el 0 y el 2, y los sketches son $00, 01, 10, 11$: **conservan el orden** de las llaves. En rojo, la consulta $q = 0101$, que **sale del trie** en el prefijo `01` (no existe ninguna llave que empiece con `01`).
+</EnterosFig>
+
+### El sketch conserva el orden entre las llaves
+
+Dos llaves $x < x'$ difieren por primera vez en algún bit $c$. Ese bit es justo el nodo del trie donde sus caminos se separan: **un nodo de ramificación**, así que $c$ es uno de los $c_j$. En los bits importantes anteriores coinciden, y en $c$ tienen $0$ y $1$. Entonces $\text{sk}(x) < \text{sk}(x')$, y en general
+
+$$\text{sk}(x_0) < \text{sk}(x_1) < \cdots < \text{sk}(x_{k-1}).$$
+
+**Todos los sketches caben en una palabra:** $k \cdot r \le k^2 = w^{2/5} \ll w$ bits. El nodo guarda un solo número con los sketches de todas sus llaves.
+
+## 3. El problema: el sketch de $q$ puede mentir
+
+<Predice pregunta="Con las llaves de arriba buscamos $q = 0101$. Sus bits 0 y 2 dan $\text{sk}(q) = 00$, que lo ubica junto a $0000$. ¿Es $0000$ el predecesor de $0101$?">
+**No:** el predecesor es $0010$ y el sucesor $1100$. $q$ se separa del trie en un nodo que **no** es de ramificación (el prefijo `01` no existe), así que sus bits en las posiciones $c_j$ no dicen en qué lugar del orden cae. El sketch es correcto **para las llaves**, no para consultas arbitrarias.
+</Predice>
+
+### La corrección: el prefijo común más largo
+
+Sea $p$ el **prefijo más largo de $q$ que también es prefijo de alguna llave**, y $\beta$ el bit de $q$ que viene justo después de $p$.
+
+- Todas las llaves con prefijo $p$ forman un **bloque contiguo** $B$ en el orden.
+- Ninguna llave tiene prefijo $p\beta$ (si no, $p$ no sería el más largo). Así que todo $B$ comparte el prefijo $p\bar\beta$.
+- **Si $\beta = 1$:** todo $B$ es **menor** que $q$, y $\text{pred}(q) = \max B$. Sea $e = p\,0\,1\cdots1$.
+- **Si $\beta = 0$:** todo $B$ es **mayor** que $q$, y $\text{suc}(q) = \min B$. Sea $e = p\,1\,0\cdots0$.
+
+$e$ es la palabra con prefijo $p\bar\beta$ más cercana a $q$, y **su posición sí se decide con sketches**:
+- Una llave $z \in B$ coincide con $e$ hasta $p\bar\beta$; después $e$ tiene solo unos (o solo ceros), así que $\text{sk}(z) \le \text{sk}(e)$ (o $\ge$).
+- Una llave fuera de $B$ difiere de $p$ en una posición **dentro** de $p$: allí ramifica el trie, el sketch ya la separa, y $e$ coincide con $p$ en ese bit.
+
+Por tanto, con $\beta = 1$: $\text{pred}(q)$ es la mayor llave con $\text{sk} \le \text{sk}(e)$. Con $\beta = 0$: $\text{suc}(q)$ es la menor con $\text{sk} \ge \text{sk}(e)$.
+
+### ¿Cómo hallar $p$ sin mirar todas las llaves?
+
+Sean $\text{sk}(x_i) \le \text{sk}(q) < \text{sk}(x_{i+1})$. El sketch de $q$ coincide con el de $B$ en los bits de ramificación que están dentro de $p$, y $B$ es contiguo, así que $\text{sk}(q)$ cae dentro del tramo de $B$ o justo al lado: **$x_i$ o $x_{i+1}$ está en $B$**. De las dos, la que comparte más prefijo con $q$ es la de **menor $q \oplus y$** (XOR), y el bit más significativo de ese XOR da $\lvert p \rvert$.
+
+```text
+Predecesor-Nodo(q):                     // índice de la mayor llave ≤ q
+  i ← (cantidad de llaves con sk ≤ sk(q)) − 1          // rango por sketch
+  y ← la de x_i, x_{i+1} que minimiza q ⊕ y             // aquí se separan
+  si y = q:  devolver el índice de y
+  j ← msb(q ⊕ y);  β ← el bit j de q
+  si β = 1:
+      e ← ((q >> (j+1)) << (j+1)) | (2^j − 1)           // e = p 0 1…1
+      devolver (cantidad de llaves con sk ≤ sk(e)) − 1
+  si no:
+      e ← ((q >> (j+1)) << (j+1)) | 2^j                 // e = p 1 0…0
+      devolver (cantidad de llaves con sk < sk(e)) − 1
+```
+
+<Practica nivel={1} titulo="Resuelto: Predecesor-Nodo(0101) con las llaves 0000, 0010, 1100, 1111">
+1. $\text{sk}(q) = 00$ (bits 0 y 2 desde la izquierda de $0101$). Llaves con sk $\le 00$: solo $0000$. $i = 0$.
+2. Candidatas $x_0 = 0000$ y $x_1 = 0010$: $q \oplus 0000 = 0101$, $q \oplus 0010 = 0111$. Gana $y = 0000$ (menor XOR).
+3. $j = \text{msb}(0101) = 2$ (contando desde la derecha, desde 0). El bit 2 de $q$ es $\beta = 1$. Entonces $p = $ `0` y $e = p\,0\,11 = 0011$.
+4. $\text{sk}(e) = 01$. Llaves con sk $\le 01$: $0000$ y $0010$ → índice $1$: **predecesor $= 0010$**. ✔
+
+(Verificado por fuerza bruta: $\max\{x \le 0101\} = 0010$.)
+</Practica>
+
+<Practica nivel={2} titulo="Complétalo: misma estructura, $q = 1011$">
+1. $\text{sk}(q)$ usa los bits 0 y 2 de $1011$: $\text{sk}(q) =$ **\_\_**. Llaves con sk $\le$ eso: **\_\_\_\_\_\_\_**, así que $i =$ **\_\_**.
+2. Candidatas $x_i$ y $x_{i+1}$; sus XOR con $q$ son **\_\_\_\_** y **\_\_\_\_**: gana $y =$ **\_\_\_\_**.
+3. $j = \text{msb}(q \oplus y) =$ **\_\_**, $\beta =$ **\_\_**, $e =$ **\_\_\_\_**, $\text{sk}(e) =$ **\_\_**.
+4. Respuesta: **\_\_\_\_**.
+
+<Solucion>
+1. $\text{sk}(1011) = 11$ (bit 0 = 1, bit 2 = 1). Todas las llaves tienen sk $\le 11$: $i = 3$ ($x_3 = 1111$, y no hay $x_4$).
+2. Solo queda $y = 1111$ ($q \oplus 1111 = 0100$).
+3. $j = \text{msb}(0100) = 2$, el bit 2 de $q = 1011$ es $\beta = 0$. $p =$ `1`, $e = p\,1\,00 = 1100$. $\text{sk}(1100) = 10$.
+4. Con $\beta = 0$: (llaves con sk $< 10$) $- 1 = 2 - 1 = 1$ → **$0010$**. Comprobación: llaves $\le 1011$ son $0000, 0010$; el predecesor es $0010$ ✔, y el sucesor $1100 = \min B$.
+
+Aquí el sketch de $q$ (11) lo ubicaba junto a $1111$, que es **mayor** que $q$: el error se corrige con $e$.
+</Solucion>
+</Practica>
+
+Faltan **tres ingredientes en $O(1)$**: calcular $\text{sk}(q)$, contar llaves con sketch menor o igual, y msb.
+
+## 4. Sketch con una multiplicación
+
+Extraer $r$ bits dispersos uno por uno costaría $O(r)$. La solución de Fredman y Willard: calcular un **sketch aproximado**, que tiene los mismos bits en el mismo orden, pero **separados por ceros** en posiciones conocidas, con una sola multiplicación.
+
+1. $x' = x \;\&\; M$, con $M$ = máscara de los bits $c_j$ (quedan solo los bits importantes).
+2. Multiplicar por $m = \sum_j 2^{m_j}$: cada bit $c_i$ produce copias en las posiciones $c_i + m_j$.
+3. Enmascarar con $D = \sum_j 2^{c_j + m_j}$ y desplazar: quedan los bits importantes en las posiciones $P_j = c_j + m_j$.
+
+Hay que elegir los $m_j$ para que:
+- **Distintos:** los $r^2$ valores $c_i + m_j$ no choquen (si no, la suma produce acarreos).
+- **Crecientes:** $P_0 < P_1 < \cdots$ (para conservar el orden).
+- **Compacto:** $P_{r-1} - P_0 = O(r^4)$, para que el sketch aproximado ocupe $O(r^4)$ bits.
+
+**Paso 1 (sin colisiones).** Elegir $t_0, t_1, \dots < r^3$ con $t_s \not\equiv t_i + c_a - c_b \pmod{r^3}$ para $i < s$ y todo $a, b$. Cada $t_s$ debe evitar menos de $s\,r^2 < r^3$ residuos, así que siempre existe.
+
+**Paso 2 (ventanas crecientes).** $m_j \equiv t_j \pmod{r^3}$, elegido para que $P_j = c_j + m_j \in [\,w + j r^3,\; w + (j+1) r^3\,)$.
+
+<Practica nivel={1} titulo="Resuelto: el ejemplo de clase con $r = 3$">
+$w = 6$, bits importantes $c = (0, 1, 3)$, $r^3 = 27$. Con $t = (0, 4, 8)$ sale $m = (27, 58, 62)$. Los 9 exponentes $c_i + m_j$:
+
+| | $m_0 = 27$ | $m_1 = 58$ | $m_2 = 62$ |
+| --- | --- | --- | --- |
+| $c_0 = 0$ | **27** | 58 | 62 |
+| $c_1 = 1$ | 28 | **59** | 63 |
+| $c_2 = 3$ | 30 | 61 | **65** |
+
+Son todos distintos, y la diagonal $P = (27, 59, 65)$ cae en las ventanas $[6, 33)$, $[33, 60)$, $[60, 87)$. Para $x = 010011$: $x \;\&\; M$ conserva los bits $c_0$ y $c_1$ (el bit 3 de $x$ es 0); tras multiplicar y enmascarar con $D = 2^{27} + 2^{59} + 2^{65}$ quedan los bits 27 y 59: el sketch aproximado, desplazado, es $1 + 2^{32}$.
+</Practica>
+
+## 5. Comparación en paralelo: una resta
+
+<EnterosFig fig="paralelo">
+**Cómo leerlo.** El nodo guarda una palabra con un bloque por llave: un **1 centinela** delante y el sketch de la llave. Se replica $\text{sk}(q)$ en todos los bloques, con un 0 delante, y se **resta**. En cada bloque, $1\,\text{sk}(x_i) - 0\,\text{sk}(q) > 0$, así que no hay préstamos entre bloques; el centinela **sobrevive** si y solo si $\text{sk}(x_i) \ge \text{sk}(q)$. Ejemplo propio con sketches de 2 bits y $\text{sk}(q) = 01$.
+</EnterosFig>
+
+- Cada llave ocupa un bloque de $r^4 + 1$ bits. Con $k$ llaves, $k(r^4+1) = O(w)$ bits: cabe en $O(1)$ palabras.
+- Replicar $\text{sk}(q)$: multiplicar por $0\cdots01\,0\cdots01\cdots$ (un 1 al inicio de cada bloque).
+- Contar centinelas vivos (con otra multiplicación que los suma, o con msb): eso es el **rango** de $q$.
+
+## 6. msb en $O(1)$
+
+Falta $\text{msb}(q \oplus y)$, el primer bit donde difieren. Idea: partir la palabra en $\sqrt w$ clusters de $\sqrt w$ bits.
+
+1. Obtener, con pocas operaciones de palabra, **un bit por cada cluster no vacío**.
+2. Comprimir esos $\sqrt w$ bits con otro sketch (una multiplicación; aquí las posiciones son regulares y el sketch es perfecto).
+3. Comparar en paralelo contra las potencias $1, 2, 4, \dots, 2^{\sqrt w - 1}$: da el primer cluster no vacío.
+4. Repetir lo mismo **dentro** de ese cluster.
+
+<Practica nivel={3} titulo="Solo: el paso 1 con $w = 16$ y $x = 0101\;0000\;1000\;1101$. Calcula $y$ (un 1 en la cabeza de cada cluster no vacío)">
+Usa $F = 1000\;1000\;1000\;1000$ (el primer bit de cada cluster), y: $t_1 = x \;\&\; F$; $t_2 = x \oplus t_1$; $t_3 = F - t_2$; $t_4 = (t_3 \oplus F) \;\&\; F$; $y = t_1 \mid t_4$.
+<Solucion>
+| paso | valor |
+| --- | --- |
+| $x$ | `0101 0000 1000 1101` |
+| $t_1 = x \;\&\; F$ (cabezas encendidas) | `0000 0000 1000 1000` |
+| $t_2 = x \oplus t_1$ (sin las cabezas) | `0101 0000 0000 0101` |
+| $t_3 = F - t_2$ | `0011 1000 1000 0011` |
+| $t_4 = (t_3 \oplus F) \;\&\; F$ | `1000 0000 0000 1000` |
+| $y = t_1 \mid t_4$ | `1000 0000 1000 1000` |
+
+En la resta $F - t_2$, el 1 de cabeza de un cluster **se pierde si y solo si** quedaba algo más en ese cluster; $t_4$ marca justo esos. Los clusters `0101`, `1000`, `1101` son no vacíos y `0000` es vacío: $y$ = `1000 0000 1000 1000` ✔ (calculado y comprobado con un script). Nota: en el texto extraído de la diapositiva las filas aparecen desordenadas; esta es la secuencia correcta.
+</Solucion>
+</Practica>
+
+## 7. Todo junto
+
+**Teorema (Fredman y Willard).** Un conjunto **estático** de $n$ palabras de $w$ bits se guarda en un B-tree de ramificación $w^{1/5}$ con $O(n)$ de espacio, y Predecesor y Sucesor cuestan $O(\log_w n)$ en la word RAM.
+
+**Por qué:** altura $O(\log_w n)$, y en cada nodo la búsqueda es $O(1)$: sketch aproximado (una multiplicación), rango por comparación en paralelo (una resta y una multiplicación), msb, y otra pasada con $e$.
+
+Versiones dinámicas: árboles exponenciales ($O(\log_w n + \lg\lg n)$ por actualización, determinista) y con hashing ($O(\log_w n)$ esperado). Sin multiplicación (modelo AC⁰) también se puede calcular el sketch perfecto, con otra técnica.
+
+## 8. Lo mejor de dos mundos: $O(\sqrt{\lg n})$
+
+vEB / Y-fast: $O(\lg w)$. Fusion tree: $O(\log_w n)$. Usando la mejor según $w$, el predecesor cuesta $O(\min\{\lg w, \log_w n\})$, y
+
+$$\min\{\lg w, \log_w n\} = O\!\left(\sqrt{\lg n}\right).$$
+
+**Demostración.** Si $\lg w \le \sqrt{\lg n}$, ya está. Si no, $\lg w > \sqrt{\lg n}$ y
+$$\log_w n = \frac{\lg n}{\lg w} < \frac{\lg n}{\sqrt{\lg n}} = \sqrt{\lg n}. \qquad\blacksquare$$
+
+Es óptimo salvo un factor $\lg\lg$ en el modelo cell probe.
+
+<Practica nivel={4} titulo="Variante: con $n = 2^{36}$, ¿qué estructura conviene si $w = 64$? ¿Y si $w = 2^{12}$?">
+<Solucion>
+$\lg n = 36$, $\sqrt{\lg n} = 6$.
+- $w = 64$: $\lg w = 6$ y $\log_w n = 36/6 = 6$. Empate: ambas dan unos 6 pasos (ejemplo propio).
+- $w = 2^{12}$: $\lg w = 12$, pero $\log_w n = 36/12 = 3$: conviene el **fusion tree**. Con palabras más anchas, cada nodo resuelve más llaves a la vez.
+</Solucion>
+</Practica>
+
+## 9. Panorama: ordenar enteros
+
+| Método | Tiempo | Condición |
+| --- | --- | --- |
+| Comparaciones | $O(n \lg n)$ | ninguna |
+| Counting sort | $O(n + 2^w)$ | $w = O(\lg n)$: $O(n)$ |
+| Radix sort | $O(n\,w/\lg n)$ | $w = O(\lg n)$: $O(n)$ |
+| vEB / Y-fast | $O(n \lg w)$ | $O(n\lg\lg n)$ si $w = \lg^{O(1)} n$ |
+| Signature sort | $O(n)$ | $w = \Omega(\lg^{2+\epsilon} n)$ |
+| Han | $O(n \lg\lg n)$ | determinista |
+| Han y Thorup | $O(n\sqrt{\lg\lg n})$ | aleatorizado |
+
+**Signature sort en una frase por paso** (para $w = \Omega(\lg^{2+\epsilon} n)$): (1) partir cada entero en $\lg^\epsilon n$ bloques; (2) reemplazar cada bloque por un hash perfecto de $O(\lg n)$ bits (hay pocos bloques distintos); (3) con palabras tan cortas, el *packed sort* (mergesort con redes bitónicas sobre palabras) ordena en $O(n)$; (4) un trie comprimido sobre los hashes, ordenando sus aristas recursivamente, da el orden real y el inorden entrega los enteros ordenados.
+
+**¿Se pueden ordenar $n$ enteros en $O(n)$ para todo $w$?** Problema abierto. Por la equivalencia de Thorup (ver [vEB](/enteros/veb/)), es lo mismo que pedir una cola de prioridad con operaciones $O(1)$.
+
+<Errores
+	errores={[
+		{ mal: '«El sketch de cualquier $q$ da su posición entre las llaves.»', bien: 'Solo para las llaves. Si $q$ sale del trie por un nodo que no ramifica, hay que corregir con $p$, $\\beta$ y la palabra $e$.' },
+		{ mal: '«Las llaves de un nodo caben en una palabra.»', bien: 'Las llaves ocupan $w^{6/5}$ bits; lo que cabe son sus <strong>sketches</strong>: $k\\cdot r \\le w^{2/5}$ bits.' },
+		{ mal: '«El sketch aproximado tiene los bits juntos.»', bien: 'Tiene los $r$ bits en orden pero separados, en un tramo de $O(r^4)$ bits; eso basta para comparar en paralelo.' },
+		{ mal: '«Fusion tree siempre le gana a vEB.»', bien: 'Depende de $w$: gana cuando $\\log_w n &lt; \\lg w$, o sea con palabras anchas. Combinadas dan $O(\\sqrt{\\lg n})$.' },
+		{ mal: '«Fusion tree, tal como se vio, es dinámico.»', bien: 'El teorema de clase es para un conjunto <strong>estático</strong>; las versiones dinámicas usan árboles exponenciales o hashing.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="fusion"
+	preguntas={[
+		{ q: 'Con $k$ llaves, ¿cuántas posiciones de bit bastan para distinguirlas?', opts: ['$k$', '$k-1$', '$\\lg k$', '$w$'], ok: 1, why: 'Hay $k-1$ nodos de ramificación en el trie.' },
+		{ q: 'La altura de un B-tree de ramificación $w^{1/5}$ es…', opts: ['$\\lg n$', '$5\\log_w n$', '$\\log_5 n$', '$w^{1/5}$'], ok: 1 },
+		{ q: 'En la corrección, si $\\beta = 1$ entonces…', opts: ['todo el bloque $B$ es mayor que $q$', 'todo $B$ es menor que $q$ y $\\text{pred}(q) = \\max B$', '$q$ es una llave', 'hay que bajar al hijo'], ok: 1 },
+		{ q: '¿Para qué sirve el centinela 1 de cada bloque?', opts: ['Para el hash', 'Para que la resta no tome prestado del bloque vecino y marque si $\\text{sk}(x_i) \\ge \\text{sk}(q)$', 'Para marcar llaves borradas', 'Para el msb'], ok: 1 },
+		{ q: '$\\min\\{\\lg w, \\log_w n\\}$ es…', opts: ['$O(\\lg\\lg n)$', '$O(\\sqrt{\\lg n})$', '$O(\\lg n)$', '$O(1)$'], ok: 1 },
+		{ q: 'La propiedad «compacto» de los $m_j$ garantiza que…', opts: ['no haya colisiones', 'el sketch aproximado ocupe $O(r^4)$ bits', 'los bits queden en orden', 'la multiplicación no desborde nunca'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica por qué un fusion tree necesita la palabra $e$ y no le basta con el sketch de $q$."
+	claves={[
+		'El sketch solo mira los bits donde el trie de las <strong>llaves</strong> ramifica; conserva el orden entre llaves.',
+		'Una consulta $q$ puede salir del trie por un nodo que no ramifica; entonces sus bits importantes no dicen dónde cae.',
+		'Se halla $p$ (prefijo común más largo) con las dos vecinas por sketch y el msb del XOR; el bit siguiente $\\beta$ dice si el bloque $B$ queda a la izquierda o a la derecha.',
+		'$e = p\\,0\\,1\\cdots1$ o $p\\,1\\,0\\cdots0$ sí se ubica bien con sketches; un ejemplo: $q = 0101$ da $e = 0011$ y el predecesor $0010$.',
+	]}
+/>
+
+<Dominio client:visible id="fusion" />
+
+<Fuente archivos={['CS3014 · Enteros III (semana 12, 27/10/2026)', 'Fredman y Willard (1993); Andersson, Miltersen y Thorup (1999); Andersson, Hagerup, Nilsson y Raman (1998)', 'Ejemplos de predecesor y msb comprobados por fuerza bruta']} />

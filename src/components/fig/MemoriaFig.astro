@@ -1,0 +1,318 @@
+---
+/** Diagramas de jerarquía de memoria: niveles, arreglo vs lista, zonas de búsqueda, mezcla múltiple, B-Tree, layouts, OFM, PMA e indirección. */
+type Fig = 'jerarquia' | 'arreglo-lista' | 'zonas' | 'multiway' | 'btree' | 'split' | 'layout-niveles' | 'layout-veb' | 'veb-busqueda' | 'ofm' | 'pma' | 'indireccion' | 'umbrales';
+interface Props {
+	fig: Fig;
+}
+const { fig } = Astro.props;
+const A = `url(#ma-${fig})`;
+const defs = `<defs><marker id="ma-${fig}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="head"/></marker></defs>`;
+
+/* Árbol perfecto de 15 nodos numerados por niveles (heap) y su posición en el layout vEB */
+const vebOrden = [1, 2, 3, 4, 8, 9, 5, 10, 11, 6, 12, 13, 7, 14, 15];
+const nodoXY = (v: number) => {
+	const nivel = Math.floor(Math.log2(v));
+	const k = v - 2 ** nivel;
+	return { x: 30 + ((k + 0.5) * 700) / 2 ** nivel, y: 36 + nivel * 56 };
+};
+const nodos15 = Array.from({ length: 15 }, (_, i) => i + 1);
+const piezaVeb = (v: number) => (v <= 3 ? 0 : [4, 8, 9].includes(v) ? 1 : [5, 10, 11].includes(v) ? 2 : [6, 12, 13].includes(v) ? 3 : 4);
+const piezaNiv = (v: number) => (v <= 3 ? 0 : v <= 7 ? 1 : v <= 11 ? 2 : 3);
+const clsP = ['c2', 'c1', 'c3', 'c4', 'c5'];
+
+/* PMA ejemplo propio: 16 celdas en 4 trozos de 4 */
+const antes = [10, 20, 30, null, 40, null, null, null, 50, 60, null, null, 70, 80, null, null];
+const despues = [10, 20, 25, null, 26, 30, 40, null, 50, 60, null, null, 70, 80, null, null];
+---
+
+<figure class="svgfig not-content">
+	<div class="svgfig__scroll">
+		{fig === 'jerarquia' && (
+			<svg viewBox="0 0 760 300" role="img" aria-label="Pirámide de la jerarquía: registros, L1, L2, RAM y disco, con capacidad y latencia">
+				<Fragment set:html={defs} />
+				{[
+					['Registros', '~100 B', '< 1 ns', 'c2'],
+					['Caché L1', '64 KB', '~0,5–1 ns', 'c6'],
+					['Caché L2', '1 MB', '~10 ns', 'c4'],
+					['Memoria principal (RAM)', 'GBs', '~100 ns', 'c1'],
+					['Disco', 'TBs', '~10 ms', 'c3'],
+				].map(([n, c, l, k], i) => (
+					<>
+						<rect x={300 - i * 50} y={20 + i * 52} width={160 + i * 100} height="44" rx="6" class={k} />
+						<text x="380" y={47 + i * 52} class="t s b">{n}</text>
+						<text x="80" y={47 + i * 52} class="t s r mu">{c}</text>
+						<text x="690" y={47 + i * 52} class="t s l mu">{l}</text>
+					</>
+				))}
+				<text x="40" y="290" class="t s l mu">capacidad</text>
+				<text x="720" y="290" class="t s r mu">latencia (órdenes de magnitud)</text>
+				<line x1="740" y1="30" x2="740" y2="270" class="ln" marker-end={A} />
+			</svg>
+		)}
+
+		{fig === 'arreglo-lista' && (
+			<svg viewBox="0 0 760 230" role="img" aria-label="Recorrer un arreglo toca N/B bloques consecutivos; seguir una lista enlazada puede tocar un bloque distinto por nodo">
+				<Fragment set:html={defs} />
+				<text x="40" y="30" class="t l b">arreglo: N/B bloques</text>
+				{Array.from({ length: 4 }, (_, b) => (
+					<>
+						<rect x={40 + b * 172} y="42" width="164" height="36" rx="6" class="c4" />
+						{Array.from({ length: 3 }, (_, c) => <line x1={40 + b * 172 + (c + 1) * 41} y1="42" x2={40 + b * 172 + (c + 1) * 41} y2="78" class="sep" />)}
+					</>
+				))}
+				<line x1="40" y1="92" x2="720" y2="92" class="ln" marker-end={A} />
+				<text x="380" y="110" class="t s mu">cada bloque traído se aprovecha entero: B palabras útiles por transferencia</text>
+				<text x="40" y="146" class="t l b">lista enlazada: hasta N bloques</text>
+				{Array.from({ length: 4 }, (_, b) => <rect x={40 + b * 172} y="158" width="164" height="36" rx="6" class="box" />)}
+				{[0, 3, 1, 2].map((b, i) => (
+					<>
+						<rect x={60 + b * 172 + i * 22} y="164" width="26" height="24" rx="4" class="c5" />
+						<text x={73 + b * 172 + i * 22} y="181" class="t s b mono">{i + 1}</text>
+					</>
+				))}
+				{[[0, 3, 0], [3, 1, 1], [1, 2, 2]].map(([a, b, i]) => (
+					<line x1={86 + a * 172 + i * 22} y1="176" x2={58 + b * 172 + (i + 1) * 22} y2="176" class="ln bad dash" marker-end={A} />
+				))}
+				<text x="380" y="222" class="t s mu">nodos consecutivos de la lista caen en bloques distintos: una transferencia por nodo</text>
+			</svg>
+		)}
+
+		{fig === 'zonas' && (
+			<svg viewBox="0 0 760 170" role="img" aria-label="Los B elementos de un bloque parten el orden en B + 1 zonas; una transferencia da a lo más lg(B+1) bits">
+				<Fragment set:html={defs} />
+				<line x1="40" y1="80" x2="720" y2="80" class="axis" />
+				{[140, 280, 420, 560].map((x, i) => (
+					<>
+						<circle cx={x} cy="80" r="14" class="c1" />
+						<text x={x} y="85" class="t s b">k{i + 1}</text>
+					</>
+				))}
+				{[90, 210, 350, 490, 640].map((x, i) => <text x={x} y="56" class="t s mu">zona {i}</text>)}
+				<rect x="440" y="98" width="100" height="24" rx="5" class="hl" />
+				<text x="490" y="116" class="t s">q cae aquí</text>
+				<text x="380" y="150" class="t s">un bloque con B = 4 llaves → 5 zonas posibles → lg 5 ≈ 2,3 bits de información por transferencia</text>
+			</svg>
+		)}
+
+		{fig === 'multiway' && (
+			<svg viewBox="0 0 760 250" role="img" aria-label="Mezcla múltiple: k corridas en disco, un bloque por corrida en memoria y uno de salida; cabe si k + 1 ≤ M/B">
+				<Fragment set:html={defs} />
+				<text x="130" y="26" class="cap">k corridas en disco</text>
+				{Array.from({ length: 5 }, (_, i) => (
+					<>
+						<rect x="40" y={40 + i * 38} width="180" height="28" rx="5" class="box" />
+						<rect x="40" y={40 + i * 38} width="44" height="28" rx="5" class="c1" />
+						<line x1="222" y1={54 + i * 38} x2="318" y2={54 + i * 38} class="ln dash" marker-end={A} />
+					</>
+				))}
+				<rect x="320" y="34" width="190" height="200" rx="10" class="frame" />
+				<text x="415" y="26" class="cap">memoria: M/B bloques</text>
+				{Array.from({ length: 5 }, (_, i) => <rect x="336" y={40 + i * 38} width="70" height="28" rx="5" class="c1" />)}
+				<text x="460" y="120" class="t s">sale el</text>
+				<text x="460" y="138" class="t s">menor de</text>
+				<text x="460" y="156" class="t s">los frentes</text>
+				<rect x="560" y="110" width="80" height="28" rx="5" class="c4" />
+				<line x1="510" y1="124" x2="556" y2="124" class="ln" marker-end={A} />
+				<text x="600" y="164" class="t s">bloque de salida</text>
+				<rect x="560" y="190" width="170" height="28" rx="5" class="box" />
+				<line x1="600" y1="140" x2="640" y2="188" class="ln dash" marker-end={A} />
+				<text x="645" y="236" class="t s mu">una corrida más larga</text>
+			</svg>
+		)}
+
+		{fig === 'btree' && (
+			<svg viewBox="0 0 760 230" role="img" aria-label="B-Tree con B = 3: raíz 40, hijos 20 y 60 80, hojas 10, 30 35, 50, 70 75, 90 95 99; búsqueda de 75 resaltada">
+				<Fragment set:html={defs} />
+				<rect x="350" y="20" width="60" height="34" rx="6" class="c5" />
+				<text x="380" y="43" class="t b mono">40</text>
+				<rect x="150" y="96" width="60" height="34" rx="6" class="box" />
+				<text x="180" y="119" class="t b mono">20</text>
+				<rect x="520" y="96" width="100" height="34" rx="6" class="c5" />
+				<text x="570" y="119" class="t b mono">60 · 80</text>
+				<line x1="370" y1="54" x2="180" y2="96" class="ln" />
+				<line x1="390" y1="54" x2="570" y2="96" class="ln bad" marker-end={A} />
+				{[
+					[50, 60, '10', 'box', 165, 130],
+					[170, 100, '30 · 35', 'box', 195, 130],
+					[350, 60, '50', 'box', 530, 130],
+					[490, 100, '70 · 75', 'c5', 570, 130],
+					[640, 110, '90 · 95 · 99', 'box', 610, 130],
+				].map(([x, w, t, c, px, py]) => (
+					<>
+						<line x1={px} y1={py} x2={Number(x) + Number(w) / 2} y2="172" class={c === 'c5' ? 'ln bad' : 'ln'} />
+						<rect x={x} y="172" width={w} height="34" rx="6" class={c} />
+						<text x={Number(x) + Number(w) / 2} y="195" class="t s b mono">{t}</text>
+					</>
+				))}
+				<text x="380" y="226" class="t s mu">B = 3: hasta 3 claves y entre 2 y 4 hijos por nodo · buscar 75 = 3 nodos = 3 transferencias</text>
+			</svg>
+		)}
+
+		{fig === 'split' && (
+			<svg viewBox="0 0 760 200" role="img" aria-label="Insertar 55 con B = 3: la hoja 40 50 60 se desborda, se parte y el 50 sube a la raíz, que queda 30 50">
+				<Fragment set:html={defs} />
+				<text x="190" y="22" class="cap">antes (hoja llena)</text>
+				<rect x="160" y="34" width="60" height="30" rx="6" class="box" />
+				<text x="190" y="54" class="t s b mono">30</text>
+				<rect x="40" y="110" width="80" height="30" rx="6" class="box" />
+				<text x="80" y="130" class="t s b mono">10 · 20</text>
+				<rect x="200" y="110" width="130" height="30" rx="6" class="c2" />
+				<text x="265" y="130" class="t s b mono">40 · 50 · 60</text>
+				<line x1="180" y1="64" x2="80" y2="110" class="ln" />
+				<line x1="200" y1="64" x2="265" y2="110" class="ln" />
+				<text x="265" y="164" class="t s">+ 55 → 40 50 55 60: ¡4 claves!</text>
+				<line x1="350" y1="100" x2="410" y2="100" class="ln" marker-end={A} />
+				<text x="590" y="22" class="cap">después</text>
+				<rect x="550" y="34" width="80" height="30" rx="6" class="c4" />
+				<text x="590" y="54" class="t s b mono">30 · 50</text>
+				<rect x="430" y="110" width="80" height="30" rx="6" class="box" />
+				<text x="470" y="130" class="t s b mono">10 · 20</text>
+				<rect x="560" y="110" width="60" height="30" rx="6" class="box" />
+				<text x="590" y="130" class="t s b mono">40</text>
+				<rect x="650" y="110" width="80" height="30" rx="6" class="box" />
+				<text x="690" y="130" class="t s b mono">55 · 60</text>
+				<line x1="565" y1="64" x2="470" y2="110" class="ln" />
+				<line x1="590" y1="64" x2="590" y2="110" class="ln" />
+				<line x1="615" y1="64" x2="690" y2="110" class="ln" />
+				<text x="590" y="164" class="t s">la clave del medio (50) sube al padre</text>
+				<text x="380" y="192" class="t s mu">si el padre también se llena, se parte él, y así hacia arriba; si se parte la raíz, nace un nivel nuevo</text>
+			</svg>
+		)}
+
+		{(fig === 'layout-niveles' || fig === 'layout-veb') && (
+			<svg viewBox="0 0 760 300" role="img" aria-label={fig === 'layout-veb' ? 'Layout de van Emde Boas de un árbol de 15 nodos: pieza superior 1 2 3 y cuatro piezas inferiores, cada una contigua' : 'Layout por niveles de un árbol de 15 nodos: los niveles bajos quedan lejos de sus padres'}>
+				<Fragment set:html={defs} />
+				{nodos15.filter((v) => v > 1).map((v) => {
+					const a = nodoXY(Math.floor(v / 2));
+					const b = nodoXY(v);
+					return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} class="ln" />;
+				})}
+				{nodos15.map((v) => (
+					<>
+						<circle cx={nodoXY(v).x} cy={nodoXY(v).y} r="15" class={clsP[fig === 'layout-veb' ? piezaVeb(v) : piezaNiv(v)]} />
+						<text x={nodoXY(v).x} y={nodoXY(v).y + 5} class="t s b mono">{v}</text>
+					</>
+				))}
+				{(fig === 'layout-veb' ? vebOrden : nodos15).map((v, i) => (
+					<>
+						<rect x={40 + i * 45} y="250" width="42" height="30" rx="4" class={clsP[fig === 'layout-veb' ? piezaVeb(v) : piezaNiv(v)]} />
+						<text x={61 + i * 45} y="270" class="t s mono">{v}</text>
+					</>
+				))}
+				<text x="380" y="296" class="t s mu">{fig === 'layout-veb' ? 'memoria: 1 2 3 | 4 8 9 | 5 10 11 | 6 12 13 | 7 14 15 — cada pieza (mismo color) es contigua' : 'memoria: 1 | 2 3 | 4 5 6 7 | 8 … 15 — el hijo de 4 (el 8) queda 4 celdas más allá; la distancia se duplica por nivel'}</text>
+			</svg>
+		)}
+
+		{fig === 'veb-busqueda' && (
+			<svg viewBox="0 0 760 290" role="img" aria-label="Análisis de la búsqueda en el layout vEB: en el nivel de recursión con piezas de altura entre la mitad de lg B y lg B, el camino cruza a lo más 2 log_B N piezas de a lo más 2 bloques">
+				<Fragment set:html={defs} />
+				<polygon points="380,16 60,270 700,270" class="frame" />
+				{[[380, 16, 0], [300, 80, 1], [250, 144, 2], [210, 208, 3]].map(([x, y, i]) => (
+					<polygon points={`${x},${y} ${Number(x) - 44},${Number(y) + 58} ${Number(x) + 44},${Number(y) + 58}`} class={i % 2 ? 'c1' : 'c3'} />
+				))}
+				<line x1="380" y1="16" x2="210" y2="266" class="ln bad" />
+				<text x="600" y="100" class="t s l">cada triángulo = una pieza</text>
+				<text x="600" y="120" class="t s l">altura entre ½ lg B y lg B</text>
+				<text x="600" y="140" class="t s l">→ entre √B y B nodos</text>
+				<text x="600" y="160" class="t s l">→ ocupa ≤ 2 bloques</text>
+				<text x="40" y="150" class="t s l">lg N</text>
+				<text x="380" y="286" class="t s">camino raíz–hoja: ≤ lg N / (½ lg B) = 2 log_B N piezas × 2 bloques = 4 log_B N transferencias</text>
+			</svg>
+		)}
+
+		{fig === 'ofm' && (
+			<svg viewBox="0 0 760 270" role="img" aria-label="Árbol de máximos en layout vEB sobre las celdas del OFM; los huecos cuentan como menos infinito; búsqueda de 16">
+				<Fragment set:html={defs} />
+				{(() => {
+					const hojas = ['3', '/', '7', '9', '/', '16', '21', '42'];
+					const vals = [['42'], ['9', '42'], ['3', '9', '16', '42'], ['3', '−∞', '7', '9', '−∞', '16', '21', '42']];
+					const pos = (l: number, k: number) => ({ x: 50 + ((k + 0.5) * 660) / 2 ** l, y: 30 + l * 52 });
+					const ruta = ['0-0', '1-1', '2-2', '3-5'];
+					return (
+						<>
+							{vals.flatMap((fila, l) => fila.map((_, k) => (l > 0 ? <line x1={pos(l - 1, Math.floor(k / 2)).x} y1={pos(l - 1, Math.floor(k / 2)).y} x2={pos(l, k).x} y2={pos(l, k).y} class={ruta.includes(`${l}-${k}`) ? 'ln bad' : 'ln'} /> : null)))}
+							{vals.flatMap((fila, l) => fila.map((v, k) => (
+								<>
+									<circle cx={pos(l, k).x} cy={pos(l, k).y} r="17" class={ruta.includes(`${l}-${k}`) ? 'c5' : 'box'} />
+									<text x={pos(l, k).x} y={pos(l, k).y + 5} class="t s b mono">{v}</text>
+								</>
+							)))}
+							{hojas.map((h, k) => (
+								<>
+									<line x1={pos(3, k).x} y1={pos(3, k).y + 17} x2={pos(3, k).x} y2="218" class="ln dash" />
+									<rect x={pos(3, k).x - 30} y="220" width="60" height="30" rx="4" class={h === '/' ? 'cell-off' : 'c4'} />
+									<text x={pos(3, k).x} y="240" class="t s b mono">{h}</text>
+								</>
+							))}
+							<text x="738" y="240" class="t s r mu">OFM</text>
+						</>
+					);
+				})()}
+			</svg>
+		)}
+
+		{fig === 'pma' && (
+			<svg viewBox="0 0 760 250" role="img" aria-label="Packed-Memory Array, ejemplo propio: tras insertar 25 y 26 el primer trozo se desborda y se redistribuye el intervalo de los dos primeros trozos">
+				<Fragment set:html={defs} />
+				{[antes, despues].map((arr, f) => (
+					<>
+						<text x="40" y={f === 0 ? 40 : 170} class="t s l b">{f === 0 ? 'antes: 7 elementos en 16 celdas' : 'después de insertar 25 y 26'}</text>
+						{arr.map((v, i) => (
+							<>
+								<rect x={40 + i * 43 + Math.floor(i / 4) * 6} y={f === 0 ? 52 : 182} width="40" height="34" rx="4" class={v === null ? 'cell-off' : f === 1 && i < 8 ? 'c2' : 'c1'} />
+								<text x={60 + i * 43 + Math.floor(i / 4) * 6} y={f === 0 ? 74 : 204} class="t s mono">{v ?? ''}</text>
+							</>
+						))}
+					</>
+				))}
+				<rect x="38" y="48" width="178" height="42" rx="6" class="frame" />
+				<text x="127" y="112" class="t s">trozo 0: con 25 queda 4/4 (≤ 1, ok); con 26, 5/4 → se pasa</text>
+				<text x="380" y="138" class="t s">sube al padre (trozos 0–1): 6/8 = 0,75 ≤ 0,875 → se reparte parejo, 3 por trozo</text>
+				<text x="380" y="240" class="t s mu">ejemplo propio con h = 2, umbral superior 3/4 + d/(4h): raíz 0,75, nivel 1: 0,875, hojas 1</text>
+			</svg>
+		)}
+
+		{fig === 'umbrales' && (
+			<svg viewBox="0 0 760 240" role="img" aria-label="Umbrales de densidad del PMA: en la raíz entre 1/2 y 3/4, en las hojas entre 1/4 y 1; se relajan 1/(4h) por nivel">
+				<Fragment set:html={defs} />
+				<line x1="120" y1="200" x2="720" y2="200" class="axis" />
+				{[0, 0.25, 0.5, 0.75, 1].map((v) => (
+					<>
+						<line x1={120 + v * 600} y1="196" x2={120 + v * 600} y2="204" class="axis" />
+						<text x={120 + v * 600} y="222" class="t s mono">{v}</text>
+					</>
+				))}
+				{[0, 1, 2, 3, 4].map((d) => {
+					const lo = 0.5 - d / 16;
+					const hi = 0.75 + d / 16;
+					return (
+						<>
+							<rect x={120 + lo * 600} y={30 + d * 34} width={(hi - lo) * 600} height="22" rx="5" class={d === 0 ? 'c5' : d === 4 ? 'c4' : 'c1'} />
+							<text x="100" y={46 + d * 34} class="t s r">{d === 0 ? 'd = 0 (raíz)' : d === 4 ? 'd = h (hojas)' : `d = ${d}`}</text>
+						</>
+					);
+				})}
+				<text x="440" y="236" class="t s mu">densidad permitida (h = 4): ½ − d/(4h) ≤ densidad ≤ ¾ + d/(4h)</text>
+			</svg>
+		)}
+
+		{fig === 'indireccion' && (
+			<svg viewBox="0 0 760 220" role="img" aria-label="Indirección: arriba la estructura cara sobre N/lg N representantes; abajo grupos de Θ(lg N) elementos contiguos">
+				<Fragment set:html={defs} />
+				<rect x="200" y="20" width="360" height="60" rx="10" class="c3" />
+				<text x="380" y="46" class="t b">estructura cara (árbol vEB + OFM)</text>
+				<text x="380" y="66" class="t s">sobre N / lg N representantes (los mínimos)</text>
+				{Array.from({ length: 5 }, (_, g) => (
+					<>
+						<line x1={260 + g * 60} y1="80" x2={70 + g * 150} y2="130" class="ln" marker-end={A} />
+						<rect x={20 + g * 150} y="132" width="130" height="36" rx="6" class="c1" />
+						{Array.from({ length: 4 }, (_, c) => <line x1={20 + g * 150 + (c + 1) * 26} y1="132" x2={20 + g * 150 + (c + 1) * 26} y2="168" class="sep" />)}
+					</>
+				))}
+				<text x="380" y="196" class="t s">grupos de Θ(lg N) elementos en celdas consecutivas: actualizar uno cuesta O(1 + lg N / B)</text>
+				<text x="380" y="214" class="t s mu">la estructura de arriba solo se toca cuando un grupo se parte, se fusiona o cambia su mínimo</text>
+			</svg>
+		)}
+	</div>
+	<figcaption><slot /></figcaption>
+</figure>

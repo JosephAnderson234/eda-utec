@@ -1,0 +1,163 @@
+---
+title: 'Descomposición por centroides'
+description: 'Grafos dinámicos I (semana 14): separadores balanceados, árbol de centroides, conteo de caminos y marcado más cercano.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import GrafosFig from '../../../components/fig/GrafosFig.astro';
+
+<EnSimple>
+Imagina cortar una red de pasillos por una sala central. Al cerrarla, ningún grupo restante debe tener más de la mitad de las salas. Repites el corte dentro de cada grupo: así puedes razonar sobre caminos que cruzan una sala separadora sin examinar toda la red cada vez.
+</EnSimple>
+
+<Objetivos objetivos={[
+  'Definir un centroide y demostrar que existe.',
+  'Construir el árbol de centroides y justificar profundidad y costo.',
+  'Contar caminos de longitud fija y mantener el marcado más cercano.',
+  'Elegir entre centroides y Heavy-Light según la consulta.'
+]} prerrequisitos={[{t:'RMQ, cartesian tree y LCA',href:'/estaticos/rmq-lca/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
+
+## 1. El nodo que separa por mitades
+
+**Definición formal.** Un nodo $c$ de un árbol de $s$ nodos es un **centroide** si, al quitarlo, cada componente conexa restante tiene a lo más $s/2$ nodos. No es necesariamente el centro por distancia ni el nodo de menor profundidad.
+
+<GrafosFig fig="separador">
+**Cómo leerlo.** En el árbol de 11 nodos de las diapositivas, quitar 2 deja grupos de 5, 3 y 2 nodos. Cada grupo tiene a lo más $11/2$ nodos, de modo que 2 es centroide.
+</GrafosFig>
+
+**Existencia (teorema de Jordan, 1869).** Enraíza la componente en cualquier nodo $r$ y calcula tamaños. Si un hijo de $v$ tiene más de $s/2$ nodos, baja a él. El descenso termina porque cada paso aumenta la profundidad. En el nodo final ningún hijo supera $s/2$. Si se llegó bajando, su subárbol tenía más de $s/2$ nodos, por lo que la componente del lado del padre tiene $s-\text{sz}(v)<s/2$; si el nodo final es la raíz, esa componente no existe. Por tanto, el nodo final es un centroide. Puede haber dos, y entonces son vecinos. Si $c_1\neq c_2$ son centroides, $c_2$ cae en una componente $C$ de $T-c_1$, con $\lvert C\rvert\le s/2$. Al quitar $c_2$, la componente que contiene a $c_1$ incluye todo lo que está fuera de $C$ (al menos $s-\lvert C\rvert\ge s/2$ nodos) más los nodos de $C$ entre $c_1$ y $c_2$. Para no pasar de $s/2$ hace falta $\lvert C\rvert=s/2$ y que no haya nodos intermedios: $c_1$ y $c_2$ son adyacentes y $s$ es par.
+
+<Predice pregunta="En una cadena con un número par de nodos, ¿puede haber dos centroides?">
+Sí. Los dos nodos centrales son adyacentes; al retirar cualquiera, la componente mayor tiene exactamente la mitad de los nodos.
+</Predice>
+
+```text
+centroide(r):
+  calcular sz en la componente de r, ignorando nodos retirados
+  s ← sz[r]; v ← r
+  mientras v tenga un hijo u con sz[u] > s/2: v ← u
+  devolver v
+```
+
+**Correctitud** sigue de la demostración anterior. **Complejidad:** un DFS para tamaños y un descenso por un camino, $O(s)$ tiempo en esa componente.
+
+## 2. Recursión y árbol de centroides
+
+Se encuentra un centroide, se retira y se repite en cada componente restante. Cada nuevo centroide es hijo del que la separó en un árbol distinto: el **árbol de centroides**.
+
+```text
+descomponer(r, padreC, nivel):
+  c ← centroide(r)
+  padreCentroide[c] ← padreC; nivelCentroide[c] ← nivel
+  marcar c como retirado
+  para cada componente vecina de c:
+    descomponer(un nodo de esa componente, c, nivel + 1)
+```
+
+<GrafosFig fig="centroides">
+**Cómo leerlo.** Para el árbol de clase, 2 es la raíz del árbol de centroides. Sus hijos son 3, 5 y 6, centroides de las componentes de tamaños 5, 3 y 2. El nivel máximo calculado es 3.
+</GrafosFig>
+
+**Correctitud.** Cada llamada trabaja solo con su componente porque las marcas impiden cruzar centroides retirados. Toda componente no vacía aporta exactamente un centroide, así que cada nodo original aparece una vez en el árbol nuevo.
+
+**Profundidad.** En cada nivel, la componente que contiene un nodo dado tiene a lo más la mitad de nodos que en el nivel anterior. Después de $d$ niveles mide a lo más $n/2^d$; para que siga no vacía, $d\le\lfloor\lg n\rfloor$. La profundidad es $O(\lg n)$.
+
+**Tiempo de construcción.** En cada nivel, las componentes son disjuntas y los DFS suman $O(n)$ trabajo. Hay $O(\lg n)$ niveles: $O(n\lg n)$ tiempo, más $O(n)$ espacio para árbol, tamaños y marcas.
+
+**Propiedad separadora.** Dados $u$ y $v$, toma el primer centroide de la recursión que los deja en componentes distintas o coincide con uno de ellos. El camino único $u$→$v$ debe pasar por ese centroide, pues retirarlo desconecta esas componentes. Esta propiedad es la base de las consultas.
+
+## 3. Contar caminos de longitud fija
+
+Para contar caminos de longitud $k$, procesa un centroide $c$. Recorre cada componente vecina por separado y mide la distancia $d$ de sus nodos a $c$. Antes de incorporar una componente, `cnt[t]` guarda cuántos nodos de las componentes **ya procesadas**, y el propio $c$, están a distancia $t$.
+
+Para cada nodo actual a distancia $d$, suma `cnt[k−d]` a la respuesta. Luego incorpora sus distancias a `cnt`. Al terminar el centroide, limpia las entradas usadas y repite recursivamente.
+
+**Correctitud.** Un par contado tiene extremos en componentes diferentes, o uno es $c$; por tanto, su camino pasa por $c$ y su longitud es la suma de las dos distancias. El orden «consultar antes de incorporar» evita pares dentro de una misma componente, que se contarán en una llamada recursiva. Cada camino aparece en el primer centroide que separa sus extremos, exactamente una vez.
+
+**Complejidad.** Si las distancias se limitan a $k$ y `cnt` se limpia solo en índices tocados, cada nivel hace $O(n)$ trabajo: $O(n\lg n)$ tiempo y $O(n)$ espacio. Para CSES 2080, también puede utilizarse un arreglo de frecuencias de longitud $k+1$.
+
+## 4. Marcado más cercano
+
+Mantén `mejor[c]`, la menor distancia desde un nodo marcado hasta el centroide $c$. Al marcar $x$, sube por todos los ancestros de $x$ en el árbol de centroides y minimiza `mejor[c]` con $\text{dist}(x,c)$. Para consultar $x$, sube por los mismos ancestros y minimiza $\text{mejor}[c]+\text{dist}(x,c)$.
+
+**Correctitud.** Para el marcado óptimo $y$, el primer centroide que separa $x$ de $y$ está en ambas cadenas de ancestros y en su camino; allí $\text{dist}(x,y)=\text{dist}(x,c)+\text{dist}(y,c)$. El mínimo almacenado no puede empeorar esa respuesta. Los candidatos calculados son longitudes de paseos por un centroide y nunca quedan por debajo de la distancia real, así que el mínimo es exacto.
+
+**Complejidad precisa.** Se visitan $O(\lg n)$ ancestros de centroide. Si se precalcula `dist(x,c)` para cada nodo y cada ancestro centroide, cada distancia cuesta $O(1)$ y marcar/consultar cuesta $O(\lg n)$, con $O(n\lg n)$ espacio para esas distancias. Si se calcula cada distancia con LCA en $O(\lg n)$, cada operación cuesta $O(\lg^2 n)$ y puede conservarse $O(n\lg n)$ espacio para binary lifting, o $O(n)$ con LCA mediante HLD. Si el LCA está preprocesado para $O(1)$, las operaciones vuelven a $O(\lg n)$.
+
+## 5. El código del curso y la comparación
+
+En `abstracted-order-104.cpp`, `DFS(u,p)` calcula tamaños ignorando nodos retirados. `centroid(u,p,s)` baja al hijo cuyo tamaño supera $s/2$. `decompose(u,p)` recalcula tamaños, elige centroide, guarda su padre `par`, lo retira, asigna `h` como nivel y recurre en las componentes. `get_depth(x)` cuenta cuántos padres de centroide hay hasta la raíz; está definido pero `main` no lo llama. `main` lee el árbol, inicia `decompose(1,-1)` e imprime para cada nodo una letra: A para nivel 0, B para 1, etcétera.
+
+**Ejemplo propio, ejecutado.** Entrada: una cadena de cinco nodos con aristas 1–2, 2–3, 3–4 y 4–5. Salida exacta: `C B A B C`. El nodo 3 es la raíz del árbol de centroides.
+
+| Pregunta | Heavy-Light | Centroides |
+| --- | --- | --- |
+| Cómo divide | cadenas por aristas pesadas | componentes por nodos separadores |
+| Altura útil | $O(\lg n)$ cadenas por camino | $O(\lg n)$ niveles de centroides |
+| Construcción | $O(n)$ | $O(n\lg n)$ |
+| Camino con valores y cambios | rangos con segment tree, $O(\lg^2 n)$ | requiere una técnica específica del problema |
+| Distancia a marcado más cercano | no es su uso directo | $O(\lg n)$ con distancias precalculadas |
+
+<Practica nivel={1} titulo="Resuelto: centroide del árbol de clase">
+El programa retiró 2 y obtuvo componentes de tamaños 5, 3 y 2. Todas miden a lo más $11/2$, así que 2 es centroide.
+</Practica>
+
+<Practica nivel={2} titulo="Completa: niveles de la recursión">
+Tras $d$ niveles, una componente mide a lo más **___**. Por eso la profundidad es **___**.
+<Solucion>$n/2^d$ y $O(\lg n)$.</Solucion>
+</Practica>
+
+<Practica nivel={3} titulo="Solo: cuenta caminos de longitud 2 en una estrella (ejemplo propio)">
+Centro 1 y hojas 2, 3 y 4. Razona con `cnt[k−d]`.
+<Solucion>Hay tres caminos entre pares de hojas: 2–1–3, 2–1–4 y 3–1–4. Cada hoja tiene $d=1$; `cnt[1]` cuenta hojas anteriores. Las contribuciones sucesivas son 0, 1 y 2; total 3.</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: si se desmarcan nodos, ¿basta mantener un mínimo por centroide?">
+<Solucion>No: al borrar el nodo que daba `mejor[c]` habría que saber el siguiente. Se necesita un multiconjunto o heap con borrado perezoso por centroide, y la actualización incorpora costos logarítmicos adicionales.</Solucion>
+</Practica>
+
+<Detective titulo="Parejas contadas dos veces" sintoma="El contador de caminos da demasiadas parejas dentro de una misma rama del centroide. El código incorpora cada distancia a cnt inmediatamente después de leer un nodo." pista="¿Qué debe representar cnt antes de recorrer una componente entera?">
+**Causa:** `cnt` ya incluye nodos de la componente actual. **Corrección:** consultar todos los nodos de esa componente primero; incorporar sus distancias después. **Verificación:** una cadena corta donde varios nodos están en la misma rama.
+</Detective>
+
+## 6. Problemas de práctica
+
+| Problema | Herramienta |
+| --- | --- |
+| CSES 2079 — Finding a Centroid | descenso por componente grande |
+| CSES 2080 — Fixed-Length Paths I | `cnt[k−d]` por centroide |
+| Codeforces 321C — Ciel the Commander | niveles del árbol de centroides |
+| Codeforces 342E — Xenia and Tree | marcado más cercano |
+| CSES 1135 — Distance Queries | LCA como apoyo para distancias |
+| CSES 1137 — Subtree Queries | HLD o Euler tour |
+| CSES 1138 — Path Queries | HLD |
+| CSES 2134 — Path Queries II | HLD y segment tree |
+
+<Errores errores={[
+  {mal:'«El centroide es el nodo de menor excentricidad.»',bien:'Se define por tamaños de componentes, no por distancias máximas.'},
+  {mal:'«El árbol de centroides conserva las aristas originales.»',bien:'Une centroides de componentes recursivas; es otro árbol.'},
+  {mal:'«La consulta de marcado es siempre $O(\\lg n)$ sin preparación.»',bien:'Eso requiere distancias a ancestros centroide en $O(1)$; con LCA de $O(\\lg n)$ cuesta $O(\\lg^2 n)$.'}
+]} />
+
+<Quiz client:visible id="graf-centroides" preguntas={[
+  {q:'Al quitar un centroide, cada componente mide a lo más…',opts:['$n/2$','$n/3$','$n-1$'],ok:0},
+  {q:'¿Cómo se encuentra un centroide tras calcular tamaños?',opts:['Bajando al hijo mayor que la mitad','Subiendo al padre','Ordenando nodos por número'],ok:0},
+  {q:'Profundidad del árbol de centroides:',opts:['$O(n)$','$O(\\lg n)$','$O(1)$'],ok:1},
+  {q:'Construcción de centroides:',opts:['$O(n)$','$O(n\\lg n)$','$O(n^2)$ siempre'],ok:1},
+  {q:'Para contar caminos de longitud k se busca…',opts:['$cnt[k-d]$','$cnt[k+d]$','$cnt[d]$ siempre'],ok:0},
+  {q:'Marcado cercano con distancias precalculadas cuesta por operación…',opts:['$O(1)$','$O(\\lg n)$','$O(n)$'],ok:1}
+]} />
+
+<Feynman consigna="Explica a otra persona por qué el árbol de centroides es poco profundo y cómo sirve para un camino o una consulta de marcado." claves={['Define centroide por componentes.','Demuestra existencia por descenso.','Justifica la mitad en cada nivel.','Explica el primer centroide separador.','Distingue costo con y sin distancias precalculadas.']} />
+<Dominio client:visible id="centroides" />
+<Fuente archivos={['CS3014 · Dynamic Graphs I (semana 14, 10/11/2026)', 'abstracted-order-104.cpp']} />

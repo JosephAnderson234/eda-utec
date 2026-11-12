@@ -1,0 +1,328 @@
+---
+title: 'Predecesor y árbol de van Emde Boas'
+description: 'Enteros I (semana 11): modelos de cómputo (word RAM, cell probe), el problema del predecesor, coordenadas jerárquicas, la recurrencia T(u) = T(√u) + O(1), Sucesor/Predecesor/Insertar/Eliminar en O(lg lg u) con trazas, el espacio Θ(u) y ordenar con una vEB.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import EnterosFig from '../../../components/fig/EnterosFig.astro';
+
+<EnSimple>
+Piensa en una **guía telefónica gigante** con todos los números posibles, de 0 a 9 999. Te piden «el primer número **ocupado** que viene después del 5 213».
+- Una forma: buscar con comparaciones, como en un árbol de búsqueda. Cuesta $\lg n$ pasos, sin importar qué son las llaves.
+- La idea de van Emde Boas: **las llaves son números, y los números tienen dígitos**. Primero miras los dígitos de adelante (**52**: ¿hay alguien ocupado en el «barrio» 52 después de 13?). Si no, saltas al **siguiente barrio ocupado** y tomas su primer número.
+- Cada pregunta se responde mirando **la mitad de los dígitos**. Partir a la mitad, luego a la mitad de la mitad… da muy pocos pasos: $\lg w$ si la llave tiene $w$ bits.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Explicar por qué la cota $\\Omega(\\lg n)$ del modelo de comparaciones <strong>no</strong> se aplica cuando las llaves son enteros de $w$ bits.',
+		'Escribir $x = \\langle c, i \\rangle$ y resolver $T(u) = T(\\sqrt u) + O(1)$ con cambio de variable.',
+		'Ejecutar a mano <strong>Sucesor, Predecesor, Insertar y Eliminar</strong> sobre una vEB de $u = 16$, diciendo qué llamada es la «cara».',
+		'Justificar por qué el espacio es $\\Theta(u)$ y qué significa que ordenar y cola de prioridad sean equivalentes.',
+	]}
+	prerrequisitos={[{ t: 'Árboles binarios de búsqueda', href: '/optimalidad/rectangulos/' }, { t: 'Recursión por mitades del layout vEB', href: '/memoria/layout-veb/' }]}
+	perfiles={['visual', 'simulador', 'laboratorio', 'feynman']}
+/>
+
+## 1. ¿En qué modelo estamos?
+
+Hasta ahora, en el curso, una llave era una **caja negra**: solo se podía comparar con otra. En esta unidad las llaves son **enteros** y podemos operar con sus bits.
+
+- **Universo.** Las llaves son enteros de $w$ bits: $U = \{0, 1, \dots, u-1\}$ con $u = 2^w$. Una **palabra** (*word*) es una celda de memoria de $w$ bits. Ejemplos: IPv4 tiene $w = 32$ ($u \approx 4\cdot 10^9$); los enteros de máquina, $w = 64$.
+- **¿Cuánto vale $w$, como mínimo?** Con $n$ llaves guardadas en $S$ celdas, una palabra tiene que poder guardar una dirección de memoria: $w \ge \lg S \ge \lg n$.
+
+| Modelo | Qué se puede hacer | Para qué se usa |
+| --- | --- | --- |
+| **BST** (comparaciones) | solo comparar llaves | cota $\Omega(\lg n)$ por búsqueda |
+| **Pointer machine** | solo seguir punteros | vEB es óptima aquí |
+| **Word RAM** | operaciones de C sobre palabras de $w$ bits en $O(1)$: aritmética, AND/OR/XOR y desplazamientos | **diseñar** algoritmos |
+| **Transdichotomous RAM** | word RAM con $w \ge \lg n$ | lo mismo, explicitando el supuesto |
+| **Cell probe** | solo se cuentan lecturas/escrituras de celdas; cómputo gratis | **demostrar cotas inferiores** |
+
+Los modelos van de más débil (BST) a más fuerte (cell probe). La regla para recordarlo:
+
+> Una **cota superior** demostrada en un modelo débil vale en los fuertes; una **cota inferior** demostrada en un modelo fuerte vale en los débiles. Por eso las cotas inferiores se prueban en cell probe y los algoritmos se diseñan en word RAM.
+
+## 2. El problema del predecesor
+
+Mantener un conjunto $S \subseteq U$ de $n$ palabras con:
+
+- $\text{Insertar}(x)$, $\text{Eliminar}(x)$;
+- $\text{Predecesor}(x) = \max\{y \in S \mid y < x\}$ y $\text{Sucesor}(x) = \min\{y \in S \mid y > x\}$.
+
+$x$ **no tiene que estar** en $S$. Es el problema de una tabla de rutas de internet («¿qué prefijo cubre esta IP?») y el de «cuál es la siguiente llave» en cualquier índice ordenado.
+
+<Predice pregunta="Tienes dos soluciones extremas: (a) un arreglo de tamaño $u$ con la respuesta precalculada para cada $x$, y (b) un árbol balanceado. ¿Cuánto cuesta consultar y actualizar en cada una? ¿Cuál falla con $w = 64$?">
+
+| | Consulta | Actualización | Espacio |
+| --- | --- | --- | --- |
+| (a) Tabla de respuestas | $O(1)$ | $\Theta(u)$ (un cambio puede alterar muchas respuestas) | $\Theta(u)$ |
+| (b) Árbol balanceado | $\Theta(\lg n)$ | $\Theta(\lg n)$ | $\Theta(n)$ |
+
+Con $w = 64$, la tabla necesitaría $2^{64}$ celdas: imposible. El árbol funciona, pero con $n = 10^9$ hace $\lg n \approx 30$ pasos. La vEB busca algo **en el medio**: $\lg w = 6$ pasos.
+</Predice>
+
+## 3. La idea: partir las palabras a la mitad
+
+<EnterosFig fig="coords">
+**Cómo leerlo.** Los $w/2$ bits altos dicen **en qué cluster** (barrio) cae $x$; los $w/2$ bits bajos dicen **en qué posición dentro** de ese cluster. Con $w = 4$: $13 = 1101_2$, así que $c = 11_2 = 3$ e $i = 01_2 = 1$; se comprueba que $3\cdot 4 + 1 = 13$.
+</EnterosFig>
+
+Formalmente, con coordenadas jerárquicas:
+
+$$
+x = \langle c, i\rangle, \qquad c = \text{alto}(x) = \left\lfloor x / \sqrt u \right\rfloor, \qquad i = \text{bajo}(x) = x \bmod \sqrt u, \qquad x = c\sqrt u + i .
+$$
+
+Hay $\sqrt u$ clusters, cada uno con universo de tamaño $\sqrt u$. (Se supone que $w$ es potencia de 2 para que las mitades sean exactas.) En C, con palabras: `c = x >> (w/2)` e `i = x & ((1 << (w/2)) - 1)`.
+
+### La recurrencia que buscamos
+
+Si cada operación hiciera **una sola** llamada recursiva sobre un universo de tamaño $\sqrt u$:
+
+$$T(u) = T(\sqrt u) + O(1).$$
+
+Cambio de variable: $m = \lg u$, así $\sqrt u = 2^{m/2}$. Definimos $S(m) = T(2^m)$:
+
+$$S(m) = S(m/2) + O(1) \;\Rightarrow\; S(m) = O(\lg m) \;\Rightarrow\; T(u) = O(\lg \lg u) = O(\lg w).$$
+
+<EnterosFig fig="bits">
+**Cómo leerlo.** Cada caja es el número de bits del universo en ese nivel de la recursión. Con $w = 64$ se pasa por 64, 32, 16, 8, 4, 2, 1: seis llamadas. **Toda la dificultad del diseño es lograr que cada operación haga una sola llamada costosa**; si hiciera dos, la recurrencia sería $T(u) = 2T(\sqrt u) + O(1) = O(\lg u) = O(w)$.
+</EnterosFig>
+
+## 4. La estructura
+
+Una vEB $V$ de tamaño $u$ guarda:
+
+1. $\sqrt u$ vEB de tamaño $\sqrt u$: $V.\text{cluster}[0], \dots, V.\text{cluster}[\sqrt u - 1]$.
+2. Una vEB $V.\text{summary}$ de tamaño $\sqrt u$ con los índices $c$ de los clusters **no vacíos**.
+3. $V.\min$, el menor elemento, **que no se guarda en ningún cluster**.
+4. $V.\max$, el mayor elemento (este sí está también en su cluster).
+
+El caso base es $u = 2$: solo hay `min` y `max`.
+
+<EnterosFig fig="veb16">
+**Cómo leerlo.** Es el ejemplo de clase: $u = 16$ y $S = \{2, 3, 4, 5, 7, 14, 15\}$. El 2 es el mínimo y **solo** vive en `V.min`; por eso el cluster 0 tiene únicamente al 3 $= \langle 0, 3 \rangle$. El resumen contiene $\{0, 1, 3\}$ porque el cluster 2 está vacío. Los demás: $4 = \langle 1,0\rangle$, $5 = \langle 1,1\rangle$, $7 = \langle 1,3\rangle$, $14 = \langle 3,2\rangle$, $15 = \langle 3,3\rangle$.
+</EnterosFig>
+
+Las dos decisiones de diseño que hacen que haya **una sola llamada costosa**:
+
+| Truco | Qué resuelve |
+| --- | --- |
+| Guardar `max` en cada (sub)estructura | En Sucesor, decidir **sin recursión** si la respuesta está en el propio cluster: basta comparar $i < \text{cluster}[c].\max$ |
+| No guardar `min` recursivamente | Insertar en una vEB vacía es $O(1)$ (solo se asignan `min` y `max`), así que de las dos inserciones (cluster + resumen) solo una es cara |
+
+## 5. Sucesor
+
+### Primer intento (dos llamadas)
+
+Para $\text{Sucesor}(x = \langle c, i \rangle)$: (1) buscar el sucesor de $i$ en $V.\text{cluster}[c]$; (2) si no hay, buscar el sucesor de $c$ en el resumen; (3) devolver el mínimo de ese cluster. Son **dos** llamadas recursivas en el peor caso: $T(u) = 2T(\sqrt u) + O(1) = O(w)$. No sirve.
+
+### Versión correcta (una llamada)
+
+```text
+Sucesor(V, x):
+  si V.min ≠ nulo y x < V.min:  devolver V.min
+  si V.max = nulo o x ≥ V.max:  devolver nulo
+  si u = 2:                      devolver V.max          // aquí x = 0 y el sucesor es 1
+  ⟨c, i⟩ ← x
+  si V.cluster[c].max ≠ nulo y i < V.cluster[c].max:
+      devolver ⟨c, Sucesor(V.cluster[c], i)⟩             // una llamada
+  si no:
+      c' ← Sucesor(V.summary, c)                          // una llamada
+      devolver ⟨c', V.cluster[c'].min⟩                    // O(1)
+```
+
+<Practica nivel={1} titulo="Resuelto: Sucesor(5) y Sucesor(9) sobre el ejemplo">
+
+**Sucesor(5).** $5 = \langle 1, 1 \rangle$. Se cumple $5 \ge V.\min = 2$ y $5 < V.\max = 15$. El cluster 1 tiene $\max = 3 > 1$: **el sucesor está en el cluster 1**, se baja ahí.
+
+Dentro del cluster 1 (elementos $\{0, 1, 3\}$, $u = 4$): su `min` es 0 (no está en sus subclusters), $\max = 3$, subcluster 0 $= \{1\}$, subcluster 1 $= \{3\}$, resumen $= \{0, 1\}$. Se busca $\text{Sucesor}(1)$: $1 = \langle 0, 1 \rangle$; el max del subcluster 0 es 1 y $1 < 1$ es falso, así que se pregunta al resumen por el sucesor de 0: es 1. Se devuelve $\langle 1, \min \text{ del subcluster } 1 \rangle = \langle 1, 1 \rangle = 3$.
+
+Afuera: $\langle 1, 3 \rangle = 1\cdot 4 + 3 = $ **7**.
+
+**Sucesor(9).** $9 = \langle 2, 1 \rangle$. El cluster 2 está vacío: no hay `max` con qué comparar. Recursión en el resumen: el sucesor de $c = 2$ es $c' = 3$. Se devuelve $\langle 3, V.\text{cluster}[3].\min \rangle = \langle 3, 2 \rangle =$ **14**.
+
+Fíjate: en ambos casos hubo **exactamente una** llamada recursiva por nivel.
+</Practica>
+
+## 6. Predecesor: el detalle del mínimo
+
+Es simétrico, con un caso extra:
+
+```text
+Predecesor(V, x):
+  si V.max ≠ nulo y x > V.max:  devolver V.max
+  si V.min = nulo o x ≤ V.min:  devolver nulo
+  si u = 2:                      devolver V.min
+  ⟨c, i⟩ ← x
+  si V.cluster[c].min ≠ nulo y i > V.cluster[c].min:
+      devolver ⟨c, Predecesor(V.cluster[c], i)⟩
+  si no:
+      c' ← Predecesor(V.summary, c)
+      si c' = nulo:  devolver V.min          // ← el mínimo no está en ningún cluster
+      devolver ⟨c', V.cluster[c'].max⟩
+```
+
+<Predice pregunta="¿Por qué hace falta la línea «si $c' =$ nulo, devolver $V.\min$»? Pruébalo con $\text{Predecesor}(3)$ en el ejemplo.">
+$3 = \langle 0, 3 \rangle$. El cluster 0 tiene $\min = 3$ y $3 > 3$ es falso, así que se pregunta al resumen por un cluster anterior a 0: no hay ($c' =$ nulo). Pero la respuesta existe: es el 2, que **no está en ningún cluster** porque es `V.min`. Sin esa línea, el algoritmo devolvería «nulo» y estaría mal.
+</Predice>
+
+## 7. Insertar
+
+```text
+Insertar(V, x):
+  si V.min = nulo:  V.min ← V.max ← x;  devolver          // vEB vacía: O(1)
+  si x = V.min o x = V.max:  devolver
+  si x < V.min:  intercambiar x ↔ V.min                    // el min viejo baja a los clusters
+  si u > 2:
+      ⟨c, i⟩ ← x
+      si V.cluster[c].min = nulo:
+          Insertar(V.summary, c)                            // la llamada cara
+          V.cluster[c].min ← V.cluster[c].max ← i           // O(1): estaba vacío
+      si no:
+          Insertar(V.cluster[c], i)                         // la llamada cara
+  si x > V.max:  V.max ← x
+```
+
+Hay dos casos y en **cada uno** solo una llamada es costosa: si el cluster estaba vacío, se paga la del resumen y la del cluster es $O(1)$; si no estaba vacío, el resumen no cambia.
+
+<Practica nivel={2} titulo="Complétalo: insertar 9 y luego 0 en $S = \{2,3,4,5,7,14,15\}$">
+
+**Insertar 9.** $9 = \langle 2, 1 \rangle$ y $9 > V.\min = 2$: no hay intercambio. El cluster 2 está vacío, así que:
+- $\text{Insertar}(V.\text{summary}, 2)$: el resumen pasa de $\{0,1,3\}$ a **\_\_\_\_\_\_** (aquí sí hay recursión).
+- $V.\text{cluster}[2].\min \leftarrow V.\text{cluster}[2].\max \leftarrow$ **\_\_**, sin recursión.
+- ¿Cambia $V.\max$? **\_\_\_**
+
+**Insertar 0.** $0 < V.\min = 2$: se intercambian. Ahora $V.\min =$ **\_\_** y lo que se inserta en los clusters es el **\_\_** viejo, que es $\langle 0, 2 \rangle$. El cluster 0 ya tenía $\{3\}$, así que hay una llamada recursiva: el cluster 0 queda con $\min =$ **\_\_** y $\max =$ **\_\_**.
+
+<Solucion>
+- Resumen: $\{0, 1, 2, 3\}$. Cluster 2: $\min = \max = 1$. $V.\max$ no cambia: $9 \le 15$.
+- Tras insertar 0: $V.\min = 0$; baja el **2** como $\langle 0, 2 \rangle$; el cluster 0 queda con $\min = 2$, $\max = 3$ (elementos $\{2, 3\}$).
+
+Comprobado con una implementación de referencia que sigue exactamente el pseudocódigo de clase.
+</Solucion>
+</Practica>
+
+## 8. Eliminar
+
+La pregunta clave: si borramos $V.\min$, **¿cuál es el nuevo mínimo y dónde estaba?** Es el mínimo del primer cluster no vacío ($c = V.\text{summary}.\min$), y estaba **dentro** de ese cluster. Se sube a $V.\min$ y se borra de su cluster para no tenerlo repetido.
+
+```text
+Eliminar(V, x):                                   // con x ∈ V
+  si V.min = V.max:  V.min ← V.max ← nulo;  devolver
+  si u = 2:  V.min ← V.max ← 1 − x;  devolver
+  si x = V.min:
+      c ← V.summary.min;  x ← ⟨c, V.cluster[c].min⟩;  V.min ← x     // ahora hay que borrar x de su cluster
+  ⟨c, i⟩ ← x;  Eliminar(V.cluster[c], i)
+  si V.cluster[c].min = nulo:                    // el cluster quedó vacío (esa llamada fue O(1))
+      Eliminar(V.summary, c)
+      si x = V.max:
+          si V.summary.min = nulo:  V.max ← V.min
+          si no:  c' ← V.summary.max;  V.max ← ⟨c', V.cluster[c'].max⟩
+  si no, si x = V.max:  V.max ← ⟨c, V.cluster[c].max⟩
+```
+
+Otra vez: si el cluster queda vacío, la eliminación dentro de él fue $O(1)$ (tenía un solo elemento) y la llamada cara es la del resumen; si no queda vacío, el resumen no se toca.
+
+<Practica nivel={1} titulo="Resuelto: eliminar 2 (el mínimo)">
+$c = V.\text{summary}.\min = 0$ y $V.\text{cluster}[0].\min = 3$: el nuevo mínimo es $\langle 0, 3 \rangle = 3$, y pasa a `V.min`.
+- Hay que sacar el 3 de su cluster. Ese cluster tenía un solo elemento: su min y max pasan a nulo en $O(1)$.
+- El cluster quedó vacío: $\text{Eliminar}(V.\text{summary}, 0)$; el resumen pasa de $\{0, 1, 3\}$ a $\{1, 3\}$. Como $x = 3 \ne V.\max = 15$, no se toca $V.\max$.
+
+Resultado: $S = \{3, 4, 5, 7, 14, 15\}$, $V.\min = 3$ y **ningún** elemento en el cluster 0.
+</Practica>
+
+<Practica nivel={3} titulo="Solo: después de borrar el 2, borra el 15. ¿Qué queda en el cluster 3, en el resumen y en $V.\max$?">
+<Solucion>
+$15 = \langle 3, 3 \rangle$. Se elimina 3 del cluster 3, que tenía $\{2, 3\}$: queda $\{2\}$, no vacío, así que el resumen sigue $\{1, 3\}$. Como $x = V.\max$, se recalcula: $V.\max = \langle 3, V.\text{cluster}[3].\max \rangle = \langle 3, 2 \rangle = 14$. Verificado con la implementación de referencia.
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: construye la vEB de $u = 16$ con $S = \{1, 6, 9, 12\}$ y calcula $\text{Sucesor}(6)$, $\text{Predecesor}(12)$ y $\text{Sucesor}(10)$">
+<Solucion>
+- $V.\min = 1$ (fuera de los clusters), $V.\max = 12$. $6 = \langle 1, 2 \rangle$, $9 = \langle 2, 1 \rangle$, $12 = \langle 3, 0 \rangle$. Resumen $= \{1, 2, 3\}$; el cluster 0 está **vacío** aunque $1 \in S$.
+- $\text{Sucesor}(6)$: cluster 1 tiene $\max = 2$ y $i = 2 < 2$ es falso → resumen: sucesor de 1 es 2 → $\langle 2, \min \rangle = \langle 2, 1 \rangle = 9$.
+- $\text{Predecesor}(12)$: $12 = V.\max$, no es mayor; cluster 3 tiene $\min = 0$ y $0 > 0$ es falso → resumen: predecesor de 3 es 2 → $\langle 2, \max \rangle = 9$.
+- $\text{Sucesor}(10)$: $10 = \langle 2, 2 \rangle$; cluster 2 tiene $\max = 1$, $2 < 1$ falso → resumen: sucesor de 2 es 3 → $\langle 3, 0 \rangle = 12$.
+</Solucion>
+</Practica>
+
+## 9. ¿Y el espacio?
+
+$$S(u) = (\sqrt u + 1)\, S(\sqrt u) + O(1).$$
+
+Hay $\sqrt u$ clusters y un resumen, todos de tamaño $\sqrt u$, y **se reservan aunque estén vacíos**. Si $S(2) = a$ y el término constante también vale $a$, por inducción $S(u) \le 2au - 3a$: $(\sqrt u + 1)(2a\sqrt u - 3a) + a = 2au - a\sqrt u - 2a \le 2au - 3a$, es decir $S(u) = \Theta(u)$. Con $w = 32$ son unos $4\cdot 10^9$ palabras **aunque $S$ tenga 10 elementos**; con $w = 64$ ni siquiera cabe.
+
+<EnSimple titulo="El problema del espacio, en simple">
+La vEB reserva una casilla para **cada número posible**, esté ocupado o no: como una guía telefónica impresa con todos los números del país, aunque solo diez tengan dueño. La memoria crece con el **universo** $u$, no con la cantidad de llaves $n$. La próxima página (X-fast y Y-fast) arregla eso guardando solo lo que existe, con tablas hash.
+</EnSimple>
+
+En la *pointer machine*, $O(\lg \lg u)$ por operación es lo mejor posible, incluso usando $\Omega(u)$ de espacio.
+
+## 10. Ordenar con una vEB, y por qué ordenar ≡ cola de prioridad
+
+```text
+Ordenar-vEB(A[1..n]):
+  V ← vEB vacía de tamaño u
+  para j ← 1..n:  Insertar(V, A[j])
+  x ← V.min
+  mientras x ≠ nulo:  imprimir x;  x ← Sucesor(V, x)
+```
+
+Cuesta $O(n \lg w)$ con $\Theta(u)$ de espacio: $n$ inserciones y $n$ sucesores. Con $w = 64$, $\lg w = 6$ contra $\lg n \approx 30$ de un ordenamiento por comparaciones (si $n \approx 10^9$).
+
+| Método | Tiempo | Cuándo conviene |
+| --- | --- | --- |
+| Counting sort | $O(n + u)$ | universo pequeño |
+| Radix sort con dígitos de $\lg n$ bits | $O(n\, w / \lg n)$ | lineal si $w = O(\lg n)$ |
+| vEB | $O(n \lg w)$ | cubre $w = \lg^{O(1)} n$ con $O(n \lg\lg n)$ |
+
+**Equivalencia (Thorup).** Con una cola de prioridad que haga Insertar y Extraer-Mínimo en $O(f(n,w))$ se ordena en $O(n\,f(n,w))$ (insertar todo y extraer). **Al revés también:** si se ordenan $n$ enteros en $O(n\,S(n,w))$, existe una cola de prioridad con Insertar, Eliminar y Mínimo en $O(S(n,w))$. Consecuencia: una cola de prioridad de tiempo constante exigiría ordenar en $O(n)$, que es un **problema abierto** para $w$ arbitrario.
+
+<Errores
+	errores={[
+		{ mal: '«El mínimo está en el cluster 0, como cualquier otro elemento.»', bien: 'El <strong>mínimo no se guarda recursivamente</strong>: vive solo en <code>V.min</code>. Por eso Predecesor necesita el caso «si c′ = nulo, devolver V.min».' },
+		{ mal: '«vEB es O(lg lg n).»', bien: 'Es $O(\\lg \\lg u) = O(\\lg w)$: depende del <strong>universo</strong>, no de cuántas llaves hay.' },
+		{ mal: '«La recurrencia T(u) = 2T(√u) + O(1) también da lg lg u.»', bien: 'Con dos llamadas da $O(\\lg u) = O(w)$. Toda la gracia de vEB es que haya <strong>una</strong> llamada costosa.' },
+		{ mal: '«Insertar en un cluster vacío requiere una llamada recursiva más.»', bien: 'Insertar en una vEB vacía es $O(1)$: solo asigna <code>min</code> y <code>max</code>. La única llamada cara es la del resumen.' },
+		{ mal: '«La vEB usa O(n) de espacio.»', bien: 'Usa $\\Theta(u)$ porque reserva todos los clusters aunque estén vacíos.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="veb"
+	preguntas={[
+		{ q: 'Con $w = 8$ y $x = 183 = 10110111_2$, ¿qué es $\\langle c, i \\rangle$?', opts: ['$\\langle 11, 7 \\rangle$', '$\\langle 7, 11 \\rangle$', '$\\langle 10, 183 \\rangle$', '$\\langle 5, 23 \\rangle$'], ok: 0, why: 'Bits altos $1011_2 = 11$, bits bajos $0111_2 = 7$; se verifica $11\\cdot 16 + 7 = 183$.' },
+		{ q: 'Resolver $T(u) = T(\\sqrt u) + O(1)$ da…', opts: ['$O(\\lg u)$', '$O(\\lg\\lg u)$', '$O(\\sqrt u)$', '$O(1)$'], ok: 1, why: 'Con $m = \\lg u$: $S(m) = S(m/2) + O(1) = O(\\lg m)$.' },
+		{ q: 'En Sucesor, ¿qué permite decidir en $O(1)$ si la respuesta está en el propio cluster?', opts: ['El min del resumen', 'Guardar el max de cada cluster', 'Una tabla hash', 'Que el min no se guarde recursivamente'], ok: 1, why: 'El sucesor de $i$ está en el cluster $c$ exactamente cuando $i < \\text{cluster}[c].\\max$.' },
+		{ q: 'Al insertar $x < V.\\min$…', opts: ['se descarta', 'se intercambia con $V.\\min$ y el mínimo viejo baja a los clusters', 'se guarda en el resumen', 'se reconstruye la estructura'], ok: 1 },
+		{ q: 'El espacio de una vEB de universo $u$ es…', opts: ['$\\Theta(n)$', '$\\Theta(n \\lg w)$', '$\\Theta(u)$', '$\\Theta(\\sqrt u)$'], ok: 2 },
+		{ q: 'Las cotas inferiores del predecesor se demuestran en cell probe porque…', opts: ['es el modelo más débil', 'una cota inferior en el modelo más fuerte vale en todos los más débiles', 'ahí la vEB es óptima', 'permite multiplicaciones'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explícale a un compañero por qué la vEB logra una sola llamada recursiva costosa por operación, tanto en Sucesor como en Insertar."
+	claves={[
+		'La recurrencia $T(u) = T(\\sqrt u) + O(1)$ y por qué da $\\lg \\lg u$; con dos llamadas sería $O(w)$.',
+		'En Sucesor: guardar <code>max</code> permite decidir con una comparación si la respuesta está en el cluster; si no, se pregunta al resumen y el <code>min</code> del cluster siguiente se lee en $O(1)$.',
+		'En Insertar: como el <code>min</code> no se guarda recursivamente, insertar en una vEB vacía es $O(1)$; la llamada cara es la del resumen o la del cluster, nunca las dos.',
+		'Un ejemplo concreto: Sucesor(9) en $u = 16$ salta directo al resumen porque el cluster 2 está vacío.',
+	]}
+	trampa="decir que se evita la recursión «porque se usa una tabla hash». La vEB clásica no usa hash; el hash aparece en X-fast / Y-fast."
+/>
+
+<Dominio client:visible id="veb" />
+
+<Fuente archivos={['Sem11_Integers_I.pdf (Enteros I, 21/10/2026)', 'van Emde Boas (1975); Thorup (2007)', 'Ejemplos verificados con una implementación propia del pseudocódigo de clase']} />

@@ -1,0 +1,202 @@
+---
+/** Diagramas de la unidad de enteros: coordenadas jerárquicas, vEB de u = 16, recurrencia de bits y vista de árbol. */
+type Fig = 'coords' | 'veb16' | 'bits' | 'arbol' | 'yfast' | 'trie4' | 'paralelo';
+interface Props {
+	fig: Fig;
+}
+const { fig } = Astro.props;
+const A = `url(#ea-${fig})`;
+const defs = `<defs><marker id="ea-${fig}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="head"/></marker></defs>`;
+
+const S = [2, 3, 4, 5, 7, 14, 15];
+const clusters = [0, 1, 2, 3].map((c) => ({
+	c,
+	items: [0, 1, 2, 3].map((i) => ({ i, x: c * 4 + i, on: S.includes(c * 4 + i) && c * 4 + i !== 2 })),
+}));
+const resumen = [0, 1, 3];
+
+/* Árbol binario de altura 4 sobre u = 16 hojas: nodo (nivel, índice) vale 1 si su intervalo contiene alguna llave */
+const nodos: { l: number; k: number; x: number; y: number; v: number }[] = [];
+for (let l = 0; l <= 4; l++) {
+	const n = 2 ** l;
+	const ancho = 16 / n;
+	for (let k = 0; k < n; k++) {
+		const v = S.some((s) => s >= k * ancho && s < (k + 1) * ancho) ? 1 : 0;
+		nodos.push({ l, k, x: 40 + ((k + 0.5) * 680) / n, y: 40 + l * 52, v });
+	}
+}
+const padre = (l: number, k: number) => nodos.find((m) => m.l === l - 1 && m.k === Math.floor(k / 2))!;
+/* ruta de x = 9 = 1001 */
+const ruta9 = [0, 1, 2, 4, 9].map((k, l) => `${l}-${k}`);
+
+/* Trie binario de las llaves 0000, 0010, 1100, 1111 y la consulta q = 0101 */
+const llaves = ['0000', '0010', '1100', '1111'];
+const q = '0101';
+const pos = (p: string) => ({ x: 40 + ((p.length ? parseInt(p, 2) : 0) + 0.5) * (680 / 2 ** p.length), y: 30 + p.length * 50 });
+const prefs = new Set<string>();
+llaves.forEach((k) => { for (let d = 0; d <= 4; d++) prefs.add(k.slice(0, d)); });
+const aristas = [...prefs].filter((p) => p.length > 0).map((p) => ({ a: pos(p.slice(0, -1)), b: pos(p), bit: p.at(-1) }));
+const qAristas = [1, 2, 3, 4].map((d) => ({ a: pos(q.slice(0, d - 1)), b: pos(q.slice(0, d)), fuera: !prefs.has(q.slice(0, d)) }));
+const ramifica = [...prefs].filter((p) => prefs.has(p + '0') && prefs.has(p + '1'));
+---
+
+<figure class="svgfig not-content">
+	<div class="svgfig__scroll">
+		{fig === 'coords' && (
+			<svg viewBox="0 0 760 230" role="img" aria-label="El entero 13 en 4 bits se parte en 2 bits altos (cluster 3) y 2 bits bajos (posición 1)">
+				<Fragment set:html={defs} />
+				<text x="380" y="26" class="t b">x = 13 con w = 4 bits (u = 16)</text>
+				{['1', '1', '0', '1'].map((b, i) => (
+					<>
+						<rect x={250 + i * 66} y="44" width="60" height="56" rx="8" class={i < 2 ? 'c3' : 'c1'} />
+						<text x={280 + i * 66} y="80" class="t b mono">{b}</text>
+					</>
+				))}
+				<text x="316" y="124" class="t s">bits altos: alto(x) = 11₂ = 3</text>
+				<text x="448" y="124" class="t s">bits bajos: bajo(x) = 01₂ = 1</text>
+				<line x1="316" y1="134" x2="200" y2="170" class="ln" marker-end={A} />
+				<line x1="448" y1="134" x2="560" y2="170" class="ln" marker-end={A} />
+				<rect x="60" y="172" width="290" height="44" rx="8" class="c3" />
+				<text x="205" y="199" class="t s">c = 3 → «en qué cluster cae» (de √u = 4)</text>
+				<rect x="410" y="172" width="290" height="44" rx="8" class="c1" />
+				<text x="555" y="199" class="t s">i = 1 → «posición dentro del cluster»</text>
+			</svg>
+		)}
+
+		{fig === 'veb16' && (
+			<svg viewBox="0 0 760 330" role="img" aria-label="vEB de u = 16 con S = 2,3,4,5,7,14,15: min 2 aparte, max 15, resumen con clusters 0,1,3 y cuatro clusters de tamaño 4">
+				<Fragment set:html={defs} />
+				<rect x="40" y="20" width="680" height="70" rx="10" class="box" />
+				<text x="60" y="48" class="t l b">V (u = 16)</text>
+				<rect x="60" y="56" width="120" height="26" rx="6" class="c2" />
+				<text x="120" y="74" class="t s b">min = 2</text>
+				<rect x="580" y="56" width="120" height="26" rx="6" class="c2" />
+				<text x="640" y="74" class="t s b">max = 15</text>
+				<text x="380" y="44" class="cap">summary (u = 4): ¿qué clusters tienen algo?</text>
+				{[0, 1, 2, 3].map((c) => (
+					<>
+						<rect x={300 + c * 42} y="54" width="36" height="28" rx="5" class={resumen.includes(c) ? 'c4' : 'cell-off'} />
+						<text x={318 + c * 42} y="73" class="t s mono">{c}</text>
+					</>
+				))}
+				{clusters.map((cl) => (
+					<>
+						<line x1={380} y1="90" x2={130 + cl.c * 170} y2="140" class="ln dash" />
+						<rect x={50 + cl.c * 170} y="140" width="160" height="150" rx="10" class="box" />
+						<text x={130 + cl.c * 170} y="162" class="t s b">cluster[{cl.c}]</text>
+						{cl.items.map((it) => (
+							<>
+								<rect x={62 + cl.c * 170 + it.i * 36} y="176" width="32" height="32" rx="5" class={it.on ? 'c1' : 'cell-off'} />
+								<text x={78 + cl.c * 170 + it.i * 36} y="197" class="t s mono">{it.i}</text>
+								<text x={78 + cl.c * 170 + it.i * 36} y="226" class="t s mu">{it.x}</text>
+							</>
+						))}
+						<text x={130 + cl.c * 170} y="258" class="t s">
+							{cl.c === 0 ? 'min 3, max 3' : cl.c === 1 ? 'min 0, max 3' : cl.c === 2 ? 'vacío' : 'min 2, max 3'}
+						</text>
+						<text x={130 + cl.c * 170} y="278" class="t s mu">{cl.c === 0 ? '(el 2 NO está aquí)' : ''}</text>
+					</>
+				))}
+				<text x="380" y="316" class="t s mu">número grande gris = valor real c·4 + i · celda azul = presente en el cluster</text>
+			</svg>
+		)}
+
+		{fig === 'bits' && (
+			<svg viewBox="0 0 760 210" role="img" aria-label="Cada llamada recursiva parte los bits a la mitad: 64, 32, 16, 8, 4, 2, 1; son lg w = 6 llamadas">
+				<Fragment set:html={defs} />
+				{[64, 32, 16, 8, 4, 2, 1].map((b, i) => (
+					<>
+						<rect x={40 + i * 100} y={60} width={Math.max(14, (b / 64) * 86)} height="40" rx="6" class={i === 6 ? 'c4' : 'c3'} />
+						<text x={40 + i * 100 + Math.max(14, (b / 64) * 86) / 2} y="86" class="t s b mono">{b}</text>
+						<text x={40 + i * 100 + 43} y="124" class="t s mu">{i === 0 ? 'u = 2⁶⁴' : `u = 2^${b}`}</text>
+						{i < 6 && <line x1={40 + i * 100 + 88} y1="80" x2={40 + (i + 1) * 100 - 4} y2="80" class="ln" marker-end={A} />}
+					</>
+				))}
+				<text x="380" y="34" class="t b">T(u) = T(√u) + O(1): cada nivel conserva la mitad de los bits</text>
+				<text x="380" y="164" class="t s">w = 64 → 6 llamadas = lg w = lg lg u</text>
+				<text x="380" y="190" class="t s mu">Con dos llamadas por nivel serían 2 + 4 + … ≈ w: no se gana nada frente a mirar los bits uno por uno</text>
+			</svg>
+		)}
+
+		{fig === 'arbol' && (
+			<svg viewBox="0 0 760 330" role="img" aria-label="Árbol binario perfecto sobre 16 hojas; cada nodo vale 1 si su intervalo tiene llaves; ruta de x = 9 resaltada: 1, 1, 0, 0, 0">
+				<Fragment set:html={defs} />
+				{nodos.filter((n) => n.l > 0).map((n) => {
+					const p = padre(n.l, n.k);
+					const enRuta = ruta9.includes(`${n.l}-${n.k}`) && ruta9.includes(`${p.l}-${p.k}`);
+					return <line x1={p.x} y1={p.y} x2={n.x} y2={n.y} class={enRuta ? 'ln bad' : 'ln'} />;
+				})}
+				{nodos.map((n) => (
+					<>
+						<circle cx={n.x} cy={n.y} r={n.l === 4 ? 13 : 15} class={ruta9.includes(`${n.l}-${n.k}`) ? (n.v ? 'c5' : 'trap') : n.v ? 'c4' : 'cell-off'} />
+						<text x={n.x} y={n.y + 5} class="t s b mono">{n.v}</text>
+					</>
+				))}
+				{Array.from({ length: 16 }, (_, k) => (
+					<text x={40 + ((k + 0.5) * 680) / 16} y="276" class="t s mu mono">{k}</text>
+				))}
+				<text x="380" y="304" class="t s">verde = 1 (hay alguna llave debajo) · en rojo, la ruta de x = 9 = 1001₂</text>
+				<text x="380" y="324" class="t s mu">A lo largo de cualquier ruta los valores son 1…1 0…0: se puede buscar binariamente dónde cambia</text>
+			</svg>
+		)}
+
+		{fig === 'yfast' && (
+			<svg viewBox="0 0 760 250" role="img" aria-label="Y-fast tree: arriba un X-fast tree con un representante por grupo; abajo grupos de Θ(w) llaves en BST balanceados">
+				<Fragment set:html={defs} />
+				<polygon points="380,20 200,110 560,110" class="c3" />
+				<text x="380" y="78" class="t b">X-fast tree</text>
+				<text x="380" y="98" class="t s">solo ≤ 2n/w representantes</text>
+				{[0, 1, 2, 3].map((g) => (
+					<>
+						<line x1={230 + g * 100} y1="110" x2={130 + g * 170} y2="150" class="ln" marker-end={A} />
+						<polygon points={`${130 + g * 170},150 ${70 + g * 170},220 ${190 + g * 170},220`} class="c1" />
+						<text x={130 + g * 170} y="200" class="t s">BST · Θ(w)</text>
+						<text x={130 + g * 170} y="240" class="t s mu">grupo G{g + 1}: r{g + 1} ≤ x &lt; r{g + 2}</text>
+					</>
+				))}
+			</svg>
+		)}
+		{fig === 'trie4' && (
+			<svg viewBox="0 0 760 300" role="img" aria-label="Trie binario de 0000, 0010, 1100 y 1111; ramifica en la raíz (bit 0) y en los prefijos 00 y 11 (bit 2); la consulta 0101 sale del trie en el prefijo 01">
+				<Fragment set:html={defs} />
+				{qAristas.map((e) => <line x1={e.a.x} y1={e.a.y} x2={e.b.x} y2={e.b.y} class={e.fuera ? 'ln bad dash' : 'ln bad'} />)}
+				{aristas.map((e) => (
+					<>
+						<line x1={e.a.x} y1={e.a.y} x2={e.b.x} y2={e.b.y} class="ln" />
+						<text x={(e.a.x + e.b.x) / 2 + (e.bit === '0' ? -10 : 10)} y={(e.a.y + e.b.y) / 2} class="t s mu mono">{e.bit}</text>
+					</>
+				))}
+				{[...prefs].map((p) => {
+					const c = pos(p);
+					return <circle cx={c.x} cy={c.y} r="9" class={ramifica.includes(p) ? 'c5' : 'box'} />;
+				})}
+				{llaves.map((k) => <text x={pos(k).x} y={pos(k).y + 30} class="t s b mono">{k}</text>)}
+				<text x={pos(q).x} y={pos(q).y + 30} class="t s bad mono">q = {q}</text>
+				<text x="730" y="34" class="t s r mu">bit 0 (desde la izquierda)</text>
+				<text x="730" y="134" class="t s r mu">bit 2</text>
+				<text x="380" y="292" class="t s">rojo lleno = nodos de ramificación · rojo punteado = camino de q fuera del trie</text>
+			</svg>
+		)}
+
+		{fig === 'paralelo' && (
+			<svg viewBox="0 0 760 220" role="img" aria-label="Comparación en paralelo: la palabra del nodo con bloques 1 seguido del sketch de cada llave, menos sk(q) replicado; el centinela sobrevive si sk(x_i) ≥ sk(q)">
+				<Fragment set:html={defs} />
+				<text x="40" y="40" class="t l s b">palabra del nodo</text>
+				<text x="40" y="100" class="t l s b">− sk(q) replicado</text>
+				<text x="40" y="160" class="t l s b">resultado</text>
+				{['00', '01', '10', '11'].map((sk, j) => (
+					<>
+						<rect x={210 + j * 130} y="20" width="120" height="32" rx="6" class="c1" />
+						<text x={270 + j * 130} y="42" class="t s mono"><tspan class="b">1</tspan> {sk}</text>
+						<rect x={210 + j * 130} y="80" width="120" height="32" rx="6" class="c2" />
+						<text x={270 + j * 130} y="102" class="t s mono">0 01</text>
+						<rect x={210 + j * 130} y="140" width="120" height="32" rx="6" class={j >= 1 ? 'c4' : 'trap'} />
+						<text x={270 + j * 130} y="162" class="t s mono"><tspan class="b">{j >= 1 ? '1' : '0'}</tspan> {(['11', '00', '01', '10'])[j]}</text>
+					</>
+				))}
+				<text x="380" y="204" class="t s">centinela vivo (verde) ⇔ sk(xᵢ) ≥ sk(q) = 01 · contar los vivos da el rango de q</text>
+			</svg>
+		)}
+	</div>
+	<figcaption><slot /></figcaption>
+</figure>

@@ -1,0 +1,204 @@
+---
+title: 'Packed-Memory Array y Order Maintenance'
+description: 'Jerarquía de Memoria IV (semana 11): Ordered File Maintenance, el Packed-Memory Array con umbrales de densidad que dependen de la profundidad, inserción con redistribución, el argumento de cobro O(lg² N), List Labeling según el espacio de etiquetas y Order Maintenance en O(1) con indirección.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+
+<EnSimple>
+Piensa en un **estante de libros ordenados alfabéticamente** donde dejas algunos huecos. Cuando llega un libro nuevo, lo metes en su lugar. Si en esa zona ya no hay espacio, **no reacomodas todo el estante**: tomas una zona un poco más grande que tenga espacio suficiente y **redistribuyes los libros parejo** dentro de ella.
+- La regla de oro: ninguna zona debe quedar **ni demasiado llena ni demasiado vacía**.
+- Las zonas grandes tienen reglas **más estrictas** que las chicas. Así, después de reacomodar una zona grande, las chicas que contiene quedan con mucho margen y tardan en volver a dar problemas.
+- En promedio, cada libro nuevo hace mover solo $O(\lg^2 N)$ libros.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Ejecutar una inserción en un <strong>Packed-Memory Array</strong>, incluida la subida por el árbol implícito y la redistribución.',
+		'Justificar por qué los umbrales dependen de la profundidad y demostrar la cota amortizada $O(\\lg^2 N)$ con el argumento de cobro.',
+		'Relacionar Ordered File Maintenance con <strong>List Labeling</strong> y comparar las cotas según el espacio de etiquetas.',
+		'Resolver <strong>Order Maintenance</strong> en $O(1)$ con dos niveles de etiquetas.',
+	]}
+	prerrequisitos={[{ t: 'Layout de van Emde Boas (de dónde sale la caja negra)', href: '/memoria/layout-veb/' }]}
+	perfiles={['simulador', 'laboratorio', 'socratico']}
+/>
+
+## 1. El problema: Ordered File Maintenance
+
+Mantener $N$ elementos en un arreglo, **en orden**, con:
+- tamaño total $O(N)$ y huecos de $O(1)$ celdas entre elementos consecutivos;
+- **Insert:** agregar un elemento entre dos consecutivos dados;
+- **Delete:** quitar un elemento.
+
+Los huecos pequeños garantizan que recorrer $k$ elementos consecutivos cueste $O(1 + k/B)$ transferencias: **el orden en memoria es el orden de los datos**. Era la caja negra del [B-Tree cache-oblivious](/memoria/layout-veb/).
+
+## 2. Packed-Memory Array (PMA)
+
+**Densidad** de un intervalo del arreglo:
+
+$$\text{densidad} = \frac{\text{elementos en el intervalo}}{\text{celdas del intervalo}}.$$
+
+**La regla:** ningún intervalo debe quedar demasiado lleno ni demasiado vacío. Cuando uno se pasa, se reparten sus elementos **de forma pareja** en un intervalo más grande que lo contenga.
+
+**La estructura.** El arreglo se divide en **trozos** de $\Theta(\lg N)$ celdas. Sobre los trozos se **imagina** un árbol binario completo: cada nodo representa un intervalo del arreglo y la raíz, el arreglo entero. La altura es $h = \Theta(\lg N)$. Cada nodo conoce cuántos elementos y cuántas celdas tiene su intervalo.
+
+### Umbrales que dependen de la profundidad
+
+Para un nodo a profundidad $d$ (raíz $d = 0$, hojas $d = h$):
+
+$$\frac12 - \frac14\cdot\frac dh \;\le\; \text{densidad} \;\le\; \frac34 + \frac14\cdot\frac dh .$$
+
+<MemoriaFig fig="umbrales">
+**Cómo leerlo.** Cada barra es el rango de densidad permitido en una profundidad (dibujado con $h = 4$). La raíz debe estar entre $\tfrac12$ y $\tfrac34$ de llena; una hoja puede estar entre $\tfrac14$ y completamente llena. Entre un nivel y el siguiente, cada umbral se mueve $\frac{1}{4h}$.
+</MemoriaFig>
+
+<Predice pregunta="¿Por qué los umbrales son más estrictos arriba (cerca de la raíz) y más permisivos abajo?">
+Después de repartir un intervalo de forma pareja, **todos sus descendientes quedan con la misma densidad que él**, que cumple el umbral estricto del ancestro. Un hijo tiene un umbral $\frac{1}{4h}$ más permisivo que su padre, así que, recién redistribuido, está al menos a esa distancia de violar el suyo: tienen que llegar **muchas** inserciones antes de que vuelva a dar problemas. Esa holgura es la que paga el costo de las redistribuciones.
+</Predice>
+
+### Insertar
+
+```text
+Insertar(x) en el PMA:
+  1. Insertar x en su trozo, reescribiéndolo (Θ(lg N) celdas).
+  2. Si el trozo quedó dentro de su umbral, terminar.
+  3. Si no, subir por el árbol hasta el primer ancestro cuyo intervalo SÍ esté dentro de su umbral
+     (contando ya el elemento nuevo).
+  4. Repartir de forma pareja todos los elementos del intervalo de ese ancestro.
+```
+
+Cuanto más arriba haya que subir, más grande es el intervalo que se reescribe. **Eliminar es igual**, con los umbrales inferiores. Si ni la raíz cumple, se reconstruye el arreglo con el doble (o la mitad) de tamaño.
+
+**El árbol no existe.** No se guarda ningún nodo: un «nodo» es un intervalo cuyos extremos se calculan con aritmética. **Subir es agrandar el intervalo**: se parte del trozo y se va duplicando hacia el lado que corresponda, contando elementos con un escaneo. Al encontrar el intervalo que cumple, se reparten sus elementos con otro par de escaneos. Todo son recorridos de celdas consecutivas: si el intervalo tiene $K$ celdas, cuesta $O(1 + K/B)$ transferencias.
+
+<MemoriaFig fig="pma">
+**Cómo leerlo.** Ejemplo propio con 16 celdas en 4 trozos de 4 ($h = 2$, umbrales superiores: raíz 0,75, nivel 1: 0,875, hojas 1). Insertar 25 en el trozo 0 lo deja 4/4: cabe. Insertar 26 lo dejaría 5/4: se pasa. Su padre (trozos 0–1) tendría 6/8 = 0,75 ≤ 0,875: cumple. Se reparten esos 6 elementos parejo, 3 por trozo.
+</MemoriaFig>
+
+<Practica nivel={2} titulo="Complétalo: en el estado «después» de la figura, inserta 27, 28 y 29 entre 26 y 30">
+Umbrales superiores: hojas 1, nivel 1: 0,875, raíz 0,75. Estado: trozos $[10, 20, 25, \_]$, $[26, 30, 40, \_]$, $[50, 60, \_, \_]$, $[70, 80, \_, \_]$.
+- Insertar 27 en el trozo 1: queda **\_\_**/4 → ¿cumple?
+- Insertar 28 en el trozo 1: quedaría **\_\_**/4 → sube al padre (trozos 0–1): **\_\_**/8 = **\_\_\_** → ¿cumple 0,875?
+- Insertar 29: …
+<Solucion>
+- 27: trozo 1 queda 4/4 = 1 ≤ 1: cumple, sin redistribuir.
+- 28: trozo 1 quedaría 5/4: se pasa. Padre (trozos 0–1): 3 + 5 = 8/8 = 1 > 0,875: **tampoco**. Raíz: 8 + 2 + 2 = 12/16 = 0,75 ≤ 0,75: cumple → se reparte **todo el arreglo**, 3 por trozo: $[10,20,25][26,27,28][30,40,50][60,70,80]$ (con un hueco por trozo).
+- 29: va al trozo 1, que queda 4/4: cumple. Ejemplo propio.
+</Solucion>
+</Practica>
+
+## 3. El argumento de cobro: $O(\lg^2 N)$ amortizado
+
+<Practica nivel={1} titulo="Resuelto: la demostración">
+**¿Quién paga la redistribución de un nodo $x$?** Se redistribuye $x$ porque uno de sus hijos se pasó de su umbral. Si el intervalo de ese hijo tiene $m$ celdas, el de $x$ tiene $2m$, y redistribuirlo cuesta $2m$ movimientos. Desde la última vez que el hijo quedó repartido parejo, su densidad tuvo que cambiar al menos $\frac{1}{4h}$ (la holgura) para violar su umbral: hubo al menos $m\cdot\frac{1}{4h} = \frac{m}{4h}$ actualizaciones dentro de él.
+
+**Se lo cobramos a esas actualizaciones:**
+$$\frac{2m}{m/(4h)} = 8h = O(\lg N) \text{ por actualización.}$$
+
+**¿Cuántas veces se le cobra a una misma actualización?** Una actualización cae dentro de un intervalo **por cada nivel** del árbol: a lo más $h = O(\lg N)$ cobros de $O(\lg N)$ cada uno. Total: $O(\lg^2 N)$ movimientos amortizados, y como son celdas consecutivas, $O\!\left(1 + \frac{\lg^2 N}{B}\right)$ transferencias.
+</Practica>
+
+## 4. List Labeling: el mismo problema con otro disfraz
+
+**El problema.** Mantener una lista enlazada en la que cada nodo lleva una **etiqueta entera**, creciente a lo largo de la lista. Al insertar entre dos nodos, el nuevo recibe una etiqueta intermedia; si no queda ninguna libre, hay que **reetiquetar** vecinos. El costo es cuántas etiquetas cambian.
+
+> **Ordered File Maintenance es List Labeling:** la etiqueta de un elemento es su posición en el arreglo.
+
+| Espacio de etiquetas | Costo por inserción | Cómo |
+| --- | --- | --- |
+| Lineal, hasta $N\lg N$ | $O(\lg^2 N)$ | Packed-Memory Array |
+| Polinomial, $N^{O(1)}$ | $\Theta(\lg N)$ | la misma idea, con más holgura |
+| Exponencial, $2^N$ | $\Theta(1)$ | punto medio |
+
+**Con más etiquetas, los umbrales se relajan:** si el «arreglo» no tiene que existir físicamente, puede ser mucho más grande que $N$ y hay que redistribuir con menos frecuencia. **El caso exponencial:** con $N$ bits por etiqueta, el nuevo toma el **punto medio** entre sus vecinos; siempre hay lugar durante $N$ inserciones (cada una, como mucho, parte un intervalo a la mitad); luego se reetiqueta todo.
+
+## 5. Order Maintenance en O(1)
+
+**El problema.** Mantener una lista bajo inserciones y eliminaciones, y responder $\text{Order}(x, y)$: ¿está $x$ antes que $y$ en la lista?
+
+**Con etiquetas, la consulta es una comparación** de dos enteros: $O(1)$. Con etiquetas polinomiales (que caben en una palabra), las actualizaciones cuestan $O(\lg N)$.
+
+<Predice pregunta="¿Dónde apareció este problema antes en el curso?">
+En **persistencia total**: para decidir si una versión es ancestro de otra en el árbol de versiones, se lo linealizaba en una lista y se comparaban posiciones. Ahí se usó como caja negra. La pregunta es: ¿se puede en $O(1)$ también al **actualizar**?
+</Predice>
+
+**Indirección, otra vez.** Dos niveles de etiquetas:
+- **Arriba:** una lista con un nodo por grupo ($N/\lg N$ nodos), etiquetada con el **método polinomial**.
+- **Abajo:** cada grupo de $\Theta(\lg N)$ elementos usa el **método exponencial**: necesita $2^{\Theta(\lg N)} = N^{O(1)}$ etiquetas, que **caben en una palabra**.
+
+$$\text{etiqueta}(x) = (\text{etiqueta de arriba}, \text{etiqueta de abajo}).$$
+
+**¿Por qué todo cuesta O(1)?**
+- **Consultar:** $\text{Order}(x, y)$ compara los pares en orden lexicográfico: dos comparaciones.
+- **Actualizar:** insertar dentro de un grupo cuesta $O(1)$ amortizado. Solo cuando un grupo se llena o se vacía se parte o fusiona, y recién entonces se toca la lista de arriba, a costo $O(\lg N)$; eso pasa una vez cada $\Omega(\lg N)$ actualizaciones del grupo: $O(1)$ amortizado.
+
+La clave: **cambiar una etiqueta de arriba cambia, de golpe y sin tocarlos, el orden relativo de los $\Theta(\lg N)$ elementos de su grupo**. Es la misma indirección del B-Tree cache-oblivious.
+
+<Practica nivel={3} titulo="Solo: con el método exponencial, etiquetas en $[0, 2^4) = [0, 16)$, la lista empieza con $a = 0$ y $b = 16$ (centinelas). Inserta 4 elementos siempre justo después de $a$. ¿Cuándo hay que reetiquetar?">
+<Solucion>
+Puntos medios: $x_1 = 8$, $x_2 = 4$ (entre 0 y 8), $x_3 = 2$, $x_4 = 1$. La quinta inserción después de $a$ necesitaría una etiqueta entre 0 y 1: no hay. Con $k$ bits caben $k$ inserciones en el peor caso; luego se reetiqueta todo. Ejemplo propio.
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: ¿por qué no usar directamente el método exponencial para toda la lista?">
+<Solucion>
+Con $N$ elementos harían falta etiquetas de $N$ bits: ya **no caben en una palabra**, y comparar dos etiquetas dejaría de ser $O(1)$. Por eso solo se usa dentro de grupos de $\Theta(\lg N)$ elementos, donde basta $\Theta(\lg N)$ bits.
+</Solucion>
+</Practica>
+
+## 6. El mapa de la unidad
+
+| Tema | Resultado |
+| --- | --- |
+| Modelo de memoria externa | escanear $N/B$; ordenar $\frac NB\log_{M/B}\frac NB$ |
+| B-Trees | buscar y actualizar en $\log_{B+1} N$, **conociendo** $B$ |
+| Modelo cache-oblivious | las mismas cotas sin conocer $B$ ni $M$ |
+| Layout de van Emde Boas | buscar en $\log_{B+1} N$ para todo $B$ |
+| Packed-Memory Array | insertar en un arreglo ordenado moviendo $\lg^2 N$ celdas |
+| Indirección | quitar factores $\lg N$: B-Tree dinámico, Order Maintenance en $O(1)$ |
+
+<Errores
+	errores={[
+		{ mal: '«Los umbrales del PMA son iguales en todos los niveles.»', bien: 'Son más <strong>estrictos arriba</strong>: eso deja holgura a los descendientes tras redistribuir.' },
+		{ mal: '«El PMA guarda un árbol de nodos.»', bien: 'El árbol es <strong>imaginario</strong>: los intervalos se calculan con aritmética y se recorren con escaneos.' },
+		{ mal: '«Cada inserción mueve $O(\\lg^2 N)$ celdas.»', bien: 'Es <strong>amortizado</strong>: una inserción puede redistribuir todo el arreglo.' },
+		{ mal: '«Order Maintenance necesita etiquetas de N bits para ser O(1).»', bien: 'Usa dos niveles: polinomial arriba y exponencial solo dentro de grupos de $\\Theta(\\lg N)$, que caben en una palabra.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="pma"
+	preguntas={[
+		{ q: 'En la raíz del PMA la densidad debe estar entre…', opts: ['0 y 1', '1/4 y 1', '1/2 y 3/4', '1/4 y 3/4'], ok: 2 },
+		{ q: 'Si un trozo se pasa de su umbral…', opts: ['se reconstruye todo el arreglo', 'se sube al primer ancestro que cumpla y se redistribuye su intervalo', 'se mueve el elemento al trozo vecino', 'se rechaza la inserción'], ok: 1 },
+		{ q: 'Redistribuir un intervalo de K celdas cuesta…', opts: ['$O(K)$ transferencias', '$O(1 + K/B)$ transferencias', '$O(\\lg K)$', '$O(K\\lg K)$'], ok: 1 },
+		{ q: 'En el cobro, cada actualización paga $O(\\lg N)$…', opts: ['una vez', 'por cada nivel: $O(\\lg^2 N)$ en total', 'por cada trozo', 'nunca'], ok: 1 },
+		{ q: 'Con etiquetas exponenciales ($2^N$), insertar cuesta…', opts: ['$\\Theta(1)$', '$\\Theta(\\lg N)$', '$\\Theta(\\lg^2 N)$', '$\\Theta(N)$'], ok: 0 },
+		{ q: 'Order Maintenance en O(1) compara…', opts: ['posiciones físicas', 'pares (etiqueta arriba, etiqueta abajo) lexicográficamente', 'punteros', 'profundidades'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica por qué un PMA con umbrales más estrictos arriba garantiza $O(\lg^2 N)$ movimientos amortizados por inserción."
+	claves={[
+		'Trozos de $\\Theta(\\lg N)$ y un árbol imaginario de altura $h = \\Theta(\\lg N)$; umbrales $\\frac12-\\frac d{4h}$ y $\\frac34+\\frac d{4h}$.',
+		'Si un trozo se pasa, se sube al primer ancestro que cumple y se reparte parejo su intervalo.',
+		'Tras repartir, los hijos quedan a $\\frac1{4h}$ de su umbral: hacen falta $\\Omega(m/h)$ actualizaciones para que el hijo vuelva a fallar; se cobra $O(h)$ a cada una.',
+		'Cada actualización recibe un cobro por nivel: $h\\cdot O(h) = O(\\lg^2 N)$.',
+	]}
+/>
+
+<Dominio client:visible id="pma" />
+
+<Fuente archivos={['CS3014 · Jerarquía de Memoria IV (semana 11, 20/10/2026)', 'Itai, Konheim y Rodeh (1981); Dietz y Sleator (1987); Bender, Cole, Demaine, Farach-Colton y Zito (2002)']} />

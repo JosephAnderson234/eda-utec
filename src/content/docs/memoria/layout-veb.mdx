@@ -1,0 +1,191 @@
+---
+title: 'Layout de van Emde Boas y B-Tree cache-oblivious'
+description: 'Jerarquía de Memoria III (semana 10): construcción del layout vEB, prueba de que buscar cuesta ≤ 4 log_B N transferencias para todo B, el árbol de máximos sobre un Ordered File Maintenance, propagación por capas en postorden e indirección para llegar a O(log_{B+1} N) en todas las operaciones.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+
+<EnSimple>
+Imagina que guardas un árbol genealógico gigante en cajas, sin saber de qué tamaño serán las cajas. El truco: **corta el árbol por la mitad de su altura**. Guarda primero la parte de arriba, todo junto; después, cada ramita de abajo, cada una toda junta. Y dentro de cada pedazo, repite lo mismo.
+- Sea cual sea el tamaño de caja, en algún nivel de ese corte los pedazos **tienen más o menos el tamaño de una caja**. Bajar por el árbol atraviesa pocos pedazos, y cada uno cuesta una o dos cajas.
+- Eso da búsquedas óptimas **sin conocer $B$**. Para poder insertar y borrar, se combina con un **arreglo con huecos** (que deja espacio libre para insertar sin mover todo) y con **indirección** (grupos pequeños abajo que absorben casi todos los cambios).
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Escribir el <strong>layout de van Emde Boas</strong> de un árbol pequeño (p. ej. 15 nodos).',
+		'Demostrar que una búsqueda sobre ese layout cuesta $\\le 4\\log_B N$ transferencias para <strong>cualquier</strong> $B$.',
+		'Describir el árbol de máximos sobre un OFM y analizar el costo de propagar una actualización por las tres capas.',
+		'Explicar qué resuelve la <strong>indirección</strong> y por qué el resultado final es $O(\\log_{B+1} N)$.',
+	]}
+	prerrequisitos={[
+		{ t: 'B-Trees y cache-oblivious', href: '/memoria/btree/' },
+	]}
+	perfiles={['visual', 'laboratorio', 'socratico', 'feynman']}
+/>
+
+## 1. Construcción del layout
+
+**Definición recursiva.** Sea un árbol binario perfecto de altura $h$. Se corta a **media altura**: arriba queda un árbol $A$ de altura $h/2$; abajo quedan $k \approx \sqrt N$ subárboles $C_1, \dots, C_k$ de altura $h/2$. En memoria se guarda **primero $A$, luego $C_1$, $C_2$, …, $C_k$**, y cada pieza se guarda, a su vez, con el mismo criterio, hasta llegar a nodos sueltos.
+
+<MemoriaFig fig="layout-veb">
+**Cómo leerlo.** Árbol de 15 nodos numerados por niveles. El corte a media altura deja la pieza superior $\{1, 2, 3\}$ y cuatro piezas inferiores $\{4, 8, 9\}$, $\{5, 10, 11\}$, $\{6, 12, 13\}$, $\{7, 14, 15\}$. En memoria van en ese orden, cada pieza (mismo color) en celdas consecutivas.
+</MemoriaFig>
+
+| Layout | Orden en que se guardan los nodos |
+| --- | --- |
+| Por niveles | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 |
+| van Emde Boas | 1, 2, 3, 4, 8, 9, 5, 10, 11, 6, 12, 13, 7, 14, 15 |
+
+**Un nodo queda junto a sus hijos, en todas las escalas.** Por niveles, el nodo 4 está a cuatro celdas de sus hijos 8 y 9, y esa distancia se **duplica** en cada nivel. En el layout vEB, 4, 8 y 9 son vecinos. Y **el layout no menciona a $B$**: la recursión baja hasta nodos sueltos; es un orden fijo de los nodos.
+
+<Practica nivel={2} titulo="Complétalo: layout vEB de un árbol perfecto de altura 4 (31 nodos, numerados por niveles)">
+Corte a media altura: con 5 niveles (0–4) la convención habitual deja **arriba** $\lfloor 5/2\rfloor = $ **\_\_** niveles y **abajo** **\_\_** niveles (otras presentaciones redondean al revés; lo importante es que ambas mitades midan $\approx h/2$).
+- Pieza superior: nodos **\_\_\_\_\_\_\_\_**, guardados (recursivamente) como **\_\_\_\_\_\_\_\_**.
+- Primera pieza inferior: el subárbol con raíz 4, que tiene los nodos 4, 8, 9, 16, 17, 18, 19; recursivamente se guarda como **\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**.
+<Solucion>
+Con arriba 2 niveles y abajo 3: pieza superior $\{1, 2, 3\}$ → `1 2 3`. Cada pieza inferior tiene altura 3 (7 nodos) y se corta otra vez: su raíz arriba y dos subárboles de 3 nodos abajo. Para la raíz 4: `4 | 8 16 17 | 9 18 19`. El layout completo empieza `1 2 3 4 8 16 17 9 18 19 5 10 20 21 11 22 23 …`. (Ejemplo propio; si se redondea al revés, arriba quedan 3 niveles y cambia el orden, pero no el análisis.)
+</Solucion>
+</Practica>
+
+## 2. ¿Cuánto cuesta una búsqueda?
+
+**El análisis sí puede usar $B$** (el algoritmo no). Seguimos la recursión del layout hasta el **primer nivel en que las piezas tienen altura $\le \lg B$**. Como cada nivel de recursión divide la altura por 2, en ese nivel cada pieza tiene altura entre $\tfrac12\lg B$ y $\lg B$: entre $\sqrt B$ y $B$ nodos.
+
+<MemoriaFig fig="veb-busqueda">
+**Cómo leerlo.** Una búsqueda es un camino raíz–hoja: atraviesa piezas una debajo de otra. Cada pieza tiene altura $\ge \tfrac12 \lg B$, así que el camino cruza a lo más $\frac{\lg N}{\frac12\lg B} = 2\log_B N$ piezas. Cada pieza ocupa $\le B$ celdas **contiguas**, que pueden caer a caballo de dos bloques: $\le 2$ transferencias por pieza.
+</MemoriaFig>
+
+$$\text{transferencias} \le 2\log_B N \cdot 2 = 4\log_B N = O(\log_{B+1} N), \quad \text{para todo } B.$$
+
+<Predice pregunta="¿Por qué la cuenta vale «para todo $B$» si el algoritmo no lo conoce?">
+Porque el $B$ solo aparece **en la demostración**: para cada valor de $B$ elegimos el nivel de recursión adecuado (el que tiene piezas de entre $\sqrt B$ y $B$ nodos). Ese nivel existe siempre, porque la recursión pasa por **todas las escalas** de tamaño. El algoritmo hace lo mismo para cualquier $B$; lo que cambia es qué nivel del análisis usamos para contar.
+</Predice>
+
+| Estructura | Transferencias | ¿Conoce $B$? |
+| --- | --- | --- |
+| Nodos dispersos | $\Theta(\lg N)$ | No |
+| Por niveles, en orden, preorden | $\Theta(\lg(N/B))$ | No |
+| B-Tree | $\Theta(\log_{B+1} N)$ | **Sí** |
+| Layout de van Emde Boas | $O(\log_{B+1} N)$ | **No** |
+
+**Óptimo en todas las fronteras a la vez**, pero es una estructura **estática**: el árbol es perfecto y sus nodos tienen posición fija. No sabemos insertar ni eliminar.
+
+## 3. Volverlo dinámico, paso a paso
+
+### La caja negra: Ordered File Maintenance (OFM)
+
+Guardar $N$ elementos **en orden** en un arreglo de tamaño $O(N)$, con a lo más $O(1)$ celdas vacías entre dos elementos consecutivos (así recorrer $k$ elementos cuesta $O(1 + k/B)$). Insertar y eliminar reacomodan $O(\lg^2 N)$ celdas **consecutivas**, amortizado: $O\!\left(1 + \frac{\lg^2 N}{B}\right)$ transferencias. Por ahora es una caja negra; se abre en la [próxima página](/memoria/pma/).
+
+### Paso 1: un árbol de máximos sobre el OFM
+
+<MemoriaFig fig="ofm">
+**Cómo leerlo.** Las celdas del OFM son las **hojas** de un árbol binario perfecto guardado con layout vEB; cada hoja está enlazada con su celda, en ambos sentidos. Cada nodo interno guarda **el máximo de su subárbol**; un hueco («/») cuenta como $-\infty$. Para buscar 16: en la raíz (42) se mira el hijo izquierdo: su máximo es 9 &lt; 16, así que se baja a la derecha; luego el hijo izquierdo tiene máximo 16 ≥ 16 → izquierda; ahí el hijo izquierdo es un hueco (−∞) → derecha: hoja 16. Un camino raíz–hoja: $O(\log_{B+1} N)$.
+</MemoriaFig>
+
+**Buscar $x$:** en cada nodo, ir a la izquierda si el máximo del hijo izquierdo es $\ge x$; si no, a la derecha.
+
+### Paso 2: actualizar
+
+Se inserta en el OFM (que reacomoda un tramo de celdas) y se **recalculan los máximos hacia arriba, en postorden**: cada nodo después de sus dos hijos. **La forma del árbol no cambia**: una inserción cambia los valores, pero no cuántas celdas hay ni qué hoja corresponde a cada celda. Solo cuando el arreglo se queda chico o grande (la cantidad de elementos se duplica o se reduce a la mitad) se reconstruye todo, como en una tabla dinámica: $O(1)$ amortizado por operación.
+
+### Paso 3: ¿qué partes del árbol cambian?
+
+El OFM modificó $O(\lg^2 N)$ celdas consecutivas. Sobre ellas, el árbol se divide en tres capas:
+
+| Capa | Qué es | Costo |
+| --- | --- | --- |
+| **1** · piezas pequeñas | las piezas de $\le B$ nodos (las del nivel de recursión del análisis) que cuelgan de esas hojas: $O\!\left(1 + \frac{\lg^2 N}{B}\right)$ piezas, cada una en $\le 2$ bloques. El postorden alterna entre una pieza hija y su pieza padre; con **4 bloques en memoria** ($M \ge 4B$) nunca se vuelve a traer una pieza ya visitada | $O\!\left(1 + \frac{\lg^2 N}{B}\right)$ |
+| **2** · hasta el ancestro común más bajo | un árbol binario con $O\!\left(\frac{\lg^2 N}{B}\right)$ nodos: se puede pagar una transferencia por nodo | $O\!\left(\frac{\lg^2 N}{B}\right)$ |
+| **3** · del ancestro común a la raíz | un tramo de un camino hacia la raíz: el mismo argumento que la búsqueda | $O(\log_{B+1} N)$ |
+
+**Estado:** insertar y eliminar cuestan $O\!\left(\log_{B+1} N + \frac{\lg^2 N}{B}\right)$ transferencias amortizadas.
+
+<Predice pregunta="¿Cuándo molesta el término $\frac{\lg^2 N}{B}$ frente a $\log_B N = \frac{\lg N}{\lg B}$?">
+$\frac{\lg^2 N}{B} \le \frac{\lg N}{\lg B}$ equivale a $B \ge \lg N \cdot \lg B$. Con bloques grandes no hay problema, pero **si $B$ es pequeño comparado con $\lg N$**, el segundo término domina. Como no conocemos $B$, la cota tiene que valer también para bloques pequeños. Hay que **quitarle un factor $\lg N$** al costo de actualizar: hacer que la estructura cara se actualice solo una de cada $\lg N$ veces.
+</Predice>
+
+### Paso 4: indirección
+
+<MemoriaFig fig="indireccion">
+**Cómo leerlo.** Dos niveles. Abajo, los $N$ elementos en **grupos de $\Theta(\lg N)$** elementos en celdas consecutivas. Arriba, la estructura de los pasos 1 a 3, pero guardando solo **un representante por grupo** (su mínimo): $N/\lg N$ elementos.
+</MemoriaFig>
+
+- **Buscar:** arriba se ubica el grupo, $O(\log_{B+1} N)$; abajo se recorre ese grupo, $O(1 + \frac{\lg N}{B})$. Total $O(\log_{B+1} N)$.
+- **Insertar o eliminar:** se reescribe el grupo entero, $O(1 + \frac{\lg N}{B})$. La estructura de arriba **no se entera**, salvo que cambie el mínimo o el grupo cambie de tamaño.
+- **Los grupos se mantienen entre un cuarto llenos y llenos:** uno que se llena se parte en dos; uno muy vacío se fusiona con un vecino. Después de partir o fusionar hacen falta $\Omega(\lg N)$ actualizaciones en ese grupo para que vuelva a ocurrir.
+
+**Costo amortizado.** Cada partición o fusión cuesta arriba $O\!\left(\log_{B+1}N + \frac{\lg^2 N}{B}\right)$ y se reparte entre las $\Omega(\lg N)$ actualizaciones que la provocaron:
+
+$$O\!\left(\frac{\log_{B+1}N + \frac{\lg^2 N}{B}}{\lg N} + \frac{\lg N}{B}\right) = O\!\left(\frac{\lg N}{B}\right).$$
+
+El término molesto bajó de $\frac{\lg^2 N}{B}$ a $\frac{\lg N}{B}$, que es $O(\log_{B+1} N)$ para todo $B$ (porque $\lg B \le B$). Y de todas formas hay que hacer una búsqueda para saber dónde insertar.
+
+<Practica nivel={1} titulo="Resuelto: el resultado y sus cuatro ingredientes">
+**Teorema (B-Tree cache-oblivious).** Existe una estructura que no conoce $B$ ni $M$ y soporta Search, Insert y Delete en $O(\log_{B+1} N)$ transferencias (amortizado para las actualizaciones).
+
+| Ingrediente | Para qué sirve |
+| --- | --- |
+| Layout de van Emde Boas | buscar en $O(\log_{B+1} N)$ sin conocer $B$ |
+| Ordered File Maintenance | insertar manteniendo el orden físico |
+| Máximos y postorden | propagar cambios con localidad |
+| Indirección | quitar un factor $\lg N$ a las actualizaciones |
+</Practica>
+
+<Practica nivel={3} titulo="Solo: con $N = 2^{30}$ y $B = 8$ (bloques muy chicos), compara $\log_B N$ con $\frac{\lg^2 N}{B}$ y con $\frac{\lg N}{B}$">
+<Solucion>
+$\log_8 2^{30} = 30/3 = 10$. $\frac{\lg^2 N}{B} = 900/8 \approx 112$: sin indirección, la actualización estaría dominada por ese término (11 veces más que la búsqueda). Con indirección: $\frac{\lg N}{B} = 30/8 \approx 4 \le 10$. Ejemplo propio.
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: ¿por qué grupos de $\Theta(\lg N)$ y no de $\Theta(B)$?">
+<Solucion>
+Porque **no conocemos $B$**: el tamaño de grupo tiene que poder elegirse sin él. $\Theta(\lg N)$ es justo lo que hace falta para dividir el $\lg^2 N$ del OFM por $\lg N$. Un grupo se reescribe en $O(1 + \frac{\lg N}{B})$, que para todo $B$ es $O(\log_{B+1} N)$.
+</Solucion>
+</Practica>
+
+<Errores
+	errores={[
+		{ mal: '«El layout vEB elige el tamaño de las piezas según B.»', bien: 'El layout es <strong>fijo</strong> y baja hasta nodos sueltos; $B$ solo aparece al elegir el nivel de recursión <em>en el análisis</em>.' },
+		{ mal: '«Cada pieza cuesta exactamente una transferencia.»', bien: 'Puede quedar a caballo de dos bloques: $\\le 2$; por eso la cota es $4\\log_B N$.' },
+		{ mal: '«Insertar cambia la forma del árbol de máximos.»', bien: 'Solo cambian los valores; la forma cambia únicamente al reconstruir cuando $N$ se duplica o se reduce a la mitad.' },
+		{ mal: '«Sin indirección ya es $O(\\log_B N)$.»', bien: 'Es $O(\\log_{B+1}N + \\lg^2 N / B)$; el segundo término domina si $B$ es chico frente a $\\lg N\\cdot\\lg B$.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="layout-veb"
+	preguntas={[
+		{ q: 'El layout vEB del árbol de 15 nodos empieza…', opts: ['1, 2, 4, 8, 9, 5…', '1, 2, 3, 4, 8, 9, 5…', '8, 4, 9, 2, 10…', '1, 2, 3, 4, 5, 6…'], ok: 1 },
+		{ q: 'En el nivel de recursión del análisis, las piezas tienen…', opts: ['exactamente B nodos', 'entre $\\sqrt B$ y $B$ nodos', 'altura $\\lg N / 2$', 'un solo nodo'], ok: 1 },
+		{ q: 'La cota de la búsqueda es…', opts: ['$2\\log_B N$', '$4\\log_B N$', '$\\lg(N/B)$', '$\\log_B N + \\lg B$'], ok: 1 },
+		{ q: 'En el árbol sobre el OFM, cada nodo interno guarda…', opts: ['el mínimo', 'el máximo de su subárbol', 'la cantidad de huecos', 'un puntero al padre'], ok: 1 },
+		{ q: 'La capa 1 se recorre con 4 bloques en memoria porque…', opts: ['el OFM lo exige', 'el postorden alterna entre una pieza hija y su pieza padre, cada una en ≤ 2 bloques', '$B$ es pequeño', 'las piezas son de 4 nodos'], ok: 1 },
+		{ q: 'La indirección reduce el término de actualización de…', opts: ['$\\lg N$ a 1', '$\\lg^2 N / B$ a $\\lg N / B$', '$\\log_B N$ a $1$', '$N$ a $\\lg N$'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica la demostración de que buscar en el layout vEB cuesta $O(\log_B N)$ transferencias, sin que el algoritmo conozca $B$."
+	claves={[
+		'El layout corta a media altura recursivamente; cada pieza de cada nivel es contigua en memoria.',
+		'Para un $B$ dado, se mira el primer nivel con piezas de altura $\\le\\lg B$: tienen altura $\\ge\\frac12\\lg B$, o sea entre $\\sqrt B$ y $B$ nodos.',
+		'Un camino cruza $\\le 2\\log_B N$ piezas; cada una ocupa $\\le 2$ bloques: total $\\le 4\\log_B N$.',
+		'El argumento vale para cada $B$ por separado: por eso es óptimo en todas las fronteras.',
+	]}
+/>
+
+<Dominio client:visible id="layout-veb" />
+
+<Fuente archivos={['Sem10_Memory_Hierarchy_III.pdf (Jerarquía de Memoria III, 16/10/2026)', 'Prokop (1999); Bender, Demaine y Farach-Colton (2000); Bender, Duan, Iacono y Wu (2002)']} />

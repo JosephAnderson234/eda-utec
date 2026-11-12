@@ -1,0 +1,254 @@
+---
+title: 'X-fast y Y-fast trees'
+description: 'Enteros II (semana 11): la vEB vista como árbol binario sobre los bits, búsqueda binaria sobre la profundidad, X-fast trees con tabla hash de prefijos, indirección con grupos de Θ(w) y Y-fast trees con O(lg w) amortizado y Θ(n) de espacio.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import EnterosFig from '../../../components/fig/EnterosFig.astro';
+
+<EnSimple>
+La vEB de la página anterior es rápida pero **reserva una casilla por cada número posible**. Las dos mejoras de hoy:
+- **X-fast:** en vez de un mapa con todas las calles del país, guardas en una **libreta (tabla hash)** solo los **prefijos** de los números que existen. Para encontrar el vecino de $x$, haces **búsqueda binaria sobre cuántos dígitos de $x$ coinciden** con algo guardado.
+- **Y-fast:** la libreta sigue siendo grande ($w$ entradas por número). Entonces agrupas los números en **paquetes de unos $w$** y solo anotas en la libreta **un representante por paquete**. Dentro de cada paquete usas un árbol normal, que es pequeño.
+- Resultado: el mismo $O(\lg w)$ que la vEB, pero con memoria proporcional a $n$, no al universo.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Dibujar el árbol binario de altura $w$ de un conjunto y explicar por qué los valores en una ruta son <code>1…1 0…0</code>.',
+		'Calcular <strong>Sucesor</strong> en un X-fast tree con búsqueda binaria sobre la profundidad y la tabla de prefijos.',
+		'Contar las entradas de la tabla hash ($\\le n(w+1)$) y justificar actualización $\\Theta(w)$.',
+		'Demostrar que un Y-fast tree usa $\\Theta(n)$ de espacio y $O(\\lg w)$ amortizado por operación (argumento de $w/4$).',
+	]}
+	prerrequisitos={[{ t: 'Árbol de van Emde Boas', href: '/enteros/veb/' }, { t: 'Indirección en memoria', href: '/memoria/pma/' }]}
+	perfiles={['visual', 'laboratorio', 'socratico', 'feynman']}
+/>
+
+## 1. Ahorrar espacio en la vEB: dos caminos
+
+Se podría seguir refinando la vEB (no guardar clusters vacíos, usar hash): con refinamientos más complejos (Mehlhorn y Näher) se llega a $\Theta(n)$. En clase se tomó **otro camino**: reducir el problema a una estructura más simple (X-fast) y luego aplicar **indirección** (Y-fast). Para eso hace falta mirar la vEB de otra forma.
+
+## 2. La vista de árbol
+
+<EnterosFig fig="arbol">
+**Cómo leerlo.** Un árbol binario perfecto de altura $w = 4$ sobre las $u = 16$ hojas, para $S = \{2,3,4,5,7,14,15\}$. Cada nodo vale el **OR** de sus hijos: 1 si su intervalo contiene alguna llave. El nodo a profundidad $\ell$ en el camino de $x$ corresponde a sus $\ell$ bits más altos, es decir, a `x >> (w − ℓ)`. En rojo, la ruta de $x = 9 = 1001_2$: valores 1, 1, 0, 0, 0.
+</EnterosFig>
+
+La propiedad que lo cambia todo: **si un nodo vale 0, todos sus descendientes valen 0**. Por lo tanto, a lo largo de cualquier ruta raíz–hoja los valores son
+
+$$\underbrace{1\,1\,\cdots\,1}_{\text{prefijos que existen}}\;\underbrace{0\,0\,\cdots\,0}_{\text{prefijos que no existen}}$$
+
+y el punto donde cambia de 1 a 0 se puede encontrar con **búsqueda binaria sobre la profundidad** (entre $w+1$ profundidades): $O(\lg w)$ pasos.
+
+### Sucesor con esta vista
+
+1. Encontrar el **último 1** en la ruta de $x$: el nodo $p$ (el prefijo más largo de $x$ que es prefijo de alguna llave).
+2. Mirar el hijo de $p$ hacia $x$, que vale 0.
+   - Si es el **hijo izquierdo** (el siguiente bit de $x$ es 0): el sucesor es el **mínimo del hijo derecho** de $p$.
+   - Si es el **hijo derecho** (bit 1): el predecesor es el **máximo del hijo izquierdo**; el sucesor es el siguiente de ese en la lista ordenada.
+
+<Practica nivel={1} titulo="Resuelto: Sucesor(9) sobre $S = \{2,3,4,5,7,14,15\}$">
+- Ruta de $9 = 1001_2$: prefijos $\varepsilon$ (1), `1` (1), `10` (0), `100` (0), `1001` (0). El último 1 es $p =$ `1`.
+- El hijo de $p$ hacia 9 es `10`, con valor 0: es el **hijo izquierdo**.
+- El sucesor es el mínimo del hijo derecho, el prefijo `11` (las hojas 12–15): **14**.
+</Practica>
+
+### ¿Qué cuesta esta versión, sin trucos?
+
+- **Consulta:** $O(\lg w)$, una búsqueda binaria sobre las $w+1$ profundidades (si cada nodo guarda su min y max).
+- **Actualización:** $O(w)$: insertar $x$ cambia los $w+1$ nodos de su ruta (el OR, el min y el max).
+- **Espacio:** $\Theta(u)$: el árbol tiene $2u - 1$ nodos.
+
+Es la misma consulta que la vEB, pero con actualización más cara. Hay que arreglar el espacio.
+
+## 3. X-fast tree: guardar solo los nodos que valen 1
+
+**La tabla $T$.** Una tabla **hash** con una entrada por cada prefijo de cada llave:
+- clave: el par $(\ell, \text{prefijo})$;
+- valor: $(\min, \max)$ de las llaves de ese subárbol.
+
+Más una **lista doblemente enlazada** con las llaves en orden (para pasar del predecesor al sucesor en $O(1)$).
+
+<Predice pregunta="¿Cuántas entradas tiene $T$ para $S = \{2, 3, 4, 5, 7, 14, 15\}$ con $w = 4$? Cuenta nivel por nivel.">
+**17**: los nodos con valor 1 del dibujo.
+- Profundidad 0: $\varepsilon$ → 1.
+- Profundidad 1: `0`, `1` → 2.
+- Profundidad 2: `00`, `01`, `11` → 3.
+- Profundidad 3: `001`, `010`, `011`, `111` → 4.
+- Profundidad 4: las 7 hojas.
+
+En general, a lo más $n(w+1)$: cada llave aporta sus $w+1$ prefijos, y algunos se comparten.
+
+| $(\ell, \text{prefijo})$ | $(\min, \max)$ |
+| --- | --- |
+| $(0, \varepsilon)$ | $(2, 15)$ |
+| $(1, 0)$ | $(2, 7)$ |
+| $(2, 01)$ | $(4, 7)$ |
+| $(3, 111)$ | $(14, 15)$ |
+
+(Algunas filas, como en la diapositiva.)
+</Predice>
+
+### Sucesor en el X-fast
+
+```text
+Sucesor-X(x):
+  ℓ ← la mayor profundidad tal que (ℓ, x >> (w − ℓ)) está en T     // búsqueda binaria + hash: O(lg w)
+  p ← x >> (w − ℓ);  β ← el bit siguiente de x (el bit ℓ+1)
+  si β = 0:  devolver T[(ℓ+1, p·2 + 1)].min          // falta el hijo izquierdo: mínimo del derecho
+  si no:     y ← T[(ℓ+1, p·2)].max                   // falta el hijo derecho: máximo del izquierdo
+             devolver el siguiente de y en la lista enlazada
+```
+
+(Si $x \in S$ la búsqueda llega a la hoja; entonces el sucesor es el siguiente en la lista.)
+
+<Practica nivel={2} titulo="Complétalo: Sucesor(6) y Sucesor(13)">
+
+**$x = 6 = 0110_2$.** Los prefijos de 6 que están en $T$ son $\varepsilon$, `0`, `01`, `011`; el de longitud 4 (`0110`) **no** está. Entonces $\ell =$ **\_\_**, $p =$ **\_\_\_** y el bit siguiente de $x$ es **\_\_**. Falta el hijo **\_\_\_\_\_\_\_\_\_**; se devuelve el min del otro, $T[(4, 0111)] =$ **\_\_**.
+
+**$x = 13 = 1101_2$.** Prefijos presentes: $\varepsilon$, `1`, `11`. Entonces $\ell =$ **\_\_**, $p =$ `11` y el bit siguiente es **\_\_** (el prefijo `110` no existe). Sucesor $= T[(3, 111)].\min =$ **\_\_**.
+
+<Solucion>
+- $x = 6$: $\ell = 3$, $p =$ `011`, bit siguiente 0. Falta el hijo izquierdo `0110`; el sucesor es el min del derecho: **7**.
+- $x = 13$: $\ell = 2$, bit siguiente 0, falta `110`; sucesor $= T[(3,111)].\min =$ **14**.
+</Solucion>
+</Practica>
+
+### Insertar y eliminar en el X-fast
+
+- **Insertar($x$):** buscar el sucesor con Sucesor-X para ubicar $x$ en la lista, y agregar los $w+1$ prefijos de $x$ a $T$, actualizando min y max de los que ya existían.
+- **Eliminar($x$):** en cada prefijo de $x$: si $x$ era la única llave, se borra la entrada; si era el min (o el max), el nuevo valor es el siguiente (o el anterior) de $x$ en la lista.
+
+Tiempo $\Theta(w)$ por actualización: hay que tocar toda la ruta, igual que en el árbol sin hash.
+
+| | Consulta | Actualización | Espacio |
+| --- | --- | --- | --- |
+| vEB | $O(\lg w)$ | $O(\lg w)$ | $\Theta(u)$ |
+| X-fast tree | $O(\lg w)$ | $\Theta(w)$ | $O(nw)$ |
+
+<Predice pregunta="¿Cómo evitar pagar $w$ por actualización y $w$ de espacio por llave, sin perder el $O(\lg w)$ de la consulta?">
+Haciendo que el X-fast tree guarde solo **$n/w$ llaves**. Si cada llave del X-fast representa a $\Theta(w)$ llaves reales, el espacio total es $(n/w)\cdot w = n$, y la actualización cara (de costo $w$) solo ocurre de vez en cuando. Eso es **indirección**.
+</Predice>
+
+## 4. Y-fast tree: indirección
+
+<EnterosFig fig="yfast">
+**Cómo leerlo.** Las llaves ordenadas se parten en grupos **contiguos** de $\Theta(w)$ llaves. Cada grupo vive en un **BST balanceado** (abajo), y **un representante** por grupo entra al X-fast tree (arriba). El grupo $G_j$ contiene las llaves $x$ con $r_j \le x < r_{j+1}$.
+</EnterosFig>
+
+### El invariante de tamaño
+
+Cada grupo tiene **entre $w/2$ y $2w$ llaves**:
+- Si crece a $2w + 1$: se **parte** en dos grupos de $w$ y $w + 1$.
+- Si baja de $w/2$: se **fusiona** con un vecino; si el resultado supera $1{,}5w$, se parte por la mitad.
+
+**Los representantes.** Cada grupo tiene un representante $r_j$ fijado **al crear el grupo** (por ejemplo, su mínimo en ese momento). Aunque la llave $r_j$ se elimine después, se queda en el X-fast tree hasta la próxima partición o fusión. Así $G_j = \{x \in S \mid r_j \le x < r_{j+1}\}$.
+
+### Espacio: $\Theta(n)$
+
+Cada grupo tiene al menos $w/2$ llaves, así que hay **a lo más $2n/w$ representantes**. Cada uno ocupa $O(w)$ en el X-fast tree: $(2n/w)\cdot O(w) = O(n)$. Los BST suman $O(n)$. Total: $\Theta(n)$.
+
+### Sucesor en el Y-fast
+
+```text
+Sucesor-Y(x):
+  r_j ← el mayor representante ≤ x                       // consulta al X-fast: O(lg w)
+  si hay una llave > x en el BST de G_j:  devolver la menor de ellas      // BST de Θ(w) llaves: O(lg w)
+  si existe G_{j+1}:  devolver el mínimo de G_{j+1}
+  devolver nulo
+```
+
+<Predice pregunta="Si $r_j \le x < r_{j+1}$, ¿puede el sucesor de $x$ estar en $G_{j+2}$ o más lejos?">
+**No.** Todas las llaves de $G_{j+1}$ son $\ge r_{j+1} > x$. Si $G_j$ no tiene llaves mayores que $x$, la menor llave mayor que $x$ es el mínimo de $G_{j+1}$; y si $G_{j+1}$ no existe, no hay sucesor. (Un detalle: si $G_{j+1}$ quedara vacío no cumpliría el invariante de tamaño, así que eso no pasa.)
+</Predice>
+
+El predecesor es simétrico: busca en $G_j$ y, si no hay, toma el máximo de $G_{j-1}$.
+
+### Insertar y eliminar
+
+- **Insertar($x$):** encontrar $G_j$ con el X-fast ($O(\lg w)$) e insertar en su BST ($O(\lg w)$). Si el grupo supera $2w$, partirlo.
+- **Eliminar($x$):** eliminar de su BST. Si el grupo baja de $w/2$, fusionarlo con un vecino (y partir si hace falta).
+
+Una partición o fusión cuesta $\Theta(w)$: reconstruir los BST es $O(w)$ y cambiar un representante en el X-fast es $O(w)$. ¿No arruina eso el tiempo? Solo si ocurriera seguido, y **no ocurre seguido**.
+
+## 5. La amortización, con cuidado
+
+<Practica nivel={1} titulo="Resuelto: tras una reestructuración, hacen falta al menos $w/4$ operaciones para la siguiente">
+- **Después de partir** un grupo de $2w + 1$: quedan grupos de $w$ y $w + 1$. Para volver a $2w + 1$ hacen falta $\ge w$ inserciones; para bajar de $w/2$, $\ge w/2$ eliminaciones.
+- **Después de fusionar:** el resultado mide $\ge w - 1$ (un grupo con $w/2 - 1$ más un vecino con $\ge w/2$). Si supera $1{,}5w$, se parte en grupos de entre $0{,}75w$ y $1{,}25w$. En cualquier caso, para llegar a $2w$ o bajar a $w/2$ hacen falta $\ge w/4$ operaciones.
+</Practica>
+
+**Teorema.** Insertar y Eliminar cuestan $O(\lg w)$ amortizado.
+
+**Demostración.** Cada operación paga $O(\lg w)$ por la búsqueda en el X-fast y en el BST. Una reestructuración cuesta $O(w)$ y ocurre a lo más una vez cada $w/4$ operaciones **de ese grupo**: se cobra $O(w)/(w/4) = O(1)$ a cada una. Total: $O(\lg w) + O(1) = O(\lg w)$. $\blacksquare$
+
+<Practica nivel={3} titulo="Solo: ¿por qué los grupos tienen tamaño $\Theta(w)$ y no $\Theta(\lg w)$ o $\Theta(w^2)$?">
+<Solucion>
+- **Más pequeños** (p. ej. $\Theta(\lg w)$): habría $n/\lg w$ representantes, cada uno con $O(w)$ en el X-fast: espacio $O(nw/\lg w)$, ya no lineal. Y la reestructuración $O(w)$ del X-fast se repartiría entre solo $\Theta(\lg w)$ operaciones: $O(w/\lg w)$ amortizado, peor que $\lg w$.
+- **Más grandes** (p. ej. $\Theta(w^2)$): el espacio queda bien, pero buscar dentro de un BST de $w^2$ llaves cuesta $O(\lg w^2) = O(\lg w)$, que todavía sirve. Pero reconstruir un grupo cuesta $O(w^2)$ y se reparte entre $\Theta(w^2)$ operaciones: también $O(1)$. Entonces funciona igual; $\Theta(w)$ es el **tamaño mínimo** que hace lineal el espacio, y es el que se eligió en clase. Lo esencial es: **tamaño de grupo $\ge w$** (para el espacio) y **$\lg(\text{tamaño}) = O(\lg w)$** (para la búsqueda).
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: con $n = 10^9$ y $w = 64$, ¿cuántos representantes hay como máximo y cuántos pasos hace una consulta?">
+<Solucion>
+A lo más $2n/w = 2\cdot 10^9/64 \approx 3{,}1\cdot 10^7$ representantes. Una consulta hace $O(\lg w)$: una búsqueda binaria sobre 65 profundidades (unos 6–7 accesos a la tabla hash) más una búsqueda en un BST de a lo más $2w = 128$ llaves (unos 7 niveles). Comparado con $\lg n \approx 30$ de un BST con todas las llaves.
+</Solucion>
+</Practica>
+
+## 6. Resumen de las cuatro estructuras
+
+| Estructura | Consulta | Actualización | Espacio |
+| --- | --- | --- | --- |
+| vEB | $O(\lg w)$ | $O(\lg w)$ | $\Theta(u)$ |
+| vEB con hash | $O(\lg w)$ | $O(\lg w)$ | $O(n \lg w)$ |
+| X-fast tree | $O(\lg w)$ | $\Theta(w)$ | $O(nw)$ |
+| Y-fast tree | $O(\lg w)$ | $O(\lg w)$ amortizado | $\Theta(n)$ |
+
+Con tablas hash, los tiempos de X-fast y Y-fast son **esperados** (o con alta probabilidad), no de peor caso. Para $n = 10^9$ y $w = 64$: $\lg w = 6$ contra $\lg n \approx 30$.
+
+<Errores
+	errores={[
+		{ mal: '«El X-fast busca de arriba hacia abajo, un nivel por paso.»', bien: 'Hace <strong>búsqueda binaria sobre la profundidad</strong>: pregunta a la tabla hash por el prefijo de longitud $\\ell$ y salta. Por eso es $O(\\lg w)$ y no $O(w)$.' },
+		{ mal: '«El X-fast ya tiene espacio lineal porque usa hash.»', bien: 'Guarda los $w+1$ prefijos de cada llave: $O(nw)$. El espacio lineal llega con la <strong>indirección</strong> del Y-fast.' },
+		{ mal: '«Si se borra el representante $r_j$ hay que sacarlo del X-fast de inmediato.»', bien: 'Se queda hasta la próxima partición o fusión: sigue sirviendo como frontera $r_j \\le x &lt; r_{j+1}$.' },
+		{ mal: '«Y-fast es $O(\\lg w)$ en el peor caso.»', bien: 'Las actualizaciones son <strong>amortizadas</strong> (y esperadas por el hash): una partición sola cuesta $\\Theta(w)$.' },
+		{ mal: '«El sucesor puede estar en cualquier grupo posterior.»', bien: 'Solo en $G_j$ o en $G_{j+1}$: todo $G_{j+1}$ es mayor que $x$.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="xfast-yfast"
+	preguntas={[
+		{ q: 'En el árbol de bits, a lo largo de una ruta raíz–hoja los valores son…', opts: ['alternados 1010…', '$1\\cdots1\\,0\\cdots0$', '$0\\cdots0\\,1\\cdots1$', 'arbitrarios'], ok: 1, why: 'Si un nodo vale 0, todos sus descendientes valen 0.' },
+		{ q: '¿Cuántas entradas tiene la tabla del X-fast como máximo?', opts: ['$n$', '$u$', '$n(w+1)$', '$2u - 1$'], ok: 2 },
+		{ q: 'Sucesor(13) con $S = \\{2,3,4,5,7,14,15\\}$, $w = 4$ es…', opts: ['14', '15', '7', 'nulo'], ok: 0, why: 'Prefijos presentes de $1101$: $\\varepsilon$, 1, 11; falta 110 (hijo izquierdo), así que se toma el mínimo de 111: 14.' },
+		{ q: 'El tamaño de los grupos del Y-fast se mantiene entre…', opts: ['$1$ y $w$', '$w/2$ y $2w$', '$\\lg w$ y $w$', '$w$ y $w^2$'], ok: 1 },
+		{ q: 'La razón por la que el Y-fast usa $\\Theta(n)$ de espacio es…', opts: ['usa una vEB abajo', 'hay $\\le 2n/w$ representantes y cada uno ocupa $O(w)$', 'el hash comprime los prefijos', 'los BST son implícitos'], ok: 1 },
+		{ q: 'Una reestructuración cuesta $O(w)$; ¿cuánto se cobra a cada operación?', opts: ['$O(w)$', '$O(\\lg w)$', '$O(1)$, porque ocurre cada $\\ge w/4$ operaciones del grupo', '$O(w^2)$'], ok: 2 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica, como a un compañero que solo conoce la vEB, qué problema resuelve el X-fast y qué problema resuelve el Y-fast."
+	claves={[
+		'La vEB gasta $\\Theta(u)$; el X-fast guarda solo prefijos existentes en una tabla hash: $O(nw)$.',
+		'La consulta es una <strong>búsqueda binaria sobre la profundidad</strong> porque los valores en una ruta son $1\\cdots1\\,0\\cdots0$.',
+		'El X-fast actualiza en $\\Theta(w)$ (toca toda la ruta); el Y-fast lo arregla con <strong>grupos de $\\Theta(w)$</strong> en BST y un representante por grupo.',
+		'Amortización: partir o fusionar cuesta $O(w)$ pero ocurre cada $\\ge w/4$ operaciones del grupo.',
+	]}
+	trampa="decir que el Y-fast «es un X-fast más pequeño». Es un X-fast <em>arriba</em> más BST <em>abajo</em>: la búsqueda tiene dos fases."
+/>
+
+<Dominio client:visible id="xfast-yfast" />
+
+<Fuente archivos={['Sem11_Integers_II.pdf (Enteros II, 23/10/2026)', 'Willard (1983); Mehlhorn y Näher (1990)']} />

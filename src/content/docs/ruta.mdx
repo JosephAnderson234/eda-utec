@@ -1,0 +1,73 @@
+---
+title: 'Ruta de estudio y tu progreso'
+description: 'Cómo usar la web para el final de CS3014: qué significa cada recuadro, la escala de dominio, el orden recomendado de estudio con sus prerrequisitos, un plan de sesiones con repaso intercalado y el panel de repaso espaciado.'
+---
+
+import EnSimple from '../../components/EnSimple.astro';
+import PanelRepaso from '../../components/tutor/PanelRepaso.tsx';
+
+<EnSimple>
+Leer una página y sentir que «ya entendí» **no** es lo mismo que poder resolver un ejercicio en el examen. Lo que fija el conocimiento es **sacarlo de tu cabeza**: predecir antes de mirar, resolver sin ayuda, explicar con tus palabras y volver al tema unos días después. Cada página está armada para obligarte a hacer eso.
+</EnSimple>
+
+## Qué significa cada recuadro
+
+| Recuadro | Qué es | Qué tienes que hacer |
+| --- | --- | --- |
+| 💡 **En simple** | La idea con una analogía, antes de la versión técnica | Tradúcela a la definición formal en tu cabeza |
+| 🎯 **Al terminar podrás** | Objetivos comprobables y prerrequisitos | Si un prerrequisito te suena a chino, ve ahí primero |
+| 🔮 **Predice antes de seguir** | Una pregunta antes de la explicación | **Comprométete con una respuesta** y recién después abre la comparación |
+| **Peldaños 1 a 4** | Resuelto → complétalo → solo → variante | Sube de a uno; si fallas el 3, vuelve al 2 |
+| 🔍 **Detective** | Código o razonamiento con un error | Escribe tu hipótesis antes de abrir el diagnóstico |
+| ⚠️ **Errores que cuestan puntos** | Lo que se suele creer (✗) y la versión correcta (✓) | Revisa si caíste en alguno |
+| 🗣️ **Explícalo tú** | Técnica de Feynman | Explícalo **sin mirar** y compara con la lista |
+| 📈 **¿Qué tan bien lo dominas?** | Autoevaluación de 0 a 4 | Marca con honestidad: programa tu próximo repaso |
+
+## La escala de dominio
+
+| Nivel | Qué significa | Cómo lo compruebas |
+| :-: | --- | --- |
+| **0** | No lo reconoces o lo confundes | No pudiste responder el «Predice» |
+| **1** | Lo entiendes leyendo, no lo aplicas solo | Seguiste el peldaño 1, te trabaste en el 2 |
+| **2** | Resuelves parecidos con alguna pista | Peldaño 2 bien; en el 3 abriste la solución antes |
+| **3** | Resuelves uno **nuevo** y justificas cada paso | Peldaño 3 sin mirar y un «Explícalo tú» completo |
+| **4** | Transfieres: comparas y ves casos límite | Peldaño 4 bien; sabes **cuándo deja de valer** |
+
+Una respuesta correcta aislada no prueba dominio: para marcar **3** necesitas un ejercicio nuevo resuelto, una justificación correcta y una explicación con tus palabras.
+
+## En qué orden estudiar
+
+Las unidades dependen unas de otras. El orden recomendado:
+
+| Paso | Tema | Por qué aquí |
+| :-: | --- | --- |
+| 1 | [Rectángulos](/optimalidad/rectangulos/) → [Wilber](/optimalidad/wilber/) → [Tango](/optimalidad/tango/) | Continúa la vista geométrica y Splay del parcial; Wilber usa rectángulos y Tango usa Wilber |
+| 2 | [Modelo externo](/memoria/modelo-externo/) → [B-Trees](/memoria/btree/) → [Layout vEB](/memoria/layout-veb/) → [PMA](/memoria/pma/) | Introduce transferencias y luego estructuras que reducen accesos a bloques; no exige la unidad 1 |
+| 3 | [vEB](/enteros/veb/) → [X/Y-fast](/enteros/xfast-yfast/) → [Fusion](/enteros/fusion/) | Retoma la recursión por mitades del layout vEB y la indirección de la unidad 2 |
+| 4 | [RMQ y LCA](/estaticos/rmq-lca/) | Prepara consultas sobre árboles; basta conocer DFS y cotas de tiempo |
+| 5 | [Heavy-Light](/grafos/heavy-light/) → [Centroides](/grafos/centroides/) | Reutiliza Euler tour, intervalos de subárbol, LCA y segment tree de la unidad 4 |
+| 6 | [KMP](/strings/kmp/) → [Aho–Corasick](/strings/aho-corasick/) → [Suffix array](/strings/suffix-array/) → [DC3/SA-IS](/strings/sa-lineal/) → [Suffix tree](/strings/suffix-tree/) | Usa RMQ para LCP y LCA en suffix tree; no requiere grafos dinámicos |
+
+Los pesos (●●● en el panel) son una **estimación propia** según cuánto tiempo y cuántos ejemplos dedicó el curso a cada tema; no son un anuncio del examen.
+
+Grafos dinámicos va antes que Strings aunque se dictó después: reutiliza lo recién visto de árboles estáticos, mientras Strings no depende de Grafos dinámicos.
+
+## Plan de sesiones (unos 90 minutos cada una)
+
+Cada sesión **empieza con 10 minutos de repaso de la anterior** (repaso intercalado): mezclar temas te obliga a decidir qué método aplica, como en el examen.
+
+| Sesión | Tema principal | Repaso al inicio | Cierra con |
+| :-: | --- | --- | --- |
+| 1 | Rectángulos → Wilber → Tango | parcial: vista geométrica | cota inferior y quiz |
+| 2 | Modelo externo → B-Trees | Wilber y Tango: explica una cota | transferencias de una búsqueda |
+| 3 | Layout vEB → PMA | B-Tree: altura y bloques | Feynman del layout |
+| 4 | vEB → X/Y-fast → Fusion | PMA: indirección y holgura | traza de sucesor |
+| 5 | RMQ → cartesian tree → LCA | vEB: recurrencia | Sparse Table y Euler tour |
+| 6 | Heavy-Light → centroides | LCA, DFS e intervalos de subárbol | traza de caminos y separadores |
+| 7 | KMP → Aho–Corasick | centroides: propiedad separadora | función prefijo y fallas |
+| 8 | Suffix array → DC3/SA-IS → suffix tree | Aho–Corasick: enlaces de falla | SA, LCP y sufijos de una cadena |
+| 9 | [Simulacro](/repaso/simulacro/) cronometrado | Strings: suffix array y suffix tree | autocorrección y panel |
+
+## Tu panel de repaso
+
+<PanelRepaso client:only="react" />

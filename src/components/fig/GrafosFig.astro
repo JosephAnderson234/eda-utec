@@ -1,0 +1,38 @@
+---
+type Fig = 'arbol' | 'cadenas' | 'camino' | 'separador' | 'centroides';
+interface Props { fig: Fig }
+const { fig } = Astro.props;
+const defs = `<defs><marker id="gr-${fig}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="head"/></marker></defs>`;
+const nodes = [
+  {v:1,x:370,y:40,p:0,pos:0},{v:2,x:210,y:105,p:1,pos:1},{v:3,x:490,y:105,p:1,pos:7},{v:4,x:640,y:105,p:1,pos:10},
+  {v:5,x:120,y:175,p:2,pos:2},{v:6,x:300,y:175,p:2,pos:5},{v:7,x:490,y:175,p:3,pos:8},
+  {v:8,x:65,y:245,p:5,pos:3},{v:9,x:170,y:245,p:5,pos:4},{v:10,x:300,y:245,p:6,pos:6},{v:11,x:490,y:245,p:7,pos:9},
+];
+const heavy = new Set(['1-2','2-5','5-8','6-10','3-7','7-11']);
+const order = [1,2,5,8,9,6,10,3,7,11,4];
+const cp = [{v:2,x:370,y:35,p:0},{v:3,x:180,y:105,p:2},{v:5,x:365,y:105,p:2},{v:6,x:550,y:105,p:2},
+  {v:1,x:90,y:175,p:3},{v:7,x:250,y:175,p:3},{v:8,x:310,y:175,p:5},{v:9,x:420,y:175,p:5},{v:10,x:550,y:175,p:6},
+  {v:4,x:90,y:245,p:1},{v:11,x:250,y:245,p:7}];
+---
+<figure class="svgfig not-content">
+  <div class="svgfig__scroll">
+    {(fig === 'arbol' || fig === 'camino' || fig === 'separador') && <svg viewBox="0 0 720 325" role="img" aria-label={fig === 'arbol' ? 'Árbol de once nodos con aristas pesadas y posiciones' : fig === 'camino' ? 'Camino de 10 a 9 dividido en tres tramos' : 'El centroide 2 separa componentes de tamaños cinco, tres y dos'}>
+      <Fragment set:html={defs} />
+      {nodes.filter(n=>n.p).map(n=>{const p=nodes.find(q=>q.v===n.p)!;return <line x1={p.x} y1={p.y} x2={n.x} y2={n.y} class={fig==='arbol' && heavy.has(`${n.p}-${n.v}`) ? 'ln ok' : fig==='camino' && ['2-5','2-6','5-9','6-10'].includes(`${n.p}-${n.v}`) ? 'ln ok' : 'ln'} style={fig==='arbol' && heavy.has(`${n.p}-${n.v}`) ? 'stroke-width:4' : undefined}/>})}
+      {nodes.map(n=><><circle cx={n.x} cy={n.y} r="21" class={fig==='separador' ? n.v===2?'c4':n.v===1||n.v===3||n.v===4||n.v===7||n.v===11?'c1':n.v===5||n.v===8||n.v===9?'c2':'c3' : fig==='camino' && [2,5,6,9,10].includes(n.v)?'c4':'box'}/><text x={n.x} y={n.y+5} class="t b">{n.v}</text>{fig==='arbol' && <text x={n.x} y={n.y+37} class="t s mu" style="paint-order:stroke;stroke:var(--pg-surface);stroke-width:5px">pos {n.pos}</text>}</>)}
+      <text x="360" y="316" class="t s mu">{fig==='arbol'?'Aristas verdes: pesadas; las demás: livianas':fig==='camino'?'10 → 6 → 2 → 5 → 9: tres tramos de cadena':'Al retirar 2: componentes de 5, 3 y 2 nodos'}</text>
+    </svg>}
+    {fig === 'cadenas' && <svg viewBox="0 0 760 160" role="img" aria-label="Orden del arreglo: 1 2 5 8, 9, 6 10, 3 7 11, 4">
+      <Fragment set:html={defs} />
+      {order.map((v,i)=><><rect x={35+i*63} y="55" width="58" height="48" rx="5" class={i<4?'c1':i===4?'c2':i<7?'c3':i<10?'c4':'c5'}/><text x={64+i*63} y="84" class="t b">{v}</text><text x={64+i*63} y="124" class="t s mu">{i}</text></>)}
+      <text x="380" y="32" class="t s">Cada color es una cadena; abajo está pos()</text>
+    </svg>}
+    {fig === 'centroides' && <svg viewBox="0 0 720 290" role="img" aria-label="Árbol de centroides con raíz 2 y profundidad máxima tres">
+      <Fragment set:html={defs} />
+      {cp.filter(n=>n.p).map(n=>{const p=cp.find(q=>q.v===n.p)!;return <line x1={p.x} y1={p.y} x2={n.x} y2={n.y} class="ln"/>})}
+      {cp.map(n=><><circle cx={n.x} cy={n.y} r="19" class={n.v===2?'c4':'box'}/><text x={n.x} y={n.y+5} class="t b">{n.v}</text></>)}
+      <text x="360" y="283" class="t s mu">Cada hijo es el centroide de una componente restante; nivel máximo: 3</text>
+    </svg>}
+  </div>
+  <figcaption><slot /></figcaption>
+</figure>

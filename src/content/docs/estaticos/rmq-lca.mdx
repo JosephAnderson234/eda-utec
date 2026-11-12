@@ -1,0 +1,319 @@
+---
+title: 'RMQ, cartesian tree y LCA'
+description: 'Árboles estáticos (semana 12): Range Minimum Query con el par ⟨P(n), Q(n)⟩, Sparse Table, bloques, cartesian tree en tiempo lineal, RMQ = LCA, Euler tour y ±1 RMQ, y el método de los cuatro rusos para llegar a ⟨O(n), O(1)⟩.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import EstaticosFig from '../../../components/fig/EstaticosFig.astro';
+
+<EnSimple>
+Tienes las temperaturas de cada día del año y te preguntan **miles de veces**: «¿qué día fue el más frío entre el día $i$ y el día $j$?». Los datos **no cambian**, así que vale la pena prepararse antes.
+- **Sparse Table:** anotas de antemano el más frío de cada tramo de 1, 2, 4, 8… días. Cualquier pregunta se responde juntando **dos tramos** que se pisan. Rápido, pero ocupa $n \lg n$.
+- **El camino largo y elegante:** convertir la pregunta en otra sobre un **árbol genealógico** («¿cuál es el ancestro común más cercano de estas dos personas?»), y esa, de vuelta, en una pregunta sobre una lista que **sube o baja de 1 en 1**. Esa lista tiene tan poca variedad que se pueden **precalcular todas las respuestas posibles** para trozos chicos: ⟨O(n), O(1)⟩.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Construir una <strong>Sparse Table</strong> y responder una consulta con dos intervalos que se solapan, explicando por qué solo vale para operaciones idempotentes.',
+		'Construir un <strong>cartesian tree</strong> en $O(n)$ con una pila y justificar $\\text{RMQ}_A(i,j) = \\text{LCA}_{T_A}(i,j)$.',
+		'Reducir LCA a <strong>±1 RMQ</strong> con el Euler tour y la tabla <code>first</code>.',
+		'Explicar el método de los <strong>cuatro rusos</strong>: por qué hay $\\le \\sqrt n$ patrones de bloque y por qué las tablas micro son $o(n)$.',
+	]}
+	prerrequisitos={[{ t: 'Recurrencias y notación asintótica; recorridos de árboles (DFS)', href: '/formulario/' }]}
+	perfiles={['visual', 'laboratorio', 'detective', 'feynman']}
+/>
+
+## 1. El problema y cómo medir una solución
+
+Dado un arreglo $A[0..n-1]$ **estático** (no cambia), responder
+
+$$\text{RMQ}_A(i, j) = \arg\min\{A[i], A[i+1], \dots, A[j]\}, \qquad 0 \le i \le j < n,$$
+
+es decir, el **índice** $k \in [i, j]$ donde está el mínimo. Devolver el índice es más general que el valor: con $k$ se obtiene $A[k]$.
+
+Una solución se mide con el par $\langle P(n), Q(n) \rangle$: tiempo de **preprocesamiento** y tiempo **por consulta**.
+
+| Solución | $\langle P, Q\rangle$ | Problema |
+| --- | --- | --- |
+| Sin preprocesar: recorrer $A[i..j]$ | $\langle O(1), O(n) \rangle$ | $10^{12}$ operaciones con $n = 10^6$ y $10^6$ consultas |
+| Tabla completa $M[i][j]$ | $\langle O(n^2), O(1) \rangle$ | $n^2$ celdas: inaceptable |
+| Segment tree | $\langle O(n), O(\lg n) \rangle$ | paga por actualizaciones que nunca se usan |
+
+Se busca casi $n$ de preprocesamiento y una consulta que **no dependa** de $j - i$.
+
+## 2. Sparse Table: ⟨O(n lg n), O(1)⟩
+
+Para cada inicio $i$ y cada $k$ con $i + 2^k \le n$:
+
+$$M[k][i] = \arg\min\{A[i], \dots, A[i + 2^k - 1]\}.$$
+
+Hay $n$ inicios y $\lfloor \lg n\rfloor + 1$ longitudes: $O(n \lg n)$ celdas. **Se llena por niveles:** un intervalo de longitud $2^k$ son dos de longitud $2^{k-1}$, así que
+
+$$M[0][i] = i, \qquad M[k][i] = \text{el mejor entre } M[k-1][i] \text{ y } M[k-1][i + 2^{k-1}].$$
+
+<Practica nivel={1} titulo="Resuelto: la tabla de $A = [5, 3, 8, 1, 9, 4, 7, 2]$ (ejemplo de clase)">
+
+| $i$ | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| $A[i]$ | 5 | 3 | 8 | 1 | 9 | 4 | 7 | 2 |
+| $M[0][i]$ | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| $M[1][i]$ | 1 | 1 | 3 | 3 | 5 | 5 | 7 | |
+| $M[2][i]$ | 3 | 3 | 3 | 3 | 7 | | | |
+| $M[3][i]$ | 3 | | | | | | | |
+
+- $M[1][2] = 3$ porque $A[3] = 1 < A[2] = 8$.
+- $M[2][4] = 7$ compara $M[1][4] = 5$ ($A = 4$) con $M[1][6] = 7$ ($A = 2$).
+</Practica>
+
+### La consulta: dos intervalos que se solapan
+
+Sea $k = \lfloor \lg(j - i + 1) \rfloor$. Entonces $2^k \le j - i + 1 < 2^{k+1}$, y los intervalos $[i, i + 2^k - 1]$ y $[j - 2^k + 1, j]$ **cubren** $[i, j]$ (se pisan en el medio).
+
+<EstaticosFig fig="consulta">
+**Cómo leerlo.** Para la consulta $[1, 6]$ se usan los dos bloques de longitud 4 que caben: $[1, 4]$ y $[3, 6]$. Cada uno ya tiene su mínimo precalculado (ambos en la posición 3). El mínimo de la unión es el mejor de los dos, y que se solapen **no importa** porque contar un elemento dos veces no cambia el mínimo.
+</EstaticosFig>
+
+```text
+RMQ-Sparse(i, j):
+  k ← ⌊lg(j − i + 1)⌋
+  a ← M[k][i];  b ← M[k][j − 2^k + 1]
+  si A[a] ≤ A[b]:  devolver a
+  si no:           devolver b
+```
+
+$\lfloor \lg x \rfloor$ se obtiene en $O(1)$ con una tabla precalculada de tamaño $n$ o con la instrucción «contar ceros iniciales». Son 2 lecturas de tabla y 1 comparación.
+
+<Predice pregunta="¿Sirve este truco para responder la **suma** de $A[i..j]$?">
+**No.** La técnica solo funciona con operaciones **idempotentes**: $\min(x, x) = x$. Con la suma, los elementos del solape se contarían dos veces. (Para sumas se usan sumas de prefijos, otra idea.)
+</Predice>
+
+### Bloques: reducir la memoria
+
+Partir $A$ en bloques de tamaño $b$, guardar el mínimo de cada bloque y construir la Sparse Table **sobre esos $n/b$ valores**: memoria $O\!\left(\tfrac{n}{b}\lg\tfrac{n}{b}\right)$. Con $b = \lg n$ queda $O\!\left(\tfrac{n}{\lg n}\lg n\right) = O(n)$.
+
+**Lo que queda abierto:** si $i$ y $j$ caen **dentro** de un mismo bloque (o hay que mirar el pedazo de bloque en los bordes), ¿cómo se responde?
+- Recorrer el bloque: $O(\lg n)$.
+- Una Sparse Table por bloque: vuelve a costar $O(n \lg\lg n)$.
+- Una tabla completa por bloque: $O(n \lg n)$.
+
+Ninguna conviene. Para resolverlo hay que entender **la estructura** de los problemas dentro de un bloque, y la herramienta es un árbol.
+
+## 3. Cartesian tree: RMQ es un problema de LCA
+
+**Definición.** El cartesian tree $T_A$ de $A[0..n-1]$ es el árbol binario con un nodo por posición tal que:
+- la raíz es la posición $m$ del mínimo de $A$;
+- su subárbol izquierdo es el cartesian tree de $A[0..m-1]$, y el derecho, el de $A[m+1..n-1]$.
+
+Cumple la **propiedad de heap** (padre menor que sus hijos) y su **inorden** es $0, 1, \dots, n-1$.
+
+<EstaticosFig fig="cartesiano">
+**Cómo leerlo.** Cartesian tree de $A = [5, 3, 8, 1, 9, 4, 7, 2]$ (ejemplo propio con el arreglo de la Sparse Table). La raíz es el 1 (posición 3). A su izquierda queda $[5, 3, 8]$ con raíz 3; a su derecha $[9, 4, 7, 2]$ con raíz 2 (posición 7). Leyendo las posiciones de izquierda a derecha (inorden) sale $0, 1, \dots, 7$.
+</EstaticosFig>
+
+**Teorema.** Con empates resueltos por la posición, $\text{RMQ}_A(i, j) = \text{LCA}_{T_A}(i, j)$.
+
+*Idea de la prueba:* el LCA $v$ de $i$ y $j$ es el primer nodo (desde la raíz) cuyo intervalo de posiciones contiene a ambos y que los separa (o es uno de ellos). Por el inorden, $v \in [i, j]$; por la propiedad de heap, $A[v]$ es el mínimo de todo su subárbol, que contiene a $[i, j]$.
+
+Ejemplo: $\text{LCA}(4, 6) = $ posición 5 (valor 4), y en efecto $\min\{A[4], A[5], A[6]\} = \min\{9, 4, 7\}$ está en la posición 5.
+
+### Construcción lineal con una pila
+
+Se recorre $A$ de izquierda a derecha manteniendo en una pila la **columna derecha** del árbol (de la raíz hacia abajo siguiendo hijos derechos). Al llegar a $A[i]$:
+- se desapilan los nodos $v$ con $A[v] > A[i]$; el **último desapilado** pasa a ser hijo izquierdo de $i$;
+- $i$ pasa a ser hijo derecho del nodo que queda en el tope (si hay) y se apila.
+
+```text
+Árbol-Cartesiano(A, n):
+  pila ← vacía;  izq[·] ← −1;  der[·] ← −1
+  para i ← 0 .. n − 1:
+      ultimo ← −1
+      mientras pila no vacía y A[tope(pila)] > A[i]:
+          ultimo ← desapilar(pila)
+      izq[i] ← ultimo
+      si pila no vacía:  der[tope(pila)] ← i
+      apilar(pila, i)
+  devolver el fondo de la pila          // la raíz
+```
+
+**Correcto:** los desapilados son mayores que $A[i]$ (quedan debajo de $i$, por heap) y están a su izquierda: forman su subárbol izquierdo. **$O(n)$:** cada posición se apila una vez y se desapila a lo más una vez; el `while` da $\le n$ vueltas en total.
+
+<Practica nivel={2} titulo="Complétalo: la traza de la pila para $A = [5, 3, 8, 1, 9, 4, 7, 2]$">
+
+| $i$ | $A[i]$ | desapila | pila después (posiciones) |
+| --- | --- | --- | --- |
+| 0 | 5 | — | [0] |
+| 1 | 3 | 0 (y `izq[1] = 0`) | [1] |
+| 2 | 8 | — | **\_\_\_\_\_** |
+| 3 | 1 | **\_\_\_\_\_** | [3] |
+| 4 | 9 | — | [3, 4] |
+| 5 | 4 | **\_\_\_** | **\_\_\_\_\_** |
+| 6 | 7 | — | [3, 5, 6] |
+| 7 | 2 | **\_\_\_\_\_** | [3, 7] |
+
+<Solucion>
+- $i = 2$: $8 > 3$, no desapila; `der[1] = 2`; pila $[1, 2]$.
+- $i = 3$: desapila 2 y 1 (último = 1), `izq[3] = 1`; pila $[3]$.
+- $i = 5$: desapila 4, `izq[5] = 4`, `der[3] = 5`; pila $[3, 5]$.
+- $i = 7$: desapila 6 y 5 (último = 5), `izq[7] = 5`, `der[3] = 7`; pila $[3, 7]$.
+
+Resultado: raíz 3; `izq = [−1, 0, −1, 1, −1, 4, −1, 5]`, `der = [−1, 2, −1, 7, −1, 6, −1, −1]`. Verificado ejecutando el algoritmo.
+</Solucion>
+</Practica>
+
+## 4. LCA y el Euler tour: de vuelta a RMQ, pero ±1
+
+**LCA$(u, v)$:** el nodo más profundo que es ancestro de $u$ y de $v$ (un nodo es ancestro de sí mismo). Sirve para distancias, $d(u, v) = d(u) + d(v) - 2\,d(\text{LCA})$; para saber si $u$ es ancestro de $v$; para caminos y consultas sobre caminos.
+
+**Euler tour:** recorrido en profundidad anotando el nodo **al entrar y cada vez que se regresa a él** desde un hijo. Con $n$ nodos da una lista $E$ de $2n - 1$ entradas, y un arreglo $D$ con sus profundidades. Sea $\text{first}[v]$ la primera aparición de $v$ en $E$.
+
+<EstaticosFig fig="euler">
+**Cómo leerlo.** El árbol de clase: A con hijos B y C; B con hijos D y E. El recorrido escribe A B D B E B A C A, con profundidades 0 1 2 1 2 1 0 1 0. Para $\text{LCA}(D, E)$ se mira el tramo de $E$ entre la primera aparición de D y la de E: el nodo de **menor profundidad** en ese tramo es B, el LCA.
+</EstaticosFig>
+
+$$\text{LCA}(u, v) = E\big[\,\text{RMQ}_D(\text{first}[u], \text{first}[v])\,\big] \quad(\text{con } \text{first}[u] \le \text{first}[v]).$$
+
+**La propiedad ±1:** en $D$, dos entradas consecutivas difieren en **exactamente 1** ($\lvert D[t] - D[t-1] \rvert = 1$), porque el recorrido siempre pasa de un nodo a su padre o a un hijo. Un RMQ sobre un arreglo así se llama **±1 RMQ**: un caso particular con mucha estructura.
+
+<EstaticosFig fig="cadena">
+**Cómo leerlo.** Ida y vuelta: un RMQ general se convierte (cartesian tree, $O(n)$) en un LCA, y el LCA (Euler tour, $O(n)$) en un ±1 RMQ. Si resolvemos ±1 RMQ en $\langle O(n), O(1)\rangle$, también RMQ y LCA. Con la Sparse Table sobre el Euler tour ya tendríamos $\langle O(n \lg n), O(1)\rangle$.
+</EstaticosFig>
+
+## 5. ±1 RMQ en ⟨O(n), O(1)⟩: los cuatro rusos
+
+<Predice pregunta="Los bloques $3\,4\,3\,2$ y $7\,8\,7\,6$ son distintos. ¿Dan las mismas respuestas para todo rango $[l, r]$ dentro del bloque?">
+**Sí.** Difieren en una constante ($+4$), así que el **índice** del mínimo es el mismo en ambos. Restando el primer elemento, un bloque de un ±1 RMQ queda determinado por su secuencia de pasos: $+, -, -$ en el ejemplo. Con $b$ elementos hay $b - 1$ pasos y $2^{b-1}$ patrones posibles.
+</Predice>
+
+**¿Cuántos patrones distintos hay?** Eligiendo $b = \tfrac12 \lg n$:
+
+$$2^{b-1} \le 2^{\frac12 \lg n} = \sqrt n .$$
+
+Hay $n/b \gg \sqrt n$ bloques pero a lo más $\sqrt n$ patrones distintos: **muchísimos bloques comparten patrón**. Basta una tabla de respuestas **por patrón**, no por bloque:
+
+$$T[p][l][r] = \text{posición del mínimo en } [l, r] \text{ de un bloque con patrón } p, \qquad 0 \le l \le r < b.$$
+
+Tamaño: $\le \sqrt n$ patrones $\times\, b^2$ pares $= \sqrt n \cdot \tfrac14 \lg^2 n = O(\sqrt n \lg^2 n) = o(n)$. Cada tabla se llena en $O(b^2)$ recorriendo $r$ y manteniendo el mínimo.
+
+<EstaticosFig fig="bloques">
+**Cómo leerlo.** Una consulta $[i, j]$ se parte en: el **sufijo** del bloque de $i$ (tabla micro), los **bloques completos** del medio (Sparse Table macro sobre los mínimos de bloque) y el **prefijo** del bloque de $j$ (tabla micro). Se toma el mejor de los tres.
+</EstaticosFig>
+
+```text
+Preprocesar-PM1(D, n):
+  b ← max(1, ⌊lg n / 2⌋);  nb ← ⌈n / b⌉
+  para cada bloque t = 0 .. nb − 1:
+      bmin[t] ← valor mínimo del bloque;  bidx[t] ← su posición
+      pat[t] ← patrón de pasos del bloque (entero de b − 1 bits)
+  construir la Sparse Table sobre bmin[0 .. nb − 1]
+  para cada patrón p que aparece:  llenar T[p][l][r] para todo 0 ≤ l ≤ r < b
+
+RMQ-PM1(i, j):
+  s ← ⌊i / b⌋;  t ← ⌊j / b⌋
+  si s = t:  devolver s·b + T[pat[s]][i mod b][j mod b]
+  a ← s·b + T[pat[s]][i mod b][b − 1]            // sufijo
+  c ← t·b + T[pat[t]][0][j mod b]                // prefijo
+  m ← mín por valor entre a y c
+  si t − s > 1:
+      u ← bidx[RMQ-Sparse(s + 1, t − 1)]          // macro
+      m ← mín por valor entre m y u
+  devolver m
+```
+
+| Componente | Memoria y tiempo | Consulta |
+| --- | --- | --- |
+| Mínimos de bloque + patrones | $O(n)$ | — |
+| Sparse Table macro | $O\!\left(\tfrac{n}{b}\lg\tfrac{n}{b}\right) = O(n)$ | $O(1)$ |
+| Tablas micro | $O(\sqrt n \lg^2 n) = o(n)$ | $O(1)$ |
+
+**El método de los cuatro rusos**, en general: cuando un problema se divide en subproblemas tan pequeños que **solo hay pocos tipos distintos**, se precalculan todas las respuestas posibles y se consultan por índice. El nombre viene de Arlazarov, Dinic, Kronrod y Faradžev (1970), que lo usaron para multiplicar matrices booleanas.
+
+**Resultado:** RMQ y LCA en $\langle O(n), O(1)\rangle$ (Harel y Tarjan, 1984; simplificado por Bender y Farach-Colton, 2000):
+
+$$\text{RMQ}_A(i, j) = \text{LCA}_{T_A}(i, j) = E\big[\text{RMQ-PM1}(\text{first}[i], \text{first}[j])\big].$$
+
+<Practica nivel={3} titulo="Solo: calcula $\text{RMQ}_A(4, 6)$ para $A = [5,3,8,1,9,4,7,2]$ pasando por el Euler tour de su cartesian tree">
+<Solucion>
+Euler tour del cartesian tree (raíz 3), escribiendo posiciones:
+
+$E = [3, 1, 0, 1, 2, 1, 3, 7, 5, 4, 5, 6, 5, 7, 3]$, $D = [0, 1, 2, 1, 2, 1, 0, 1, 2, 3, 2, 3, 2, 1, 0]$ (15 = $2\cdot 8 - 1$ entradas).
+
+$\text{first}[4] = 9$, $\text{first}[6] = 11$. En $D[9..11] = 3, 2, 3$ el mínimo está en $t = 10$, y $E[10] = 5$. Respuesta: **posición 5** (valor 4) ✔. Comprobado con un script.
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante: ¿por qué no se usa $b = \lg n$ en los cuatro rusos, como en la versión con bloques?">
+<Solucion>
+Con $b = \lg n$ habría hasta $2^{\lg n - 1} = n/2$ patrones y cada tabla tendría $b^2 = \lg^2 n$ entradas: $\Theta(n \lg^2 n)$, peor que la Sparse Table. El factor $\tfrac12$ hace que $2^{b-1} \le \sqrt n$: los patrones posibles son **muchos menos** que los bloques, y por eso las tablas suman $o(n)$. Cualquier $b = \varepsilon \lg n$ con $\varepsilon < 1$ funcionaría.
+</Solucion>
+</Practica>
+
+<Detective
+	titulo="La Sparse Table que devuelve índices fuera de rango"
+	sintoma="Con $n = 8$, casi todas las consultas salen bien, pero las de un solo elemento, como $(5, 5)$, devuelven basura o un índice fuera de rango. El código usa <code>k = (int)log2(j - i)</code>."
+	pista="Calcula $k$ con esa fórmula para $(4, 7)$, para $(5, 7)$ y para $(5, 5)$. ¿Los dos bloques siguen cubriendo el intervalo?"
+>
+- **Causa raíz:** la longitud del intervalo es $j - i + 1$, no $j - i$. Para longitudes $\ge 2$ el error es «benigno»: $k = \lfloor\lg(\text{len} - 1)\rfloor$ cumple $2^{k+1} \ge \text{len}$, así que los dos bloques **todavía cubren** $[i, j]$ (solo se solapan más). Pero con $i = j$ se calcula $\log_2 0 = -\infty$, y convertir eso a `int` es comportamiento indefinido: `M[k]` lee fuera de la tabla.
+- **Cuándo se dispara:** solo en consultas de longitud 1, que son justo las que un test con rangos «grandes» no prueba.
+- **Corrección:** `k = 31 - __builtin_clz(j - i + 1)` o una tabla `lg[x]` con `lg[1] = 0`, `lg[x] = lg[x/2] + 1`.
+- **Verificación:** comparar contra fuerza bruta en **todos** los pares $(i, j)$, incluidos $i = j$, de un arreglo aleatorio.
+</Detective>
+
+## 6. Práctica (de las diapositivas)
+
+| Problema | Idea |
+| --- | --- |
+| CSES 1647 — Static Range Minimum Queries | Sparse Table |
+| Library Checker — Static RMQ | versión lineal con bloques |
+| CSES 1688 — Company Queries II | Euler + RMQ (LCA) |
+| CSES 1135 — Distance Queries | $d(u) + d(v) - 2\,d(\text{LCA})$ |
+| CSES 1136 — Counting Paths | LCA + diferencias sobre el árbol |
+| Library Checker — Lowest Common Ancestor | Euler tour + RMQ lineal |
+
+<Errores
+	errores={[
+		{ mal: '«La Sparse Table sirve para cualquier operación de rango.»', bien: 'Solo para operaciones <strong>idempotentes</strong> (mín, máx, gcd…): los dos intervalos se solapan.' },
+		{ mal: '«El cartesian tree es un BST por valores.»', bien: 'Es un BST por <strong>posiciones</strong> (inorden 0..n−1) y un <strong>heap</strong> por valores.' },
+		{ mal: '«El Euler tour tiene n entradas.»', bien: 'Tiene $2n - 1$: se anota el nodo al entrar y al volver de cada hijo.' },
+		{ mal: '«Hay una tabla micro por bloque.»', bien: 'Hay una por <strong>patrón</strong>; con $b = \\frac12\\lg n$ hay $\\le\\sqrt n$ patrones, mucho menos que bloques.' },
+		{ mal: '«Los cuatro rusos funciona para cualquier RMQ.»', bien: 'Se aplica al ±1 RMQ; el RMQ general llega ahí por las reducciones cartesian tree → LCA → Euler tour.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="rmq-lca"
+	preguntas={[
+		{ q: 'La Sparse Table es…', opts: ['$\\langle O(n), O(\\lg n)\\rangle$', '$\\langle O(n\\lg n), O(1)\\rangle$', '$\\langle O(n^2), O(1)\\rangle$', '$\\langle O(n), O(1)\\rangle$'], ok: 1 },
+		{ q: 'Para la consulta $[2, 6]$, ¿qué $k$ y qué bloques se usan?', opts: ['$k=2$: $[2,5]$ y $[3,6]$', '$k=3$: $[2,9]$', '$k=2$: $[2,5]$ y $[6,9]$', '$k=1$: $[2,3]$ y $[5,6]$'], ok: 0, why: 'Longitud 5, $\\lfloor\\lg 5\\rfloor = 2$: bloques de 4 que empiezan en $i$ y terminan en $j$.' },
+		{ q: 'La raíz del cartesian tree de $[7, 8, 2, 6, 9, 4]$ es…', opts: ['posición 0', 'posición 2', 'posición 5', 'posición 4'], ok: 1, why: 'Es la posición del mínimo (el 2).' },
+		{ q: '¿Por qué la construcción con pila es $O(n)$?', opts: ['Por el teorema maestro', 'Cada posición se apila una vez y se desapila a lo más una', 'Porque el árbol está balanceado', 'Porque usa la Sparse Table'], ok: 1 },
+		{ q: 'En el arreglo de profundidades del Euler tour…', opts: ['los valores son crecientes', 'consecutivos difieren en exactamente 1', 'no hay repetidos', 'hay $n$ entradas'], ok: 1 },
+		{ q: 'Con $b = \\frac12\\lg n$, el número de patrones de bloque es a lo más…', opts: ['$n$', '$n/b$', '$\\sqrt n$', '$\\lg n$'], ok: 2 },
+		{ q: 'Las tablas micro ocupan…', opts: ['$O(n\\lg n)$', '$O(\\sqrt n\\lg^2 n) = o(n)$', '$O(n)$ exacto', '$O(2^n)$'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica la cadena RMQ → LCA → ±1 RMQ y por qué al final la consulta es O(1) con preprocesamiento O(n)."
+	claves={[
+		'Cartesian tree: raíz = mínimo, inorden = posiciones; por eso RMQ$(i,j)$ = LCA$(i,j)$. Se construye en $O(n)$ con una pila.',
+		'Euler tour: $2n-1$ entradas; LCA$(u,v)$ = nodo de menor profundidad entre <code>first[u]</code> y <code>first[v]</code>; las profundidades cambian de a ±1.',
+		'Bloques de $\\frac12\\lg n$: macro con Sparse Table sobre $n/b$ mínimos ($O(n)$); micro con una tabla por patrón ($\\le\\sqrt n$ patrones, $o(n)$).',
+		'Consulta: a lo más 2 micro + 1 macro, todas $O(1)$.',
+	]}
+	trampa="decir que hay una tabla por bloque: eso costaría $\\Theta(n\\lg n)$. La clave es que muchos bloques comparten patrón."
+/>
+
+<Dominio client:visible id="rmq-lca" />
+
+<Fuente archivos={['Sem12_Static_Trees.pdf (Árboles estáticos, 28/10/2026)', 'Bender y Farach-Colton (2000); Fischer y Heun (2011)', 'Tablas, pila y Euler tour verificados con un script propio']} />

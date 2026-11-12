@@ -1,0 +1,169 @@
+---
+title: 'Suffix array y LCP'
+description: 'Strings II: arreglo de sufijos, duplicación de Manber–Myers, Kasai y problemas de subcadenas.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Detective from '../../../components/tutor/Detective.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import StringsFig from '../../../components/fig/StringsFig.astro';
+import SuffixArraySim from '../../../components/sim/SuffixArraySim.tsx';
+
+<EnSimple>
+Imagina un libro con una tarjeta por cada posición. En cada tarjeta copias el texto que comienza allí y ordenas las tarjetas alfabéticamente. Las tarjetas que empiezan por un patrón quedan juntas; una búsqueda binaria las localiza. El **suffix array** guarda solo los números de las tarjetas, y el arreglo **LCP** anota cuántas primeras letras comparten dos tarjetas vecinas.
+</EnSimple>
+
+<Objetivos objetivos={[
+  'Definir SA con centinela y hallar el intervalo de un patrón mediante búsqueda binaria.',
+  'Construir SA con duplicación de rangos y counting sort en $O(n\\lg n)$.',
+  'Calcular LCP con Kasai y usarlo para consultas y aplicaciones de subcadenas.',
+]} prerrequisitos={[{t:'RMQ, cartesian tree y LCA',href:'/estaticos/rmq-lca/'},{t:'KMP y orden de cadenas',href:'/strings/kmp/'}]} perfiles={['visual','simulador','laboratorio','feynman']} />
+
+## 1. Ordenar todos los sufijos
+
+Un **sufijo** $S[i..]$ comienza en $i$ y llega al final. Añadimos un **centinela** `$` único y menor que toda letra del texto; así ningún sufijo es prefijo de otro. Para $S=\texttt{banana\$}$, el arreglo $SA$ ordena los índices de sus sufijos de menor a mayor:
+
+$$SA=[6,5,3,1,0,4,2].$$
+
+<StringsFig fig="sa">**Cómo leerlo.** La fila $k$ muestra el sufijo que empieza en $SA[k]$. La columna LCP mide lo compartido con la fila anterior; `ana$` y `anana$` comparten `ana`.</StringsFig>
+
+**Convenciones distintas, misma información.** Las diapositivas incluyen `$` y definen $LCP[k]=\operatorname{lcp}(S[SA[k-1]..],S[SA[k]..])$: para `banana$`, $SA=[6,5,3,1,0,4,2]$ y $LCP=[0,0,1,3,0,0,2]$. El código del curso devuelve $SA$ **sin** el centinela, $[5,3,1,0,4,2]$, y `lcp[k]` compara $SA[k]$ con $SA[k+1]$: $[1,3,0,0,2]$. Es la misma lista de vecinos, desplazada una posición y sin la fila del centinela.
+
+## 2. Buscar un patrón
+
+Todos los sufijos que empiezan por $P$ forman un intervalo contiguo en $SA$. Dos búsquedas binarias encuentran sus límites: el primero que no es menor que $P$, y el primero que ya es mayor que cualquier sufijo que comienza por $P$. Cada comparación mira hasta $|P|$ caracteres, por tanto cuestan $O(|P|\lg n)$ en total; contar es la longitud del intervalo y enumerar cuesta además el número de apariciones.
+
+<Predice pregunta="En banana, ¿qué posiciones forman el intervalo de ana? ¿Y existe nab?">
+`ana` empieza en 3 y 1: aparecen en las filas 2 y 3 del SA con centinela. `nab` no aparece. El código `black-order-712 (3).cpp` responde `Yes`, `No`, `Yes` para `ana`, `nab`, `ban` en `banana`.
+</Predice>
+
+## 3. Duplicación de Manber–Myers
+
+Ordenar sufijos con un comparador que lee hasta $n$ letras puede costar $O(n^2\lg n)$. La **duplicación** ordena primero por una letra, luego por dos, cuatro, ocho… Definimos $r_k(i)$ como el rango con empates del prefijo de longitud $2^k$ del sufijo $i$. Para duplicar una longitud $\ell$, el nuevo orden se obtiene comparando el par $(r(i),r(i+\ell))$; el rango fuera de la cadena se trata como menor. Con un centinela único, el código del curso trabaja con índices cíclicos módulo $n$ y obtiene el mismo orden de sufijos.
+
+```text
+Manber–Myers(S con $):
+  a ← índices ordenados por S[i]
+  r ← rangos de cada carácter; longitud ← 1
+  mientras longitud < n y quedan empates:
+    sec ← [(a[t]−longitud+n) mod n para t=0..n−1]
+    a ← counting sort estable de sec por r[índice]
+    nuevo[a[0]] ← 0
+    para t ← 1 hasta n−1:
+      comparar (r[a[t]],r[(a[t]+longitud) mod n])
+            con (r[a[t−1]],r[(a[t−1]+longitud) mod n])
+      nuevo[a[t]] ← nuevo[a[t−1]] + indicador de pares distintos
+    r ← nuevo; longitud ← 2·longitud
+  devolver a
+```
+
+El desplazamiento de `sec` deja los índices ya ordenados por la segunda mitad; counting sort estable por la primera mitad ordena el par completo en $O(n)$. Tras $\lceil\lg n\rceil$ rondas se distinguen sufijos completos: tiempo $O(n\lg n)$ y memoria $O(n)$. Una ordenación general de pares en cada ronda subiría a $O(n\lg^2 n)$.
+
+En `banana$`, los rangos por índice $0..6$ son:
+
+| longitud | rangos |
+| --- | --- |
+| 1 | 2, 1, 3, 1, 3, 1, 0 |
+| 2 | 3, 2, 4, 2, 4, 1, 0 |
+| 4 | 4, 3, 6, 2, 5, 1, 0 |
+
+El código `manber-myers.cpp` añade un byte cero como centinela, ordena cíclicamente con `head` para el counting sort, lo quita del resultado y luego calcula LCP. Su salida para `banana` es el SA sin centinela de arriba.
+
+<SuffixArraySim client:visible />
+
+## 4. LCP y algoritmo de Kasai
+
+El **LCP** (*longest common prefix*) de dos cadenas es la longitud de su prefijo común más largo. Para dos posiciones $k<l$ del SA, el LCP de sus sufijos es el **mínimo** de los LCP vecinos entre ambas filas:
+
+$$\operatorname{lcp}(SA[k],SA[l])=\min_{k<j\le l} LCP[j].$$
+
+Si los extremos comparten un prefijo, todas las cadenas intermedias en orden lexicográfico también lo comparten; en alguna pareja vecina se pierde exactamente la primera letra donde difieren los extremos. Una estructura RMQ permite responder ese mínimo en tiempo constante tras preprocesamiento.
+
+<StringsFig fig="lcp">**Cómo leerlo.** La fila resaltada tiene LCP 3 con la anterior. Entre dos filas no vecinas, toma el menor valor LCP de las filas intermedias.</StringsFig>
+
+**Kasai** calcula todos los LCP en $O(n)$ recorriendo las posiciones originales $i=0,1,\ldots$. Si el LCP de un sufijo con su vecino es $h$, al pasar a $i+1$ al menos $h-1$ letras pueden reutilizarse. La variable $h$ baja a lo sumo uno por iteración y cada comparación exitosa la aumenta, así el total es lineal.
+
+```text
+Kasai(S, SA):
+  rank[SA[k]] ← k para todo k
+  h ← 0
+  para i ← 0 hasta n−1:
+    k ← rank[i]
+    si k = 0: LCP[k] ← 0; continuar
+    j ← SA[k−1]
+    mientras S[i+h] = S[j+h]: h ← h+1
+    LCP[k] ← h
+    si h > 0: h ← h−1
+```
+
+El centinela termina las comparaciones; en una implementación sin centinela se comprueban límites. El código del curso usa el **sucesor** en SA en vez del predecesor, de ahí el desplazamiento de convención.
+
+## 5. Aplicaciones de SA + LCP
+
+Para un texto de longitud $n$ **sin** centinela, sus sufijos aportan $n(n+1)/2$ prefijos en total. El sufijo nuevo en orden lexicográfico solo aporta los prefijos más largos que su LCP con el anterior:
+
+$$\#\text{subcadenas distintas}=\frac{n(n+1)}2-\sum LCP.$$
+
+En `banana`, $21-6=15$. La **subcadena repetida más larga** tiene longitud $\max LCP=3$, por ejemplo `ana`. Para la **subcadena común más larga** de $S$ y $T$, se construye el SA de `S#T$` con separadores distintos y se toma el mayor LCP entre vecinos de origen distinto. Para hallar la **k-ésima subcadena distinta** en orden lexicográfico, recorre los sufijos y resta la cantidad nueva $n-SA[j]-LCP[j]$ (sin centinela) hasta alcanzar $k$; el resto indica la longitud del prefijo buscado.
+
+<Practica nivel={1} titulo="Resuelto · ejemplo propio: subcadenas distintas de abab">
+$SA=[2,0,3,1]$ y el LCP entre vecinos siguientes es $[2,0,1]$. Hay $4·5/2=10$ subcadenas con repetición y $2+0+1=3$ repeticiones descontadas: **7 distintas**.
+</Practica>
+
+<Practica nivel={2} titulo="Completa el LCP de banana">
+Con SA sin centinela $[5,3,1,0,4,2]$, los LCP siguientes son $[1,\_\_,0,0,\_\_]$. ¿Cuántas subcadenas distintas hay?
+<Solucion>Los huecos son 3 y 2. La suma es 6; hay $21-6=15$ subcadenas distintas.</Solucion>
+</Practica>
+
+<Practica nivel={3} titulo="Solo: busca ana, nab y ban en banana">
+Indica si existen y, cuando existan, el índice inicial.
+<Solucion>`ana`: sí, 1 y 3. `nab`: no. `ban`: sí, 0. En SA, las posiciones de `ana` son contiguas.</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Variante · ejemplo propio: dos cadenas con separador">
+Para $S=\texttt{ab}$ y $T=\texttt{ba}$, halla una subcadena común más larga y explica por qué se descarta un LCP que cruza el separador.
+<Solucion>La longitud máxima es 1: `a` o `b`. El separador `#` aparece solo una vez y no puede ser parte de una subcadena de ambas cadenas.</Solucion>
+</Practica>
+
+<Detective titulo="Un LCP desplazado" sintoma="La tabla del código muestra cinco LCP para banana, pero la figura muestra siete." pista="Cuenta el centinela y observa qué vecino compara cada definición.">
+El código elimina el centinela y guarda $\operatorname{lcp}(SA[k],SA[k+1])$; las diapositivas lo incluyen y guardan $\operatorname{lcp}(SA[k-1],SA[k])$. Ambas dan los mismos cinco valores útiles $1,3,0,0,2$.
+</Detective>
+
+## 6. Práctica del curso
+
+| Problema | Herramienta |
+| --- | --- |
+| Library Checker — Suffix Array | duplicación o algoritmo lineal |
+| Library Checker — Number of Substrings | SA + LCP |
+| CSES 2104 — Pattern Positions | intervalo de búsqueda y posiciones |
+| CSES 2105 — Distinct Substrings | suma de contribuciones nuevas |
+| CSES 2106 — Repeating Substring | máximo LCP |
+| CSES 2108 — Substring Order I | k-ésima distinta |
+| CSES 2109 — Substring Order II | k-ésima con repeticiones |
+
+<Errores errores={[
+  {mal:'«SA contiene las cadenas completas».',bien:'Guarda solo <strong>índices</strong>; los sufijos se leen en el texto original.'},
+  {mal:'«Un LCP cualquiera se obtiene sumando los LCP intermedios».',bien:'Se toma el <strong>mínimo</strong> de los LCP vecinos del rango.'},
+  {mal:'«El centinela cuenta como subcadena».',bien:'En la fórmula de subcadenas, $n$ es la longitud <strong>sin</strong> el centinela.'},
+]} />
+
+<Quiz client:visible id="str-suffix-array" preguntas={[
+  {q:'¿Cuál es SA de banana sin centinela?',opts:['5,3,1,0,4,2','6,5,3,1,0,4,2','0,1,2,3,4,5'],ok:0,why:'Es el orden de sus seis sufijos; con centinela se antepone 6.'},
+  {q:'¿Cuál es el LCP de ana y anana?',opts:['1','2','3'],ok:2,why:'Comparten ana.'},
+  {q:'¿Qué operación combina dos mitades en duplicación?',opts:['Par de rangos','Recorrido DFS','Enlace de falla'],ok:0,why:'Los rangos de ambas mitades determinan el orden de longitud doble.'},
+  {q:'¿Cuál es el tiempo con counting sort por ronda?',opts:['O(n)','O(n log n)','O(n²)'],ok:0,why:'Los rangos son enteros de un rango O(n).'},
+  {q:'¿Cuántas subcadenas distintas tiene banana?',opts:['15','21','6'],ok:0,why:'21 prefijos de sufijos menos 6 LCP.'},
+  {q:'¿Qué operación combina LCP vecinos para dos sufijos no adyacentes?',opts:['Suma','Máximo','Mínimo'],ok:2,why:'El prefijo común de los extremos se pierde en el menor LCP del intervalo.'},
+]} />
+
+<Feynman consigna="Explica cómo SA y LCP permiten contar subcadenas distintas." claves={['SA ordena índices de sufijos.','Los prefijos compartidos con el vecino anterior no son nuevos.','Kasai obtiene los LCP en tiempo lineal.','Se resta la suma de LCP de n(n+1)/2.']} />
+<Dominio client:visible id="suffix-array" />
+<Fuente archivos={['Sem13_Strings_II.pdf','manber-myers.cpp','black-order-712 (3).cpp']} />

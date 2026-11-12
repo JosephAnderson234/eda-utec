@@ -1,0 +1,76 @@
+---
+title: 'EDA Avanzadas · Final'
+description: 'Web de estudio del final de CS3014 Estructuras de Datos Avanzadas (UTEC, 2026-2): optimalidad dinámica, memoria, enteros, árboles estáticos, grafos dinámicos y strings.'
+template: splash
+hero:
+  title: 'Estructuras de Datos Avanzadas: <span class="grad">el final, desde cero</span>'
+  tagline: 'Semanas 9 a 14 de CS3014, explicadas para quien llega nuevo: primero la idea en palabras simples, después la versión formal, con figuras, ejercicios por niveles y autoevaluación.'
+  actions:
+    - text: 'Empieza por la ruta'
+      link: /ruta/
+      icon: right-arrow
+      variant: primary
+    - text: 'Formulario de cotas'
+      link: /formulario/
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import EnSimple from '../../components/EnSimple.astro';
+
+<EnSimple titulo="De qué trata el final, en una frase por unidad">
+1. **Optimalidad dinámica:** ¿existe un árbol de búsqueda casi tan bueno como el mejor posible para *cualquier* secuencia? Aprendemos a demostrar cuánto cuesta **como mínimo** (cotas inferiores) y un árbol que se acerca: Tango.
+2. **Jerarquía de memoria:** en una computadora real lo caro es **traer datos** de la memoria lenta, no compararlos. Estructuras que traen pocos bloques, incluso sin saber de qué tamaño son.
+3. **Enteros:** si las llaves son números, podemos mirar sus **bits** y buscar el vecino más cercano más rápido que $\lg n$.
+4. **Árboles estáticos:** si los datos no cambian, vale la pena prepararse: mínimo en un rango y ancestro común en **tiempo constante**.
+5. **Grafos dinámicos I:** partir un árbol en cadenas o por centroides permite responder preguntas sobre caminos sin recorrerlos completos.
+6. **Strings:** buscar patrones en textos enormes sin volver atrás, y estructuras (suffix array, suffix tree) que responden preguntas sobre subcadenas.
+</EnSimple>
+
+## Las unidades
+
+<CardGrid>
+	<Card title="1 · Optimalidad dinámica (sem. 9)" icon="random">
+		Vista geométrica, rectángulos independientes, cotas de Wilber, Tango Trees y Signed-Greedy.
+
+		[Rectángulos](/optimalidad/rectangulos/) · [Wilber](/optimalidad/wilber/) · [Tango](/optimalidad/tango/)
+	</Card>
+	<Card title="2 · Jerarquía de memoria (sem. 10–11)" icon="setting">
+		Modelo de memoria externa, B-Trees, cache-oblivious, layout de van Emde Boas, Packed-Memory Array, Order Maintenance.
+
+		[Modelo](/memoria/modelo-externo/) · [B-Trees](/memoria/btree/) · [Layout vEB](/memoria/layout-veb/) · [PMA](/memoria/pma/)
+	</Card>
+	<Card title="3 · Enteros (sem. 11–12)" icon="puzzle">
+		Predecesor en word RAM: árbol de van Emde Boas, X-fast, Y-fast y fusion trees.
+
+		[vEB](/enteros/veb/) · [X/Y-fast](/enteros/xfast-yfast/) · [Fusion](/enteros/fusion/)
+	</Card>
+	<Card title="4 · Árboles estáticos (sem. 12)" icon="list-format">
+		RMQ con Sparse Table, cartesian tree, LCA, Euler tour, ±1 RMQ y los cuatro rusos.
+
+		[RMQ y LCA](/estaticos/rmq-lca/)
+	</Card>
+	<Card title="5 · Grafos dinámicos (sem. 14)" icon="puzzle">
+		Heavy-Light para caminos y subárboles; centroides para separar caminos y consultas de distancia.
+
+		[Heavy-Light](/grafos/heavy-light/) · [Centroides](/grafos/centroides/)
+	</Card>
+	<Card title="6 · Strings (sem. 12–13)" icon="document">
+		KMP, Aho–Corasick, suffix array (Manber–Myers, Kasai, DC3, SA-IS) y suffix tree (Ukkonen), con el código del curso.
+
+		[KMP](/strings/kmp/) · [Aho–Corasick](/strings/aho-corasick/) · [Suffix array](/strings/suffix-array/) · [DC3 y SA-IS](/strings/sa-lineal/) · [Suffix tree](/strings/suffix-tree/)
+	</Card>
+	<Card title="Repaso" icon="pencil">
+		Formulario con todas las cotas y un simulacro mixto con soluciones.
+
+		[Formulario](/formulario/) · [Simulacro](/repaso/simulacro/)
+	</Card>
+</CardGrid>
+
+## Cómo está armada cada página
+
+Todas siguen el mismo recorrido: **💡 En simple** (analogía) → **🎯 objetivos** → modelo mental y definición formal → ejemplo resuelto → **🔮 predicciones** antes de las respuestas → **escalera de práctica** (resuelto → complétalo → solo → variante) → **⚠️ errores frecuentes** → quiz → **🗣️ explícalo tú** → autoevaluación de dominio que alimenta tu [panel de repaso](/ruta/).
+
+<LinkCard title="Ruta de estudio y panel de progreso" description="Qué estudiar primero, en qué orden y cuándo repasar cada tema." href="/ruta/" />
+
+**Fuente del contenido:** las diapositivas del curso (semanas 9–14, prof. Víctor Galván) y los códigos del curso (`black-order-712*.cpp`, `manber-myers.cpp`, `dc3.cpp`, `sais.cpp`, `abstracted-order-104.cpp`). Cuando una página agrega algo que el material no dice, lo marca como «ejemplo propio» o explica la convención usada. Los pesos de cada tema son una estimación propia, no un anuncio del examen.

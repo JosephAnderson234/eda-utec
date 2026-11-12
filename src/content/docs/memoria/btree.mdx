@@ -1,0 +1,185 @@
+---
+title: 'B-Trees y el modelo cache-oblivious'
+description: 'Jerarquía de Memoria II (semana 10): B-Tree (nodos del tamaño de un bloque), altura O(log_{B+1} N), buscar, insertar partiendo nodos y eliminar; por qué no sirve para ordenar; el modelo cache-oblivious, paginación óptima vs LRU, qué sobrevive del tablero y por qué el layout de un árbol decide su costo.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Fuente from '../../../components/Fuente.astro';
+import Quiz from '../../../components/Quiz.tsx';
+import Objetivos from '../../../components/tutor/Objetivos.astro';
+import Predice from '../../../components/tutor/Predice.astro';
+import Practica from '../../../components/tutor/Practica.astro';
+import Errores from '../../../components/tutor/Errores.astro';
+import Feynman from '../../../components/tutor/Feynman.astro';
+import Dominio from '../../../components/tutor/Dominio.tsx';
+import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+
+<EnSimple>
+- **B-Tree:** en vez de un árbol donde cada nodo pregunta «¿izquierda o derecha?», cada nodo es **una caja llena de claves** (tantas como caben en un bloque). Con un viaje al depósito traes la caja y eliges **entre cientos de caminos** a la vez. Por eso el árbol es bajito: 3 o 4 niveles para mil millones de claves.
+- **Cache-oblivious** («que ignora la caché»): ¿y si no sabes de qué tamaño son las cajas? Tu computadora tiene **varias** fronteras (L1, L2, RAM, disco), cada una con su tamaño de bloque. La idea es escribir el algoritmo **sin mencionar** $B$ ni $M$, y demostrar que es bueno para **cualquier** valor. Entonces es bueno en todas las fronteras a la vez.
+</EnSimple>
+
+<Objetivos
+	objetivos={[
+		'Buscar, insertar (partiendo nodos) y eliminar (préstamo o fusión) en un B-Tree, y acotar su altura en $O(\\log_{B+1} N)$.',
+		'Explicar con números por qué ordenar insertando en un B-Tree pierde un factor $B$ frente a la mezcla múltiple.',
+		'Definir el modelo <strong>cache-oblivious</strong> y justificar el supuesto de paginación óptima con LRU.',
+		'Calcular cuántas transferencias cuesta una búsqueda según el <strong>layout</strong> del árbol (niveles, en orden, preorden).',
+	]}
+	prerrequisitos={[{ t: 'Modelo de memoria externa', href: '/memoria/modelo-externo/' }]}
+	perfiles={['visual', 'laboratorio', 'debate']}
+/>
+
+## 1. Un árbol binario en disco: el problema
+
+Si los nodos de un árbol binario de búsqueda están repartidos por el disco, **cada paso** de la búsqueda trae un bloque nuevo para leer **una sola clave**. Un árbol balanceado cuesta $\Theta(\lg N)$ transferencias por búsqueda: **peor** que la búsqueda binaria sobre un arreglo ($\lg(N/B)$).
+
+## 2. La idea: nodos del tamaño de un bloque
+
+Un nodo $=$ un bloque: hasta $B$ claves ordenadas y hasta $B + 1$ hijos (uno por cada zona entre claves). Traer el nodo cuesta **una** transferencia; ubicar la clave entre las $B$ del nodo es trabajo en memoria: **gratis**. Una sola transferencia decide entre $B + 1$ caminos, no entre dos. Es exactamente lo que pedía la cota inferior: $\lg(B+1)$ bits por bloque.
+
+**Definición (B-Tree).** Un árbol de búsqueda en el que:
+- cada nodo guarda a lo más $B$ claves ordenadas, y un nodo interno con $k$ claves tiene $k + 1$ hijos;
+- todo nodo, salvo la raíz, tiene al menos $\lceil (B+1)/2 \rceil$ hijos (o esa cantidad de claves menos uno, si es hoja);
+- **todas las hojas están a la misma profundidad.**
+
+<MemoriaFig fig="btree">
+**Cómo leerlo.** B-Tree con $B = 3$ (ejemplo de clase): entre 2 y 4 hijos por nodo. Buscar el 75: en la raíz, $75 > 40$ → hijo derecho; en $[60, 80]$, $60 < 75 < 80$ → hijo del medio; en la hoja $[70, 75]$: encontrado. **Tres transferencias, una por nivel.**
+</MemoriaFig>
+
+### ¿Qué tan alto es?
+
+Cada nodo tiene al menos $\lceil (B+1)/2\rceil$ hijos, así que con $N$ claves la altura es $O(\log_{B+1} N)$: unas $\lg(B+1)$ veces menos que la del árbol binario. **Buscar cuesta $\Theta(\log_{B+1} N)$ transferencias: óptimo.**
+
+Con $N = 10^9$ y $B = 10^3$: 3 o 4 niveles, contra 30 del árbol binario y 20 de la búsqueda binaria.
+
+## 3. Insertar: partir un nodo lleno
+
+<MemoriaFig fig="split">
+**Cómo leerlo.** Con $B = 3$ se inserta el 55 en la hoja $[40, 50, 60]$, que ya estaba llena: quedarían 4 claves. Se parte en dos mitades y **la clave del medio (50) sube al padre**. Si el padre también se llena, se parte él, y así hacia arriba. (Reconstrucción del estado «antes» a partir del resultado de la diapositiva.)
+</MemoriaFig>
+
+**¿Cómo crece un B-Tree? Hacia arriba, no hacia abajo.** Solo gana altura cuando se parte **la raíz**: nace una raíz nueva con una clave y dos hijos. Por eso todas las hojas quedan siempre a la misma profundidad, **sin rotaciones**.
+
+**Eliminar es el proceso inverso.** Si un nodo queda con menos claves que el mínimo, **toma una prestada** de un hermano (rotando a través del padre); si el hermano tampoco tiene de sobra, los dos **se fusionan** y el padre pierde una clave (lo que puede propagarse hacia arriba).
+
+Buscar, insertar y eliminar: $O(\log_{B+1} N)$ transferencias.
+
+<Practica nivel={2} titulo="Complétalo: en el B-Tree de la figura con $B = 3$, inserta 97 y luego 98">
+- 97 va a la hoja **\_\_\_\_\_\_\_\_** que tiene 3 claves → con 97 tendría 4: hay que **\_\_\_\_\_\_**.
+- Clave que sube: **\_\_**; hojas resultantes: **\_\_\_\_\_** y **\_\_\_\_\_**. El nodo $[60, 80]$ pasa a **\_\_\_\_\_\_\_\_\_**.
+- Insertar 98: ¿se parte algo?
+<Solucion>
+- 97 va a $[90, 95, 99]$ → $[90, 95, 97, 99]$: se parte. Con 4 claves, la «del medio» puede ser 95 o 97 según la convención; tomando la segunda de las cuatro (como en el ejemplo de clase, donde de $40,50,55,60$ subió 50): sube **95**, hojas $[90]$ y $[97, 99]$. El padre queda $[60, 80, 95]$ (3 claves, lleno pero válido).
+- 98 va a $[97, 99]$ → $[97, 98, 99]$: cabe, no se parte nada. Ejemplo propio.
+</Solucion>
+</Practica>
+
+## 4. ¿Y si ordenamos con un B-Tree?
+
+<Predice pregunta="En el modelo RAM, insertar $N$ elementos en un árbol balanceado y recorrerlo en orden es un ordenamiento óptimo $\Theta(N\lg N)$. ¿También lo es en memoria externa con un B-Tree? Haz la cuenta con $N = 10^{11}$, $M = 10^9$, $B = 10^5$.">
+**No.** Son $N$ inserciones de $\log_{B+1} N$ transferencias: $O(N\log_{B+1} N) \approx 10^{11}\cdot 2{,}2 \approx 2\cdot 10^{11}$. La mezcla múltiple cuesta $O\!\left(\frac NB\log_{M/B}\frac NB\right) \approx 2\cdot 10^6$. El B-Tree responde **cada operación de inmediato**, y eso cuesta un factor $B$ (y más) frente a procesar todo **por lotes**.
+</Predice>
+
+## 5. El modelo cache-oblivious
+
+**¿Cuál es el $B$?** Cada frontera de la jerarquía tiene su $B$ y su $M$: líneas de caché de 64 B en L1 y L2, páginas de 4 KB en la RAM, sectores o bloques de MB en el disco. El modelo de memoria externa mira **una** frontera. Un B-Tree con nodos del tamaño de una página es óptimo entre RAM y disco, pero **dentro de la RAM** cada nodo son decenas de líneas de caché, recorridas sin ningún cuidado.
+
+> ¿Se puede ser eficiente en todas las fronteras a la vez, sin ajustar el algoritmo a cada máquina?
+
+**Modelo cache-oblivious (Frigo, Leiserson, Prokop y Ramachandran, 1999).** El mismo modelo de dos niveles, con una restricción: **el algoritmo no conoce $B$ ni $M$**. Se escribe como en RAM y se analiza como en memoria externa: el código no menciona bloques; $B$ y $M$ aparecen solo en el análisis, y la cota debe valer **para todos sus valores**.
+
+### ¿Quién decide qué bloque sale de la memoria?
+
+| | Memoria externa | Cache-oblivious |
+| --- | --- | --- |
+| Quién trae y desaloja | **el algoritmo**, que sabe qué tiene en memoria | **el sistema**: al acceder a una palabra ausente, su bloque se trae solo; si la memoria está llena, se desaloja otro |
+| Supuesto | — | la elección de víctima es **óptima** |
+
+<Predice pregunta="¿No es mucho pedir que el sistema adivine el futuro (paginación óptima)?">
+No hace falta. Las políticas reales **LRU y FIFO**, con una memoria del **doble** de tamaño, hacen a lo más el doble de transferencias que el óptimo (Sleator y Tarjan, 1985). Y nuestras cotas no cambian al reemplazar $M$ por $2M$ (solo cambian constantes). Así que suponer paginación óptima es seguro.
+</Predice>
+
+### ¿Por qué es tan atractivo?
+
+- **Una demostración, todas las fronteras:** si la cota vale para cualquier $B$ y $M$, vale en particular para los de cada par de niveles vecinos. El algoritmo es bueno en **toda la jerarquía a la vez**.
+- **No hay parámetros que ajustar** al cambiar de máquina, y se adapta solo si la memoria disponible cambia mientras corre.
+
+### ¿Qué sobrevive del tablero de memoria externa?
+
+| Problema | Memoria externa | Cache-oblivious |
+| --- | --- | --- |
+| Escanear | $\Theta(N/B)$ | **igual**: el algoritmo nunca usó $B$ |
+| Ordenar | $\Theta\!\left(\frac NB\log_{M/B}\frac NB\right)$ | **igual**, con *funnelsort*, suponiendo $M = \Omega(B^{1+\varepsilon})$ (*tall cache*) |
+| Permutar | $\Theta(\min\{N, \text{ordenar}\})$ | el mínimo es **imposible**: no se puede saber cuál de las dos estrategias conviene |
+| Buscar | $\Theta(\log_{B+1} N)$ | **¿?** — el B-Tree no sirve: su definición empieza por «cada nodo guarda $B$ claves» |
+
+## 6. ¿Y buscar? El orden en memoria lo decide todo
+
+Lo que sí podemos escribir sin conocer $B$: un **árbol binario de búsqueda balanceado, guardado en un arreglo**, con la búsqueda de siempre. Lo único por decidir es **en qué orden se guardan los nodos** en el arreglo. De ese orden depende qué nodos comparten bloque y, por lo tanto, cuántos bloques toca un camino raíz–hoja.
+
+<MemoriaFig fig="layout-niveles">
+**Cómo leerlo.** Orden **por niveles** (el de un heap): 1; 2, 3; 4, 5, 6, 7; … Los primeros $\lg B$ niveles caben en el primer bloque y salen casi gratis. Más abajo, un nodo y su hijo están a más de $B$ posiciones de distancia: **una transferencia por nivel**. Total $\Theta(\lg N - \lg B)$, lo mismo que la búsqueda binaria.
+</MemoriaFig>
+
+| Layout | Qué agrupa bien | Costo de un camino |
+| --- | --- | --- |
+| Por niveles (BFS) | arriba | $\Theta(\lg(N/B))$ |
+| En orden (arreglo ordenado) | abajo: los últimos $\lg B$ pasos | $\Theta(\lg(N/B))$ (es la búsqueda binaria) |
+| Preorden | hacia la izquierda (bajar a la izquierda = celda siguiente) | $\Theta(\lg(N/B))$ si el camino siempre va a la derecha |
+
+**Los tres fallan por lo mismo:** agrupan bien en **una escala** y mal en las demás. Como no sabemos $B$, hay que agrupar bien **en todas las escalas a la vez**.
+
+**La idea que lo resuelve:** cortar el árbol a la **mitad de su altura**, guardar primero la parte de arriba y luego cada subárbol de abajo, y hacer lo mismo dentro de cada pieza, recursivamente. Es el **layout de van Emde Boas**: sea cual sea $B$, algún nivel de la recursión tiene piezas «del tamaño de un bloque». Lo construimos en la [siguiente página](/memoria/layout-veb/).
+
+<Practica nivel={3} titulo="Solo: árbol perfecto con $N = 2^{20} - 1$ nodos y $B = 2^{6}$ nodos por bloque, en layout por niveles. ¿Cuántos bloques toca un camino raíz–hoja?">
+<Solucion>
+Los primeros niveles: los nodos $1..63$ (niveles 0–5, seis niveles) caben en el primer bloque. A partir del nivel 6, padre e hijo están a $\ge 64$ posiciones: cada nivel restante es un bloque nuevo. Hay 20 niveles: $1 + (20 - 6) = 15$ bloques $\approx \lg N - \lg B$. Con un layout óptimo serían $\approx \log_B N = 20/6 \approx 4$ (más constantes). Ejemplo propio.
+</Solucion>
+</Practica>
+
+<Practica nivel={4} titulo="Debate: base de datos en un servidor fijo vs. biblioteca que correrá en máquinas desconocidas">
+<Solucion>
+- **Servidor fijo, una frontera dominante (RAM–disco):** un **B-Tree** con nodos del tamaño de la página es simple, óptimo para esa frontera y con constantes bajas.
+- **Biblioteca para máquinas desconocidas, o datos que viven en caché:** una estructura **cache-oblivious** (layout vEB + OFM) es buena en todas las fronteras sin ajustar parámetros, a costa de constantes mayores.
+Ninguna es superior en general: depende de cuántas fronteras importan y de si $B$ se conoce.
+</Solucion>
+</Practica>
+
+<Errores
+	errores={[
+		{ mal: '«Un AVL en disco cuesta lo mismo que un B-Tree.»', bien: 'Cuesta $\\Theta(\\lg N)$ transferencias contra $\\Theta(\\log_{B+1} N)$: un factor $\\lg(B+1)$ peor.' },
+		{ mal: '«El B-Tree crece agregando niveles en las hojas.»', bien: 'Crece <strong>hacia arriba</strong>: solo gana altura cuando se parte la raíz.' },
+		{ mal: '«Ordenar insertando en un B-Tree es óptimo en disco.»', bien: 'Cuesta $N\\log_{B+1}N$, un factor $\\approx B$ peor que la mezcla múltiple.' },
+		{ mal: '«Cache-oblivious significa que no usa la caché.»', bien: 'Significa que el algoritmo <strong>no conoce</strong> $B$ ni $M$; el análisis sí los usa y debe valer para todos.' },
+		{ mal: '«Suponer paginación óptima es irreal.»', bien: 'LRU con el doble de memoria hace a lo más el doble de transferencias; las cotas no cambian.' },
+	]}
+/>
+
+<Quiz
+	client:visible
+	id="btree"
+	preguntas={[
+		{ q: 'La altura de un B-Tree con $N$ claves es…', opts: ['$O(\\lg N)$', '$O(\\log_{B+1} N)$', '$O(N/B)$', '$O(\\lg\\lg N)$'], ok: 1 },
+		{ q: 'Con $B = 3$, cada nodo (salvo la raíz) tiene entre…', opts: ['1 y 3 hijos', '2 y 4 hijos', '3 y 6 hijos', '2 y 3 hijos'], ok: 1, why: '$\\lceil (B+1)/2\\rceil = 2$ y $B + 1 = 4$.' },
+		{ q: 'Un B-Tree gana altura cuando…', opts: ['se inserta en una hoja', 'se parte la raíz', 'se hace una rotación', 'se fusionan dos hojas'], ok: 1 },
+		{ q: 'En el modelo cache-oblivious, ¿quién decide qué bloque desalojar?', opts: ['el algoritmo', 'el sistema, con política óptima', 'nadie: no hay desalojo', 'el programador con un parámetro B'], ok: 1 },
+		{ q: '¿Qué problema NO alcanza su óptimo de memoria externa en cache-oblivious?', opts: ['Escanear', 'Ordenar', 'Permutar', 'Ninguno'], ok: 2 },
+		{ q: 'Una búsqueda en un árbol guardado por niveles cuesta…', opts: ['$\\Theta(\\log_B N)$', '$\\Theta(\\lg(N/B))$', '$\\Theta(1)$', '$\\Theta(N/B)$'], ok: 1 },
+	]}
+/>
+
+<Feynman
+	consigna="Explica por qué el B-Tree no se puede usar en el modelo cache-oblivious y qué idea lo reemplaza."
+	claves={[
+		'El B-Tree es óptimo ($\\log_{B+1} N$) porque cada nodo tiene exactamente el tamaño de un bloque: <strong>necesita conocer $B$</strong>.',
+		'Cache-oblivious: el algoritmo no conoce $B$ ni $M$; la cota debe valer para todos, y así vale en todas las fronteras de la jerarquía.',
+		'Sin $B$, la alternativa es un árbol binario en un arreglo; lo que decide el costo es el <strong>orden</strong> de los nodos.',
+		'Niveles, en orden y preorden agrupan bien solo en una escala; el layout vEB agrupa bien en todas.',
+	]}
+/>
+
+<Dominio client:visible id="btree" />
+
+<Fuente archivos={['CS3014 · Jerarquía de Memoria II (semana 10, 14/10/2026)', 'Bayer y McCreight (1972); Frigo, Leiserson, Prokop y Ramachandran (1999); Sleator y Tarjan (1985)']} />
