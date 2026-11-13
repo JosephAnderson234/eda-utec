@@ -15,10 +15,13 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Si escribes todos los finales de una palabra en un árbol, muchas rutas tienen tramos largos sin bifurcaciones. El **suffix tree** reemplaza cada tramo por una sola arista que apunta a un segmento del texto. Así puedes seguir un patrón letra por letra y encontrarlo en tiempo proporcional a su longitud. Ukkonen construye ese árbol mientras recibe los caracteres, sin reconstruirlo desde cero.
 </EnSimple>
+
+<Rush id="suffix-tree" clave={"Suffix tree con $\\le 2n + 1$ nodos y búsqueda $O(\\lvert P\\rvert)$; SA + LCP equivale al árbol; Ukkonen: punto activo, tres reglas y enlaces de sufijo."} lee={"§1, §2, §3 y §4."} salta={"La traza completa de §5: haz solo una o dos fases."} haz={"Peldaño 2: los enlaces de sufijo de abab con su centinela."} />
 
 <Objetivos objetivos={[
   'Comprimir un trie de sufijos y razonar el límite de nodos y el costo de búsqueda.',

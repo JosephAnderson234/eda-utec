@@ -15,12 +15,16 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import EstaticosFig from '../../../components/fig/EstaticosFig.astro';
+import Rush from '../../../components/Rush.astro';
+import SparseTableAnim from '../../../components/anim/SparseTableAnim.tsx';
 
 <EnSimple>
 Tienes las temperaturas de cada día del año y te preguntan **miles de veces**: «¿qué día fue el más frío entre el día $i$ y el día $j$?». Los datos **no cambian**, así que vale la pena prepararse antes.
 - **Sparse Table:** anotas de antemano el más frío de cada tramo de 1, 2, 4, 8… días. Cualquier pregunta se responde juntando **dos tramos** que se pisan. Rápido, pero ocupa $n \lg n$.
 - **El camino largo y elegante:** convertir la pregunta en otra sobre un **árbol genealógico** («¿cuál es el ancestro común más cercano de estas dos personas?»), y esa, de vuelta, en una pregunta sobre una lista que **sube o baja de 1 en 1**. Esa lista tiene tan poca variedad que se pueden **precalcular todas las respuestas posibles** para trozos chicos: ⟨O(n), O(1)⟩.
 </EnSimple>
+
+<Rush id="rmq-lca" clave={"Sparse Table $\\langle O(n\\lg n), O(1)\\rangle$; RMQ ⇔ LCA vía cartesian tree; LCA ⇔ ±1 RMQ vía Euler tour; cuatro rusos para $\\langle O(n), O(1)\\rangle$."} lee={"§2, §3 y §4 completos; de §5, la idea de bloques de $\\frac12\\lg n$."} salta={"Los detalles de las tablas de §5."} anim={"La animación de Sparse Table (al final de §2): construye la tabla y consulta $(1, 6)$."} haz={"Peldaño 3: $\\text{RMQ}_A(4, 6)$ pasando por el Euler tour."} />
 
 <Objetivos
 	objetivos={[
@@ -107,6 +111,8 @@ Partir $A$ en bloques de tamaño $b$, guardar el mínimo de cada bloque y constr
 - Una tabla completa por bloque: $O(n \lg n)$.
 
 Ninguna conviene. Para resolverlo hay que entender **la estructura** de los problemas dentro de un bloque, y la herramienta es un árbol.
+
+<SparseTableAnim client:visible />
 
 ## 3. Cartesian tree: RMQ es un problema de LCA
 

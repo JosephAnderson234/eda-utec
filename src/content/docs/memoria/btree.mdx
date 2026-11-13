@@ -14,11 +14,14 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 - **B-Tree:** en vez de un árbol donde cada nodo pregunta «¿izquierda o derecha?», cada nodo es **una caja llena de claves** (tantas como caben en un bloque). Con un viaje al depósito traes la caja y eliges **entre cientos de caminos** a la vez. Por eso el árbol es bajito: 3 o 4 niveles para mil millones de claves.
 - **Cache-oblivious** («que ignora la caché»): ¿y si no sabes de qué tamaño son las cajas? Tu computadora tiene **varias** fronteras (L1, L2, RAM, disco), cada una con su tamaño de bloque. La idea es escribir el algoritmo **sin mencionar** $B$ ni $M$, y demostrar que es bueno para **cualquier** valor. Entonces es bueno en todas las fronteras a la vez.
 </EnSimple>
+
+<Rush id="btree" clave={"B-Tree: búsqueda $O(\\log_B N)$ transferencias e inserción partiendo nodos llenos. Cache-oblivious: el algoritmo no conoce $B$ ni $M$."} lee={"§2, §3, §5 y §6."} salta={"§4 (ordenar con un B-Tree): solo la conclusión."} haz={"Peldaño 3: árbol con $N = 2^{20} - 1$ y $B = 2^6$ en layout por niveles."} />
 
 <Objetivos
 	objetivos={[

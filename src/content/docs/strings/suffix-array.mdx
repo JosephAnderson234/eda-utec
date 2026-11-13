@@ -16,10 +16,13 @@ import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
 import SuffixArraySim from '../../../components/sim/SuffixArraySim.tsx';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Imagina un libro con una tarjeta por cada posición. En cada tarjeta copias el texto que comienza allí y ordenas las tarjetas alfabéticamente. Las tarjetas que empiezan por un patrón quedan juntas; una búsqueda binaria las localiza. El **suffix array** guarda solo los números de las tarjetas, y el arreglo **LCP** anota cuántas primeras letras comparten dos tarjetas vecinas.
 </EnSimple>
+
+<Rush id="suffix-array" clave={"SA y LCP de banana a mano; búsqueda $O(\\lvert P\\rvert\\lg n)$; Kasai $O(n)$; subcadenas distintas $= \\frac{n(n+1)}{2} - \\sum \\text{LCP}$."} lee={"§1, §2, §4 y §5."} salta={"El detalle de §3: usa el simulador de duplicación en su lugar."} anim={"El simulador de duplicación de Manber–Myers (§3)."} haz={"Peldaño 2: el LCP de banana."} />
 
 <Objetivos objetivos={[
   'Definir SA con centinela y hallar el intervalo de un patrón mediante búsqueda binaria.',

@@ -14,6 +14,8 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import EnterosFig from '../../../components/fig/EnterosFig.astro';
+import Rush from '../../../components/Rush.astro';
+import VebSuccAnim from '../../../components/anim/VebSuccAnim.tsx';
 
 <EnSimple>
 Piensa en una **guía telefónica gigante** con todos los números posibles, de 0 a 9 999. Te piden «el primer número **ocupado** que viene después del 5 213».
@@ -21,6 +23,8 @@ Piensa en una **guía telefónica gigante** con todos los números posibles, de 
 - La idea de van Emde Boas: **las llaves son números, y los números tienen dígitos**. Primero miras los dígitos de adelante (**52**: ¿hay alguien ocupado en el «barrio» 52 después de 13?). Si no, saltas al **siguiente barrio ocupado** y tomas su primer número.
 - Cada pregunta se responde mirando **la mitad de los dígitos**. Partir a la mitad, luego a la mitad de la mitad… da muy pocos pasos: $\lg w$ si la llave tiene $w$ bits.
 </EnSimple>
+
+<Rush id="veb" clave={"Sucesor con una sola llamada recursiva: $T(u) = T(\\sqrt u) + O(1) = O(\\lg\\lg u)$. El min se guarda aparte. Espacio $\\Theta(u)$."} lee={"§3, §4, §5 y §7."} salta={"§6 y §8 (son simétricos) y §10, salvo la idea."} anim={"La animación de Sucesor (en §5): prueba $x = 5$ (baja al cluster) y $x = 9$ (pregunta al resumen)."} haz={"Peldaño 2: insertar 9 y luego 0."} />
 
 <Objetivos
 	objetivos={[
@@ -141,6 +145,8 @@ Sucesor(V, x):
       c' ← Sucesor(V.summary, c)                          // una llamada
       devolver ⟨c', V.cluster[c'].min⟩                    // O(1)
 ```
+
+<VebSuccAnim client:visible />
 
 <Practica nivel={1} titulo="Resuelto: Sucesor(5) y Sucesor(9) sobre el ejemplo">
 

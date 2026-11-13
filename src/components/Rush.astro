@@ -1,0 +1,28 @@
+---
+/** Recuadro del modo rush: cuánto tiempo darle a la página y qué hacer si vas apurado. */
+import { tex } from './tutor/tex';
+import { cronograma, hhmm, UNIDADES } from './rush/plan';
+interface Props {
+	id: string;
+	clave: string;
+	lee: string;
+	salta?: string;
+	anim?: string;
+	haz: string;
+}
+const { id, clave, lee, salta, anim, haz } = Astro.props;
+const slot = cronograma().find((x) => x.tipo === 'bloque' && x.id === id) as { min: number; inicio: number; u: string } | undefined;
+if (!slot) throw new Error(`Rush: id desconocido ${id}`);
+const min = slot.min;
+const bloque = `${UNIDADES[slot.u]} · empieza en la hora ${hhmm(slot.inicio)}`;
+---
+<aside class="rush not-content" aria-label="Modo rush">
+	<p class="rush__t">⚡ Modo rush <span class="rush__min">{min} min</span><span class="an-s">{bloque} · <a href="/rush/">ver el plan de 12 h</a></span></p>
+	<dl>
+		<dt>🎯 Lo que sale sí o sí</dt><dd set:html={tex(clave)} />
+		<dt>📖 Lee</dt><dd set:html={tex(lee)} />
+		{salta && <><dt>⏭️ Salta si vas tarde</dt><dd set:html={tex(salta)} /></>}
+		{anim && <><dt>🎬 Mira</dt><dd set:html={tex(anim)} /></>}
+		<dt>✍️ Haz</dt><dd set:html={tex(haz)} />
+	</dl>
+</aside>

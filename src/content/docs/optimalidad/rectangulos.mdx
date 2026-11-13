@@ -14,12 +14,15 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 La gran pregunta de esta unidad: **¿existe un árbol binario de búsqueda (BST) que, para cualquier secuencia de búsquedas, sea casi tan bueno como el mejor árbol posible para esa secuencia?** A eso se le llama **optimalidad dinámica**.
 - Para decir «casi tan bueno como el mejor», primero hay que saber **cuánto cuesta el mejor**, y eso es muy difícil de calcular. Lo que sí se puede es demostrar que el mejor cuesta **al menos** cierto valor: una **cota inferior**.
 - Hoy aprendemos una técnica para conseguir cotas inferiores **dibujando**: cada acceso es un punto en un plano (llave, tiempo), y contamos **rectángulos** que no se estorban entre sí. Cada uno obliga a cualquier árbol a hacer al menos medio trabajo extra.
 </EnSimple>
+
+<Rush id="rectangulos" clave={"El teorema $\\text{OPT} \\ge \\lvert I\\rvert + \\tfrac12\\,\\text{MIS}$ (con signo: $\\text{OPT}^\\pm \\ge \\lvert I\\rvert + \\text{MIS}^\\pm$) y qué es un par de rectángulos independientes."} lee={"§1 (ejecución válida ⇔ conjunto arboralmente satisfecho), §2, §3 y el enunciado del §5."} salta={"§4, la prueba del lema: léela en diagonal, sin rehacer cada caso."} haz={"Peldaño 3: 10 rectángulos independientes en 20 accesos, ¿qué afirmas sobre OPT?"} />
 
 <Objetivos
 	objetivos={[

@@ -14,6 +14,7 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Un **Tango Tree** es un BST que se «organiza» según por dónde vienen pasando las búsquedas.
@@ -21,6 +22,8 @@ Un **Tango Tree** es un BST que se «organiza» según por dónde vienen pasando
 - Cada camino se guarda **comprimido** en un árbol balanceado pequeño (de $O(\lg n)$ nodos), así que moverse dentro de un camino cuesta solo $O(\lg\lg n)$.
 - Una búsqueda solo paga extra cuando **se sale** de un camino. Y cada salida es exactamente un **zigzag de Wilber-1**, que cualquier árbol también tiene que pagar. Resultado: Tango cuesta como mucho $O(\lg\lg n)$ veces lo que el mejor árbol posible.
 </EnSimple>
+
+<Rush id="tango" clave={"Tango es $O(\\lg\\lg n)$-competitivo: cada cambio de hijo preferido es una alternancia de Wilber-1 y cuesta $O(\\lg\\lg n)$."} lee={"§1 y §2."} salta={"§3 (cortar y unir árboles auxiliares) y la parte larga de §4. De Signed-Greedy recuerda que es una cota, no un algoritmo."} haz={"Peldaño 2: costo total de Tango con $n = 2^{16}$."} />
 
 <Objetivos
 	objetivos={[

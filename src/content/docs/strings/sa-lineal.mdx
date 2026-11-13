@@ -15,10 +15,13 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Ordenar todos los sufijos parece costoso. DC3 hace algo parecido a ordenar dos de cada tres tarjetas y deducir dónde insertar la tercera. Para ordenar esas dos partes crea un problema más pequeño del mismo tipo. Si reducir el tamaño y combinar cuestan lo suficiente, el trabajo total es proporcional al texto.
 </EnSimple>
+
+<Rush id="sa-lineal" clave={"DC3: ordenar recursivamente los sufijos en posiciones $i \\not\\equiv 0 \\pmod 3$, ubicar los demás y mezclar; $T(n) = T(2n/3) + O(n) = O(n)$."} lee={"§1 y §2 hasta la recurrencia."} salta={"§3 (SA-IS solo se menciona en clase)."} haz={"Peldaño 3: particiona abcabxabcd."} />
 
 <Objetivos objetivos={[
   'Explicar la forma $T(n)=T(\\alpha n)+O(n)$ con $\\alpha<1$.',

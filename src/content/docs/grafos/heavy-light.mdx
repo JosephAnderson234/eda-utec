@@ -15,10 +15,14 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import GrafosFig from '../../../components/fig/GrafosFig.astro';
+import Rush from '../../../components/Rush.astro';
+import HldAnim from '../../../components/anim/HldAnim.tsx';
 
 <EnSimple>
 Piensa en una ciudad con avenidas largas y calles pequeñas. Para ir de una casa a otra, recorres tramos de avenida y cambias de avenida unas pocas veces. Heavy-Light elige esas «avenidas» en un árbol: convierte un camino en pocos tramos consecutivos de un arreglo.
 </EnSimple>
+
+<Rush id="heavy-light" clave={"Una arista liviana reduce el subárbol a menos de la mitad ⇒ $O(\\lg n)$ cadenas por camino. Camino $O(\\lg^2 n)$, subárbol $O(\\lg n)$ con el rango $[\\text{pos}(v), \\text{sal}(v))$."} lee={"§1, §2 y §3."} salta={"La comparación de §4."} anim={"La animación del camino (final de §3): $10 \\to 9$ da 3 tramos y $8 \\to 11$ da 2."} haz={"Peldaño 3: parte $10 \\to 9$ en intervalos sin mirar."} />
 
 <Objetivos objetivos={[
   'Demostrar por qué una arista liviana reduce el tamaño del subárbol a menos de la mitad.',
@@ -112,6 +116,8 @@ Resultado: 2 rangos y 7 nodos.
 Resultado: 3 rangos y los nodos 9, 6, 10, 2, 5. Ambas tablas se reprodujeron con código.
 
 **Complejidad.** Cada iteración cruza una arista liviana de uno de los dos extremos: $O(\lg n)$ rangos. Cada consulta de segment tree cuesta $O(\lg n)$, luego el camino cuesta $O(\lg^2 n)$. Actualizar un camino usa el mismo bucle y una actualización de rango (por ejemplo, suma con propagación perezosa): también $O(\lg^2 n)$. Un subárbol es un solo rango: $O(\lg n)$.
+
+<HldAnim client:visible />
 
 ## 4. LCA y comparación de costos
 

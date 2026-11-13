@@ -15,10 +15,14 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import GrafosFig from '../../../components/fig/GrafosFig.astro';
+import Rush from '../../../components/Rush.astro';
+import CentroideAnim from '../../../components/anim/CentroideAnim.tsx';
 
 <EnSimple>
 Imagina cortar una red de pasillos por una sala central. Al cerrarla, ningún grupo restante debe tener más de la mitad de las salas. Repites el corte dentro de cada grupo: así puedes razonar sobre caminos que cruzan una sala separadora sin examinar toda la red cada vez.
 </EnSimple>
+
+<Rush id="centroides" clave={"Todo árbol tiene un centroide (componentes de a lo más $n/2$); árbol de centroides de profundidad $O(\\lg n)$ y construcción $O(n\\lg n)$; todo camino pasa por el primer centroide que separa sus extremos."} lee={"§1 y §2; de §3 y §4, la idea de cada aplicación."} salta={"El código de §5."} anim={"La animación nivel por nivel (final de §2): comprueba los niveles 2 · 5, 6, 3 · 8, 9, 10, 7, 1 · 11, 4."} haz={"Peldaño 2: niveles de la recursión."} />
 
 <Objetivos objetivos={[
   'Definir un centroide y demostrar que existe.',
@@ -75,6 +79,8 @@ descomponer(r, padreC, nivel):
 **Tiempo de construcción.** En cada nivel, las componentes son disjuntas y los DFS suman $O(n)$ trabajo. Hay $O(\lg n)$ niveles: $O(n\lg n)$ tiempo, más $O(n)$ espacio para árbol, tamaños y marcas.
 
 **Propiedad separadora.** Dados $u$ y $v$, toma el primer centroide de la recursión que los deja en componentes distintas o coincide con uno de ellos. El camino único $u$→$v$ debe pasar por ese centroide, pues retirarlo desconecta esas componentes. Esta propiedad es la base de las consultas.
+
+<CentroideAnim client:visible />
 
 ## 3. Contar caminos de longitud fija
 

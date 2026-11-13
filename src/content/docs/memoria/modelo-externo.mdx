@@ -14,6 +14,7 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Imagina que estudias en tu escritorio (la **memoria**, pequeña y rápida) y los libros están en un **depósito** lejano (el **disco**, enorme y lento). Cada viaje al depósito tarda muchísimo, pero puedes traer **una caja entera de libros** por viaje.
@@ -21,6 +22,8 @@ Imagina que estudias en tu escritorio (la **memoria**, pequeña y rápida) y los
 - Si los libros que necesitas uno tras otro están **en la misma caja**, un viaje te sirve para muchos. Si están desperdigados, cada libro es un viaje.
 - El **modelo de memoria externa** cuenta exactamente eso: viajes (transferencias de bloques). Con él aparecen las dos cotas que organizan toda la unidad: escanear cuesta $N/B$ y ordenar cuesta $\frac{N}{B}\log_{M/B}\frac{N}{B}$.
 </EnSimple>
+
+<Rush id="modelo-externo" clave={"Las cuatro cotas: escanear $\\Theta(N/B)$, buscar $\\Theta(\\log_{B+1} N)$, ordenar $\\Theta(\\frac NB\\log_{M/B}\\frac NB)$, permutar $\\Theta(\\min\\{N, \\text{ordenar}\\})$."} lee={"§2 (el modelo), §3, §4 y §5."} salta={"§1 si ya sabes qué es un bloque; la prueba de §6."} haz={"Peldaño 2: $N = 2^{40}$, $M = 2^{30}$, $B = 2^{10}$."} />
 
 <Objetivos
 	objetivos={[

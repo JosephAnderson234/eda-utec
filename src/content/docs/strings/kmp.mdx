@@ -16,10 +16,14 @@ import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
 import PrefixFunctionSim from '../../../components/sim/PrefixFunctionSim.tsx';
+import Rush from '../../../components/Rush.astro';
+import KmpAnim from '../../../components/anim/KmpAnim.tsx';
 
 <EnSimple>
 Imagina que buscas una palabra en una cinta larga. Si ya comprobaste `ababa` y la siguiente letra falla, **no hace falta volver a leer esas cinco letras**: el final `aba` coincide con el comienzo `aba`. KMP guarda cuánto del comienzo sobrevive al fallo. Así el dedo que recorre la cinta nunca retrocede.
 </EnSimple>
+
+<Rush id="kmp" clave={"Calcular $\\pi$ a mano, KMP en $O(n + m)$ y periodo mínimo $n - \\pi[n-1]$."} lee={"§1, §2 y §3."} salta={"§4, salvo el periodo."} anim={"El simulador de $\\pi$ (§2) y la animación de búsqueda (final de §3)."} haz={"Peldaño 2: $\\pi$ y el periodo de abab."} />
 
 <Objetivos objetivos={[
   'Reconocer un <strong>borde</strong> y calcular la función prefijo π a mano.',
@@ -90,6 +94,8 @@ KMP(P, T):                         // P no vacío
 <Practica nivel={1} titulo="Resuelto · ejemplo propio: buscar aba en ababa">
 $\pi(\texttt{aba})=[0,0,1]$. Se lee `a,b,a`: $k=1,2,3$, y se reporta inicio 0. Se baja a $\pi[2]=1$; las letras siguientes `b,a` llevan a $k=2,3$ y se reporta inicio 2. Las ocurrencias se superponen.
 </Practica>
+
+<KmpAnim client:visible />
 
 ## 4. Aplicaciones de π
 

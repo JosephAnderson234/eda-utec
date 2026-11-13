@@ -14,6 +14,7 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import EnterosFig from '../../../components/fig/EnterosFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Un **B-tree** es rápido porque cada nodo tiene muchas llaves y elige entre muchos caminos de una vez. El problema: para elegir, hay que comparar la consulta con **todas** las llaves del nodo, y eso cuesta.
@@ -21,6 +22,8 @@ Un **B-tree** es rápido porque cada nodo tiene muchas llaves y elige entre much
 - Los resúmenes de todas las llaves de un nodo caben **juntos en una sola palabra** de la máquina.
 - Con **una resta** de palabras se compara la consulta contra todas las llaves a la vez, y con **una multiplicación** se calcula el resumen. Así cada nodo se resuelve en $O(1)$, y el árbol entero en $O(\log_w n)$.
 </EnSimple>
+
+<Rush id="fusion" clave={"Fusion tree: $O(\\log_w n)$ por consulta; combinado con vEB, $O(\\min\\{\\lg w, \\log_w n\\}) = O(\\sqrt{\\lg n})$."} lee={"§1, §2, §7 y §8."} salta={"§3 a §6 (sketch con una multiplicación, comparación en paralelo, msb): lee solo para qué sirve cada truco."} haz={"Peldaño 4: con $n = 2^{36}$, ¿qué conviene si $w = 64$? ¿Y si $w = 2^{12}$?"} />
 
 <Objetivos
 	objetivos={[

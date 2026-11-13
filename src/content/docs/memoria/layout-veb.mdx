@@ -14,12 +14,16 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+import Rush from '../../../components/Rush.astro';
+import VebLayoutAnim from '../../../components/anim/VebLayoutAnim.tsx';
 
 <EnSimple>
 Imagina que guardas un árbol genealógico gigante en cajas, sin saber de qué tamaño serán las cajas. El truco: **corta el árbol por la mitad de su altura**. Guarda primero la parte de arriba, todo junto; después, cada ramita de abajo, cada una toda junta. Y dentro de cada pedazo, repite lo mismo.
 - Sea cual sea el tamaño de caja, en algún nivel de ese corte los pedazos **tienen más o menos el tamaño de una caja**. Bajar por el árbol atraviesa pocos pedazos, y cada uno cuesta una o dos cajas.
 - Eso da búsquedas óptimas **sin conocer $B$**. Para poder insertar y borrar, se combina con un **arreglo con huecos** (que deja espacio libre para insertar sin mover todo) y con **indirección** (grupos pequeños abajo que absorben casi todos los cambios).
 </EnSimple>
+
+<Rush id="layout-veb" clave={"Cortar el árbol a media altura, guardar arriba y luego cada subárbol de abajo; una búsqueda toca $\\le 4\\log_B N$ bloques. Versión dinámica: layout vEB + PMA + indirección."} lee={"§1 y §2 completos; de §3, los ingredientes del resultado."} salta={"Los detalles de §3."} anim={"La animación del layout (antes de §2): elige la hoja 13 y compara bloques vEB contra el layout por niveles."} haz={"Peldaño 2: layout vEB de 31 nodos."} />
 
 <Objetivos
 	objetivos={[
@@ -57,6 +61,8 @@ Corte a media altura: con 5 niveles (0–4) la convención habitual deja **arrib
 Con arriba 2 niveles y abajo 3: pieza superior $\{1, 2, 3\}$ → `1 2 3`. Cada pieza inferior tiene altura 3 (7 nodos) y se corta otra vez: su raíz arriba y dos subárboles de 3 nodos abajo. Para la raíz 4: `4 | 8 16 17 | 9 18 19`. El layout completo empieza `1 2 3 4 8 16 17 9 18 19 5 10 20 21 11 22 23 …`. (Ejemplo propio; si se redondea al revés, arriba quedan 3 niveles y cambia el orden, pero no el análisis.)
 </Solucion>
 </Practica>
+
+<VebLayoutAnim client:visible />
 
 ## 2. ¿Cuánto cuesta una búsqueda?
 

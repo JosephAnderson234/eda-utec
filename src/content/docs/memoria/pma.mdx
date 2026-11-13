@@ -14,6 +14,7 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Piensa en un **estante de libros ordenados alfabéticamente** donde dejas algunos huecos. Cuando llega un libro nuevo, lo metes en su lugar. Si en esa zona ya no hay espacio, **no reacomodas todo el estante**: tomas una zona un poco más grande que tenga espacio suficiente y **redistribuyes los libros parejo** dentro de ella.
@@ -21,6 +22,8 @@ Piensa en un **estante de libros ordenados alfabéticamente** donde dejas alguno
 - Las zonas grandes tienen reglas **más estrictas** que las chicas. Así, después de reacomodar una zona grande, las chicas que contiene quedan con mucho margen y tardan en volver a dar problemas.
 - En promedio, cada libro nuevo hace mover solo $O(\lg^2 N)$ libros.
 </EnSimple>
+
+<Rush id="pma" clave={"PMA: umbrales de densidad por nivel y $O(\\lg^2 N)$ celdas movidas amortizadas; List Labeling según el espacio de etiquetas; Order Maintenance en $O(1)$ con dos niveles."} lee={"§1, §2 y la tabla de §4."} salta={"La demostración de §3 y el detalle de §5: quédate con los resultados."} haz={"Peldaño 2: inserta 27, 28 y 29."} />
 
 <Objetivos
 	objetivos={[

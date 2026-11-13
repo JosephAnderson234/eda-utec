@@ -14,6 +14,8 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
+import Rush from '../../../components/Rush.astro';
+import WilberAnim from '../../../components/anim/WilberAnim.tsx';
 
 <EnSimple>
 Las dos cotas de Wilber son dos formas **concretas y calculables** de encontrar muchos rectángulos independientes, y por lo tanto de decir «ningún árbol puede costar menos que esto».
@@ -21,6 +23,8 @@ Las dos cotas de Wilber son dos formas **concretas y calculables** de encontrar 
 - **Wilber-2:** para cada acceso, mira los accesos anteriores «que se ven» desde él y cuenta cuántas veces alternan entre estar a su izquierda y a su derecha.
 - Idea común: **zigzaguear cuesta**. Una secuencia que salta de un lado a otro todo el tiempo no puede ser barata para ningún BST.
 </EnSimple>
+
+<Rush id="wilber" clave={"Wilber-1 = suma de alternancias izquierda/derecha en cada nodo del árbol de referencia; la secuencia bit-reversal da $\\Theta(n\\lg n)$."} lee={"§2 y §3. De §1 (Wilber-2) basta la definición en una frase."} salta={"§4 en detalle: quédate con la conclusión."} anim={"La animación de alternancias (después de la figura de Wilber-1): reprodúcela con $0,4,2,6,1,5$ y comprueba el total 7."} haz={"Peldaño 2: Wilber-1 de $0,1,\\dots,6$."} />
 
 <Objetivos
 	objetivos={[
@@ -56,6 +60,8 @@ Las dos cotas de Wilber son dos formas **concretas y calculables** de encontrar 
 <OptimalidadFig fig="wilber1">
 **Cómo leerlo.** Árbol de referencia perfecto con llaves 0–6 y la secuencia $0, 4, 2, 6, 1, 5$ (ejemplo propio). En la raíz (3), los accesos caen izquierda, derecha, izquierda, derecha, izquierda, derecha: 5 alternancias. El nodo 1 ve solo $0, 2, 1$ (el 1 se ignora): una alternancia; igual el nodo 5. Las hojas no tienen dos lados. Wilber-1 $= 5 + 1 + 1 = 7$.
 </OptimalidadFig>
+
+<WilberAnim client:visible />
 
 <Practica nivel={2} titulo="Complétalo: Wilber-1 de la secuencia $0, 1, 2, 3, 4, 5, 6$ sobre el mismo árbol">
 - Raíz 3: accesos de su subárbol sin contarla: $0,1,2$ (izq) y $4,5,6$ (der) → lados: **\_\_\_\_\_\_\_\_\_\_\_\_** → alternancias: **\_\_**.

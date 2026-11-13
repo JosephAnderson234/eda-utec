@@ -14,6 +14,7 @@ import Errores from '../../../components/tutor/Errores.astro';
 import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import EnterosFig from '../../../components/fig/EnterosFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 La vEB de la página anterior es rápida pero **reserva una casilla por cada número posible**. Las dos mejoras de hoy:
@@ -21,6 +22,8 @@ La vEB de la página anterior es rápida pero **reserva una casilla por cada nú
 - **Y-fast:** la libreta sigue siendo grande ($w$ entradas por número). Entonces agrupas los números en **paquetes de unos $w$** y solo anotas en la libreta **un representante por paquete**. Dentro de cada paquete usas un árbol normal, que es pequeño.
 - Resultado: el mismo $O(\lg w)$ que la vEB, pero con memoria proporcional a $n$, no al universo.
 </EnSimple>
+
+<Rush id="xfast-yfast" clave={"X-fast: una tabla hash por nivel y búsqueda binaria sobre los niveles, $O(\\lg w)$, espacio $O(nw)$. Y-fast: grupos de $\\Theta(w)$ en BSTs ⇒ espacio $\\Theta(n)$ y actualizaciones $O(\\lg w)$ amortizadas."} lee={"§2, §3, §4 y la tabla de §6."} salta={"La amortización de §5: quédate con el resultado."} haz={"Peldaño 2: Sucesor(6) y Sucesor(13)."} />
 
 <Objetivos
 	objetivos={[

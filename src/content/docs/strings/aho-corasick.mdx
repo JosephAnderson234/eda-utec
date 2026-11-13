@@ -15,10 +15,13 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
+import Rush from '../../../components/Rush.astro';
 
 <EnSimple>
 Piensa en buscar mil palabras en un libro. KMP una por una leería el libro mil veces. Un **trie** comparte los comienzos de esas palabras, como un árbol de carpetas. Los **enlaces de falla** dicen a qué comienzo todavía útil saltar cuando la siguiente letra no encaja. Aho–Corasick combina ambas ideas y lee el libro una sola vez.
 </EnSimple>
+
+<Rush id="aho-corasick" clave={"Trie + enlaces de falla (el mayor sufijo propio que también está en el trie); búsqueda $O(n + z)$; contar sin enumerar propagando por los enlaces."} lee={"§1, §2 y §3."} salta={"§4, salvo la idea de propagar conteos."} haz={"Peldaño 1 y después el 3: he, she, his, hers en ushers."} />
 
 <Objetivos objetivos={[
   'Construir un trie y explicar qué representa el estado después de leer un prefijo del texto.',

@@ -1,0 +1,49 @@
+---
+title: 'Modo rush: todo el final en menos de 12 h'
+description: 'Plan intensivo para el final de CS3014: 21 bloques en orden lineal, descansos incluidos, qué leer y qué saltar en cada página, y siete animaciones para entender lo central rápido.'
+---
+
+import EnSimple from '../../components/EnSimple.astro';
+import RushPlan from '../../components/rush/RushPlan.tsx';
+
+<EnSimple titulo="La idea del rush">
+No vas a leer la web completa: vas a hacer **triaje**. En cada tema hay una o dos ideas que dan casi todos los puntos (una cota, una traza, un truco) y mucho detalle que solo sirve si te sobra tiempo. Cada página empieza con un recuadro **⚡ Modo rush** que te dice exactamente qué leer, qué saltar, qué animación mirar y qué ejercicio hacer. Tú solo sigue el cronograma.
+</EnSimple>
+
+## Las 5 reglas del rush
+
+1. **Orden lineal, sin saltos.** Cada unidad usa la anterior: el sidebar ya está numerado en ese orden (1 → 19). Si te trabas, no saltes al siguiente tema: baja al prerrequisito.
+2. **Primero la animación, después el texto.** Las animaciones 🎬 muestran en 1 minuto lo que el texto explica en 10. Reprodúcela, pausa y **predice el siguiente paso** antes de avanzar.
+3. **Un ejercicio por tema, sin mirar.** El recuadro ⚡ te indica cuál. Si no lo puedes resolver solo, ese tema no está aprendido: márcalo y vuelve en el cierre.
+4. **Cronómetro honesto.** Si un bloque se acaba, pasa al siguiente aunque no hayas terminado: lo que falte lo cubre el simulacro y el cierre.
+5. **Descansa de verdad.** 10 minutos cada ~50 de estudio, ya incluidos en el plan. Sin celular en los descansos: la memoria necesita esos huecos.
+
+## El cronograma
+
+<RushPlan client:only="react" />
+
+## Dónde están las animaciones
+
+Tienen ▶ reproducir, pausa, paso a paso y velocidad. Muchas aceptan tus propios datos.
+
+| Unidad | Animación | Qué te enseña en un minuto |
+| --- | --- | --- |
+| 1 | [Alternancias de Wilber-1](/optimalidad/wilber/) | Contar alternancias = contar cambios de hijo preferido en Tango |
+| 2 | [Layout vEB en memoria](/memoria/layout-veb/) | Por qué una búsqueda toca pocos bloques sin conocer $B$ |
+| 3 | [Sucesor en vEB](/enteros/veb/) | Una sola llamada recursiva por nivel ⇒ $O(\lg\lg u)$ |
+| 4 | [Sparse Table](/estaticos/rmq-lca/) | Construcción por duplicación y consulta con dos ventanas solapadas |
+| 5 | [Heavy-Light](/grafos/heavy-light/) | Un camino se parte en $O(\lg n)$ rangos del arreglo |
+| 5 | [Centroides](/grafos/centroides/) | Cada nivel parte las componentes a la mitad ⇒ profundidad $\lg n$ |
+| 6 | [KMP](/strings/kmp/) | El texto nunca retrocede; el patrón salta según $\pi$ |
+
+Además siguen los simuladores paso a paso de la [función prefijo](/strings/kmp/) y del [suffix array por duplicación](/strings/suffix-array/).
+
+## Si te quedan menos de 12 horas
+
+| Tiempo | Qué recortar |
+| --- | --- |
+| **8 h** | Salta Fusion trees, DC3/SA-IS y Signed-Greedy (solo lee su fila en el [formulario](/formulario/)). Haz solo la parte A del simulacro. |
+| **5 h** | Haz solo los recuadros ⚡ (lee + anima + ejercicio) de los temas ●●● del [panel](/ruta/) y el formulario completo. |
+| **2 h** | [Formulario](/formulario/) + las 7 animaciones + parte A del [simulacro](/repaso/simulacro/). |
+
+Los recortes son una **estimación propia** según el peso que tuvo cada tema en clase; no son un anuncio del examen.
