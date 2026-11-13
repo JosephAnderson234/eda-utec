@@ -110,7 +110,7 @@ Umbrales superiores: hojas 1, nivel 1: 0,875, raíz 0,75. Estado: trozos $[10, 2
 
 <Pregunta q={"¿Por qué redistribuir un segmento grande no tiene que cobrarse entero a una sola inserción?"} />
 
-## 3. El argumento de cobro: $O(\lg^2 N)$ amortizado
+## 3. El argumento de cobro: O(lg² N) amortizado
 
 <Practica nivel={1} titulo="Resuelto: la demostración">
 **¿Quién paga la redistribución de un nodo $x$?** Se redistribuye $x$ porque uno de sus hijos se pasó de su umbral. Si el intervalo de ese hijo tiene $m$ celdas, el de $x$ tiene $2m$, y redistribuirlo cuesta $2m$ movimientos. Desde la última vez que el hijo quedó repartido parejo, su densidad tuvo que cambiar al menos $\frac{1}{4h}$ (la holgura) para violar su umbral: hubo al menos $m\cdot\frac{1}{4h} = \frac{m}{4h}$ actualizaciones dentro de él.

@@ -80,7 +80,7 @@ $$\text{sk}(x_0) < \text{sk}(x_1) < \cdots < \text{sk}(x_{k-1}).$$
 
 <Pregunta q={"Si solo conservamos los bits que distinguen las llaves guardadas, ¿qué podría fallar con una consulta nueva?"} />
 
-## 3. El problema: el sketch de $q$ puede mentir
+## 3. El problema: el sketch de *q* puede mentir
 
 <Predice pregunta="Con las llaves de arriba buscamos $q = 0101$. Sus bits 0 y 2 dan $\text{sk}(q) = 00$, que lo ubica junto a $0000$. ¿Es $0000$ el predecesor de $0101$?">
 **No:** el predecesor es $0010$ y el sucesor $1100$. $q$ se separa del trie en un nodo que **no** es de ramificación (el prefijo `01` no existe), así que sus bits en las posiciones $c_j$ no dicen en qué lugar del orden cae. El sketch es correcto **para las llaves**, no para consultas arbitrarias.
@@ -101,7 +101,7 @@ $e$ es la palabra con prefijo $p\bar\beta$ más cercana a $q$, y **su posición 
 
 Por tanto, con $\beta = 1$: $\text{pred}(q)$ es la mayor llave con $\text{sk} \le \text{sk}(e)$. Con $\beta = 0$: $\text{suc}(q)$ es la menor con $\text{sk} \ge \text{sk}(e)$.
 
-### ¿Cómo hallar $p$ sin mirar todas las llaves?
+### ¿Cómo hallar *p* sin mirar todas las llaves?
 
 Sean $\text{sk}(x_i) \le \text{sk}(q) < \text{sk}(x_{i+1})$. El sketch de $q$ coincide con el de $B$ en los bits de ramificación que están dentro de $p$, y $B$ es contiguo, así que $\text{sk}(q)$ cae dentro del tramo de $B$ o justo al lado: **$x_i$ o $x_{i+1}$ está en $B$**. De las dos, la que comparte más prefijo con $q$ es la de **menor $q \oplus y$** (XOR), y el bit más significativo de ese XOR da $\lvert p \rvert$.
 
@@ -188,7 +188,7 @@ Son todos distintos, y la diagonal $P = (27, 59, 65)$ cae en las ventanas $[6, 3
 - Replicar $\text{sk}(q)$: multiplicar por $0\cdots01\,0\cdots01\cdots$ (un 1 al inicio de cada bloque).
 - Contar centinelas vivos (con otra multiplicación que los suma, o con msb): eso es el **rango** de $q$.
 
-## 6. msb en $O(1)$
+## 6. msb en O(1)
 
 Falta $\text{msb}(q \oplus y)$, el primer bit donde difieren. Idea: partir la palabra en $\sqrt w$ clusters de $\sqrt w$ bits.
 
@@ -221,7 +221,7 @@ En la resta $F - t_2$, el 1 de cabeza de un cluster **se pierde si y solo si** q
 
 Versiones dinámicas: árboles exponenciales ($O(\log_w n + \lg\lg n)$ por actualización, determinista) y con hashing ($O(\log_w n)$ esperado). Sin multiplicación (modelo AC⁰) también se puede calcular el sketch perfecto, con otra técnica.
 
-## 8. Lo mejor de dos mundos: $O(\sqrt{\lg n})$
+## 8. Lo mejor de dos mundos: O(√lg n)
 
 vEB / Y-fast: $O(\lg w)$. Fusion tree: $O(\log_w n)$. Usando la mejor según $w$, el predecesor cuesta $O(\min\{\lg w, \log_w n\})$, y
 

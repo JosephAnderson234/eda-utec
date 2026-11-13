@@ -169,7 +169,7 @@ Cada grupo tiene **entre $w/2$ y $2w$ llaves**:
 
 **Los representantes.** Cada grupo tiene un representante $r_j$ fijado **al crear el grupo** (por ejemplo, su mínimo en ese momento). Aunque la llave $r_j$ se elimine después, se queda en el X-fast tree hasta la próxima partición o fusión. Así $G_j = \{x \in S \mid r_j \le x < r_{j+1}\}$.
 
-### Espacio: $\Theta(n)$
+### Espacio: Θ(n)
 
 Cada grupo tiene al menos $w/2$ llaves, así que hay **a lo más $2n/w$ representantes**. Cada uno ocupa $O(w)$ en el X-fast tree: $(2n/w)\cdot O(w) = O(n)$. Los BST suman $O(n)$. Total: $\Theta(n)$.
 

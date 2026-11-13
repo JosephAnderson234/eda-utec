@@ -1,11 +1,13 @@
 ---
 /** Define un término en el momento exacto en que la historia lo necesita por primera vez. */
+import { tex } from './tutor/tex';
 interface Props {
 	termino: string;
 }
 const { termino } = Astro.props;
+const plano = termino.replace(/\$([^$]+)\$/g, (_, m: string) => m.replace(/\\text\{([^}]*)\}/g, '$1').replace(/\\/g, ''));
 ---
-<aside class="concepto" aria-label={`Concepto nuevo: ${termino}`}>
-	<p class="concepto__t">📌 Concepto nuevo · <span>{termino}</span></p>
+<aside class="concepto" aria-label={`Concepto nuevo: ${plano}`}>
+	<p class="concepto__t">📌 Concepto nuevo · <span set:html={tex(termino)} /></p>
 	<div class="concepto__b"><slot /></div>
 </aside>
