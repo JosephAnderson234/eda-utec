@@ -15,6 +15,7 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Imagina que estudias en tu escritorio (la **memoria**, pequeña y rápida) y los libros están en un **depósito** lejano (el **disco**, enorme y lento). Cada viaje al depósito tarda muchísimo, pero puedes traer **una caja entera de libros** por viaje.
@@ -36,6 +37,9 @@ Imagina que estudias en tu escritorio (la **memoria**, pequeña y rápida) y los
 	perfiles={['visual', 'laboratorio', 'socratico']}
 />
 
+
+<Pregunta q={"Si dos recorridos hacen Θ(N) operaciones, ¿por qué podrían tardar muy distinto al mover datos?"} />
+
 ## 1. La jerarquía de memoria
 
 <MemoriaFig fig="jerarquia">
@@ -49,6 +53,9 @@ Sumar los $N$ elementos de un **arreglo** y sumar los $N$ nodos de una **lista e
 <MemoriaFig fig="arreglo-lista">
 **Cómo leerlo.** El arreglo aprovecha **cada bloque completo**: trae $B$ elementos útiles por transferencia. La lista puede necesitar **un bloque nuevo por cada nodo**, porque nodos consecutivos de la lista quedan en lugares distintos de la memoria. Hace falta un modelo que vea esa diferencia.
 </MemoriaFig>
+
+
+<Pregunta q={"¿Por qué recorrer un arreglo aprovecha mejor los bloques que recorrer una lista dispersa?"} respuesta={"Un bloque del arreglo trae varios elementos consecutivos útiles; la lista puede requerir un bloque distinto por cada nodo."} />
 
 ## 2. El modelo de memoria externa (Aggarwal y Vitter)
 
@@ -69,11 +76,17 @@ Se supone $1 \le B \le M/2$ y, para que sea interesante, $N > M$. **Solo se cuen
 
 Entre $T(N)$ y $T(N)/B$ puede haber un factor de mil o de un millón. **¿De qué depende a cuál extremo se parece un algoritmo?** De su **localidad**: de si los datos que usa uno después de otro están también uno al lado del otro.
 
+
+<Pregunta q={"Si una transferencia trae B palabras, ¿cuánto debería costar leer N palabras consecutivas?"} />
+
 ## 3. Escanear: Θ(⌈N/B⌉)
 
 Recorrer $N$ elementos consecutivos toca $\lceil N/B \rceil$ bloques. El **techo** importa: aunque $N < B$, se paga al menos una transferencia.
 
 **Varios escaneos a la vez.** Mezclar dos corridas ordenadas $A$ y $C$ son tres escaneos que avanzan juntos (uno por cada entrada y uno por la salida); basta un bloque en memoria para cada uno. Costo $O(\lceil (\lvert A\rvert + \lvert C\rvert)/B\rceil)$ siempre que $M \ge 3B$. **Con $k$ entradas a la vez**, la mezcla sigue costando un escaneo mientras $k + 1 \le M/B$.
+
+
+<Pregunta q={"¿Por qué un escaneo de menos de B elementos todavía cuesta una transferencia?"} respuesta={"El modelo mueve bloques enteros: hay que traer al menos el bloque que contiene esos elementos."} />
 
 ## 4. Buscar: ¿cuánto cuesta, como mínimo?
 

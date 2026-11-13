@@ -17,6 +17,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
 import SuffixArraySim from '../../../components/sim/SuffixArraySim.tsx';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Imagina un libro con una tarjeta por cada posición. En cada tarjeta copias el texto que comienza allí y ordenas las tarjetas alfabéticamente. Las tarjetas que empiezan por un patrón quedan juntas; una búsqueda binaria las localiza. El **suffix array** guarda solo los números de las tarjetas, y el arreglo **LCP** anota cuántas primeras letras comparten dos tarjetas vecinas.
@@ -30,15 +31,21 @@ Imagina un libro con una tarjeta por cada posición. En cada tarjeta copias el t
   'Calcular LCP con Kasai y usarlo para consultas y aplicaciones de subcadenas.',
 ]} prerrequisitos={[{t:'RMQ, cartesian tree y LCA',href:'/estaticos/rmq-lca/'},{t:'KMP y orden de cadenas',href:'/strings/kmp/'}]} perfiles={['visual','simulador','laboratorio','feynman']} />
 
+
+<Pregunta q={"Si ordenamos todos los sufijos, ¿qué información mínima habría que guardar de cada uno?"} />
+
 ## 1. Ordenar todos los sufijos
 
-Un **sufijo** $S[i..]$ comienza en $i$ y llega al final. Añadimos un **centinela** `$` único y menor que toda letra del texto; así ningún sufijo es prefijo de otro. Para $S=\texttt{banana\$}$, el arreglo $SA$ ordena los índices de sus sufijos de menor a mayor:
+Un **sufijo** $S[i..]$ comienza en $i$ y llega al final. Añadimos un **centinela** `$` único y menor que toda letra del texto; así ningún sufijo es prefijo de otro. Para $S=\texttt{banana\char36}$, el arreglo $SA$ ordena los índices de sus sufijos de menor a mayor:
 
 $$SA=[6,5,3,1,0,4,2].$$
 
 <StringsFig fig="sa">**Cómo leerlo.** La fila $k$ muestra el sufijo que empieza en $SA[k]$. La columna LCP mide lo compartido con la fila anterior; `ana$` y `anana$` comparten `ana`.</StringsFig>
 
 **Convenciones distintas, misma información.** Las diapositivas incluyen `$` y definen $LCP[k]=\operatorname{lcp}(S[SA[k-1]..],S[SA[k]..])$: para `banana$`, $SA=[6,5,3,1,0,4,2]$ y $LCP=[0,0,1,3,0,0,2]$. El código del curso devuelve $SA$ **sin** el centinela, $[5,3,1,0,4,2]$, y `lcp[k]` compara $SA[k]$ con $SA[k+1]$: $[1,3,0,0,2]$. Es la misma lista de vecinos, desplazada una posición y sin la fila del centinela.
+
+
+<Pregunta q={"¿Por qué las apariciones de un patrón quedan juntas en el suffix array?"} respuesta={"Todos los sufijos que empiezan por el mismo patrón comparten ese prefijo y forman un intervalo contiguo en orden lexicográfico."} />
 
 ## 2. Buscar un patrón
 
@@ -47,6 +54,9 @@ Todos los sufijos que empiezan por $P$ forman un intervalo contiguo en $SA$. Dos
 <Predice pregunta="En banana, ¿qué posiciones forman el intervalo de ana? ¿Y existe nab?">
 `ana` empieza en 3 y 1: aparecen en las filas 2 y 3 del SA con centinela. `nab` no aparece. El código `black-order-712 (3).cpp` responde `Yes`, `No`, `Yes` para `ana`, `nab`, `ban` en `banana`.
 </Predice>
+
+
+<Pregunta q={"Ordenar sufijos completos puede ser caro: ¿cómo reutilizaríamos rangos de prefijos más cortos?"} />
 
 ## 3. Duplicación de Manber–Myers
 
@@ -81,6 +91,9 @@ En `banana$`, los rangos por índice $0..6$ son:
 El código `manber-myers.cpp` añade un byte cero como centinela, ordena cíclicamente con `head` para el counting sort, lo quita del resultado y luego calcula LCP. Su salida para `banana` es el SA sin centinela de arriba.
 
 <SuffixArraySim client:visible />
+
+
+<Pregunta q={"¿Por qué la duplicación con counting sort cuesta O(n lg n)?"} respuesta={"Hay O(lg n) rondas que duplican la longitud conocida. En cada una se ordenan pares de rangos enteros en O(n) con counting sort estable."} />
 
 ## 4. LCP y algoritmo de Kasai
 

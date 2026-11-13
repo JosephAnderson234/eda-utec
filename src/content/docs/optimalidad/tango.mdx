@@ -15,6 +15,7 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Un **Tango Tree** es un BST que se «organiza» según por dónde vienen pasando las búsquedas.
@@ -36,6 +37,9 @@ Un **Tango Tree** es un BST que se «organiza» según por dónde vienen pasando
 	perfiles={['visual', 'socratico', 'debate']}
 />
 
+
+<Pregunta q={"Si Wilber-1 cuenta alternancias, ¿cómo podría un BST hacer que solo esas alternancias resulten caras?"} />
+
 ## 1. Hijos preferidos y caminos preferidos
 
 **Definición.** Se fija un árbol de referencia $P$, **perfectamente balanceado** (altura $\Theta(\lg n)$), sobre las mismas claves. Cada nodo de $P$ tiene un puntero hacia su **hijo preferido**: el hijo por el que pasó el acceso más reciente dentro de su subárbol.
@@ -53,6 +57,9 @@ Un **Tango Tree** es un BST que se «organiza» según por dónde vienen pasando
 Por eso el número de cambios de hijo preferido **es** Wilber-1 (con el árbol de referencia $P$).
 </Predice>
 
+
+<Pregunta q={"¿Por qué cada camino preferido tiene solo O(lg n) nodos?"} respuesta={"Es un camino del árbol de referencia perfectamente balanceado, cuya altura es Θ(lg n)."} />
+
 ## 2. ¿Por qué O(lg lg n)-competitivo?
 
 **La estrategia.** Cada camino preferido se guarda en su propio **BBST** (árbol balanceado, el «árbol auxiliar»), ordenado por clave, de tamaño $O(\lg n)$: cada operación dentro de uno cuesta $O(\lg\lg n)$.
@@ -68,6 +75,9 @@ Por eso el número de cambios de hijo preferido **es** Wilber-1 (con el árbol d
 $$\text{costo(Tango)} = O\big((m + \text{Wilber-1})\cdot\lg\lg n\big) = O\big(\text{OPT}\cdot\lg\lg n\big),$$
 
 porque $\text{OPT} \ge m$ (cada acceso toca al menos un nodo) y $\text{OPT} = \Omega(\text{Wilber-1})$. Es decir, **$O(\lg\lg n)$-competitivo**.
+
+
+<Pregunta q={"Si el árbol auxiliar está ordenado por clave, ¿cómo cortaríamos un camino a cierta profundidad?"} />
 
 ## 3. El problema al actualizar (y su solución)
 
@@ -91,6 +101,9 @@ Altura 16; caminos de $\le 17$ nodos; auxiliares de altura $O(\lg 17) \approx 4$
 </Practica>
 
 **Resultado:** Tango Trees son $O(\lg\lg n)$-competitivos: el primer avance real **más allá de balancear** (un árbol balanceado es trivialmente $O(\lg n)$-competitivo).
+
+
+<Pregunta q={"¿Qué datos permiten convertir un corte por profundidad en cortes por clave?"} respuesta={"Los nodos bajo el punto de corte pertenecen a un subárbol de P, y sus claves forman un intervalo. Con el mínimo y el máximo de ese subárbol se aísla el rango mediante split y join."} />
 
 ## 4. Signed-Greedy: otra cota inferior
 

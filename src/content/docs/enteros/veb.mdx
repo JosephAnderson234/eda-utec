@@ -16,6 +16,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import EnterosFig from '../../../components/fig/EnterosFig.astro';
 import Rush from '../../../components/Rush.astro';
 import VebSuccAnim from '../../../components/anim/VebSuccAnim.tsx';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Piensa en una **guía telefónica gigante** con todos los números posibles, de 0 a 9 999. Te piden «el primer número **ocupado** que viene después del 5 213».
@@ -37,6 +38,9 @@ Piensa en una **guía telefónica gigante** con todos los números posibles, de 
 	perfiles={['visual', 'simulador', 'laboratorio', 'feynman']}
 />
 
+
+<Pregunta q={"Si una llave es un entero con bits accesibles, ¿qué ventaja podríamos obtener frente a solo compararla?"} />
+
 ## 1. ¿En qué modelo estamos?
 
 Hasta ahora, en el curso, una llave era una **caja negra**: solo se podía comparar con otra. En esta unidad las llaves son **enteros** y podemos operar con sus bits.
@@ -56,6 +60,9 @@ Los modelos van de más débil (BST) a más fuerte (cell probe). La regla para r
 
 > Una **cota superior** demostrada en un modelo débil vale en los fuertes; una **cota inferior** demostrada en un modelo fuerte vale en los débiles. Por eso las cotas inferiores se prueban en cell probe y los algoritmos se diseñan en word RAM.
 
+
+<Pregunta q={"¿Por qué la cota de búsqueda por comparaciones no se aplica directamente a word RAM?"} respuesta={"En word RAM se pueden usar aritmética y operaciones sobre bits de la llave en tiempo constante, además de comparaciones."} />
+
 ## 2. El problema del predecesor
 
 Mantener un conjunto $S \subseteq U$ de $n$ palabras con:
@@ -74,6 +81,9 @@ $x$ **no tiene que estar** en $S$. Es el problema de una tabla de rutas de inter
 
 Con $w = 64$, la tabla necesitaría $2^{64}$ celdas: imposible. El árbol funciona, pero con $n = 10^9$ hace $\lg n \approx 30$ pasos. La vEB busca algo **en el medio**: $\lg w = 6$ pasos.
 </Predice>
+
+
+<Pregunta q={"¿Qué pasaría si cada paso recursivo trabajara solo con la mitad de los bits?"} />
 
 ## 3. La idea: partir las palabras a la mitad
 
@@ -102,6 +112,9 @@ $$S(m) = S(m/2) + O(1) \;\Rightarrow\; S(m) = O(\lg m) \;\Rightarrow\; T(u) = O(
 <EnterosFig fig="bits">
 **Cómo leerlo.** Cada caja es el número de bits del universo en ese nivel de la recursión. Con $w = 64$ se pasa por 64, 32, 16, 8, 4, 2, 1: seis llamadas. **Toda la dificultad del diseño es lograr que cada operación haga una sola llamada costosa**; si hiciera dos, la recurrencia sería $T(u) = 2T(\sqrt u) + O(1) = O(\lg u) = O(w)$.
 </EnterosFig>
+
+
+<Pregunta q={"¿Por qué partir la palabra en dos mitades lleva a O(lg lg u) niveles?"} respuesta={"La longitud en bits empieza en lg u y se divide por dos en cada llamada; hacen falta O(lg lg u) divisiones hasta llegar al caso base."} />
 
 ## 4. La estructura
 

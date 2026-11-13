@@ -17,6 +17,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import GrafosFig from '../../../components/fig/GrafosFig.astro';
 import Rush from '../../../components/Rush.astro';
 import HldAnim from '../../../components/anim/HldAnim.tsx';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Piensa en una ciudad con avenidas largas y calles pequeñas. Para ir de una casa a otra, recorres tramos de avenida y cambias de avenida unas pocas veces. Heavy-Light elige esas «avenidas» en un árbol: convierte un camino en pocos tramos consecutivos de un arreglo.
@@ -30,6 +31,9 @@ Piensa en una ciudad con avenidas largas y calles pequeñas. Para ir de una casa
   'Partir un camino en rangos y justificar los costos de consulta, actualización y LCA.',
   'Reconocer un subárbol como un solo rango.'
 ]} prerrequisitos={[{t:'RMQ, cartesian tree y LCA',href:'/estaticos/rmq-lca/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
+
+
+<Pregunta q={"Un subárbol cabe en un intervalo DFS; ¿cómo representaríamos un camino que cruza varias ramas?"} />
 
 ## 1. De caminos a cadenas
 
@@ -46,6 +50,9 @@ El tiempo de entrada de un DFS vuelve **contiguo** cada subárbol, pero un camin
 <Predice pregunta="Si el hijo pesado y el liviano tienen el mismo tamaño, ¿se pierde la cota de la mitad?">
 No. Incluso en empate, ambos caben en el padre y queda además el propio padre: $2\text{sz}(v)\le\text{sz}(u)-1$.
 </Predice>
+
+
+<Pregunta q={"¿Por qué un camino de raíz a hoja cruza solo O(lg n) aristas livianas?"} respuesta={"Al seguir una arista liviana, el subárbol restante tiene menos de la mitad de los nodos; eso solo puede repetirse O(lg n) veces."} />
 
 ## 2. Dos DFS y tres clases de intervalos
 
@@ -73,6 +80,9 @@ Se obtienen tres tipos de intervalo: tramo de una cadena desde su cabeza hasta $
 **Correctitud.** Visitar primero al pesado deja los nodos de una cadena consecutivos. Como el segundo recorrido es DFS, termina todo el subárbol de $v$ antes de salir: ocupa exactamente `sz[v]` posiciones a partir de `pos[v]`.
 
 **Complejidad.** Cada DFS visita nodos y aristas una vez: $O(n)$ tiempo y espacio. Un segment tree sobre el arreglo sirve para los rangos.
+
+
+<Pregunta q={"Si cada cadena ocupa un tramo del arreglo, ¿cómo consultar un camino entre dos nodos?"} />
 
 ## 3. Subir por cadenas y consultar un camino
 
@@ -118,6 +128,9 @@ Resultado: 3 rangos y los nodos 9, 6, 10, 2, 5. Ambas tablas se reprodujeron con
 **Complejidad.** Cada iteración cruza una arista liviana de uno de los dos extremos: $O(\lg n)$ rangos. Cada consulta de segment tree cuesta $O(\lg n)$, luego el camino cuesta $O(\lg^2 n)$. Actualizar un camino usa el mismo bucle y una actualización de rango (por ejemplo, suma con propagación perezosa): también $O(\lg^2 n)$. Un subárbol es un solo rango: $O(\lg n)$.
 
 <HldAnim client:visible />
+
+
+<Pregunta q={"¿Por qué una consulta de camino con segment tree cuesta O(lg² n)?"} respuesta={"El camino se divide en O(lg n) tramos de cadena porque cada salto cruza una arista liviana. Cada consulta de rango en el segment tree cuesta O(lg n)."} />
 
 ## 4. LCA y comparación de costos
 

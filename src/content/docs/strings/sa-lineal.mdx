@@ -16,6 +16,7 @@ import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Ordenar todos los sufijos parece costoso. DC3 hace algo parecido a ordenar dos de cada tres tarjetas y deducir dónde insertar la tercera. Para ordenar esas dos partes crea un problema más pequeño del mismo tipo. Si reducir el tamaño y combinar cuestan lo suficiente, el trabajo total es proporcional al texto.
@@ -28,6 +29,9 @@ Ordenar todos los sufijos parece costoso. DC3 hace algo parecido a ordenar dos d
   'Reconstruir las cinco etapas de DC3 y sus dos comparaciones de mezcla.',
   'Distinguir duplicación, DC3 y SA-IS según idea, tiempo y uso.',
 ]} prerrequisitos={[{t:'Suffix array y rangos',href:'/strings/suffix-array/'}]} perfiles={['visual','laboratorio','feynman']} />
+
+
+<Pregunta q={"Si cada ronda lineal de duplicación deja otra ronda, ¿qué reduciría el costo total a lineal?"} />
 
 ## 1. La estrategia de reducción
 
@@ -44,6 +48,9 @@ porque $n+\alpha n+\alpha^2n+\cdots$ es una serie geométrica. DC3 toma aproxima
 | Kärkkäinen y Sanders, DC3 | 2003 | $O(n)$ | residuos módulo 3 |
 | Ko y Aluru | 2003 | $O(n)$ | ordenamiento inducido |
 | Nong, Zhang y Chan, SA-IS | 2009 | $O(n)$ | inducido y reducción |
+
+
+<Pregunta q={"¿Por qué una reducción a una fracción fija del problema da tiempo O(n)?"} respuesta={"El trabajo por nivel forma la serie n + αn + α²n + ..., con α menor que 1; la suma es O(n)."} />
 
 ## 2. DC3: escoger dos tercios
 
@@ -111,6 +118,9 @@ Explica por qué no basta ordenar solo los nombres de las tripletas de $C$.
 Se ordenaron de izquierda a derecha. Radix sort de claves de varios componentes exige pasadas estables desde el componente menos significativo: tercero, segundo, primero. Corrige el orden y verifica que `dc3.cpp` coincide con `manber-myers.cpp`.
 </Detective>
 
+
+<Pregunta q={"Si DC3 ya construye SA en tiempo lineal, ¿qué otra forma de elegir sufijos permitiría inducir el orden de los demás?"} />
+
 ## 3. SA-IS: en clase solo se menciona
 
 SA-IS clasifica un sufijo como **tipo S** si es menor que el siguiente, y **tipo L** si es mayor; en igualdad hereda el tipo del siguiente. Un **LMS** (*leftmost S*) es una posición S precedida por una L. El algoritmo ordena primero las subcadenas LMS, reduce sus nombres a un problema más corto, y luego **induce** el orden de los sufijos L y S recorriendo cubetas. El detalle formal del ordenamiento inducido no se desarrolla en clase.
@@ -124,6 +134,9 @@ El archivo `sais.cpp` refleja esa estructura: `type` clasifica, `lms` reúne pos
 | SA-IS | $O(n)$ | orden inducido; útil en bibliotecas e instancias grandes |
 
 Después de cualquiera de ellos, Kasai obtiene LCP en $O(n)$.
+
+
+<Pregunta q={"¿Qué hace SA-IS después de ordenar las subcadenas LMS?"} respuesta={"Reduce sus nombres a un problema menor y usa cubetas para inducir el orden de los sufijos de tipo L y S. La página presenta esa idea sin desarrollar la prueba formal."} />
 
 ## 4. Práctica del curso
 

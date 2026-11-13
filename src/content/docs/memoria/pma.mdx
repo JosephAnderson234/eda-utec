@@ -15,6 +15,7 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Piensa en un **estante de libros ordenados alfabéticamente** donde dejas algunos huecos. Cuando llega un libro nuevo, lo metes en su lugar. Si en esa zona ya no hay espacio, **no reacomodas todo el estante**: tomas una zona un poco más grande que tenga espacio suficiente y **redistribuyes los libros parejo** dentro de ella.
@@ -36,6 +37,9 @@ Piensa en un **estante de libros ordenados alfabéticamente** donde dejas alguno
 	perfiles={['simulador', 'laboratorio', 'socratico']}
 />
 
+
+<Pregunta q={"Si guardamos elementos ordenados sin huecos, ¿qué costo puede tener insertar uno al comienzo?"} />
+
 ## 1. El problema: Ordered File Maintenance
 
 Mantener $N$ elementos en un arreglo, **en orden**, con:
@@ -44,6 +48,9 @@ Mantener $N$ elementos en un arreglo, **en orden**, con:
 - **Delete:** quitar un elemento.
 
 Los huecos pequeños garantizan que recorrer $k$ elementos consecutivos cueste $O(1 + k/B)$ transferencias: **el orden en memoria es el orden de los datos**. Era la caja negra del [B-Tree cache-oblivious](/memoria/layout-veb/).
+
+
+<Pregunta q={"¿Por qué Ordered File Maintenance exige huecos pequeños entre elementos consecutivos?"} respuesta={"Así el orden físico sigue el orden de los datos y recorrer k elementos consecutivos cuesta O(1 + k/B) transferencias."} />
 
 ## 2. Packed-Memory Array (PMA)
 
@@ -100,6 +107,9 @@ Umbrales superiores: hojas 1, nivel 1: 0,875, raíz 0,75. Estado: trozos $[10, 2
 </Solucion>
 </Practica>
 
+
+<Pregunta q={"¿Por qué redistribuir un segmento grande no tiene que cobrarse entero a una sola inserción?"} />
+
 ## 3. El argumento de cobro: $O(\lg^2 N)$ amortizado
 
 <Practica nivel={1} titulo="Resuelto: la demostración">
@@ -110,6 +120,9 @@ $$\frac{2m}{m/(4h)} = 8h = O(\lg N) \text{ por actualización.}$$
 
 **¿Cuántas veces se le cobra a una misma actualización?** Una actualización cae dentro de un intervalo **por cada nivel** del árbol: a lo más $h = O(\lg N)$ cobros de $O(\lg N)$ cada uno. Total: $O(\lg^2 N)$ movimientos amortizados, y como son celdas consecutivas, $O\!\left(1 + \frac{\lg^2 N}{B}\right)$ transferencias.
 </Practica>
+
+
+<Pregunta q={"¿Por qué el costo de redistribuir un nodo se reparte entre varias actualizaciones?"} respuesta={"Tras redistribuir, un hijo queda separado de su umbral por una holgura de 1/(4h). Deben ocurrir muchas actualizaciones en ese hijo antes de que vuelva a violarlo, y entre ellas se cobra la redistribución."} />
 
 ## 4. List Labeling: el mismo problema con otro disfraz
 

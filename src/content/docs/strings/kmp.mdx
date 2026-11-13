@@ -18,6 +18,7 @@ import StringsFig from '../../../components/fig/StringsFig.astro';
 import PrefixFunctionSim from '../../../components/sim/PrefixFunctionSim.tsx';
 import Rush from '../../../components/Rush.astro';
 import KmpAnim from '../../../components/anim/KmpAnim.tsx';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Imagina que buscas una palabra en una cinta larga. Si ya comprobaste `ababa` y la siguiente letra falla, **no hace falta volver a leer esas cinco letras**: el final `aba` coincide con el comienzo `aba`. KMP guarda cuánto del comienzo sobrevive al fallo. Así el dedo que recorre la cinta nunca retrocede.
@@ -30,6 +31,9 @@ Imagina que buscas una palabra en una cinta larga. Si ya comprobaste `ababa` y l
   'Ejecutar KMP sin retroceder en el texto y justificar $O(n+m)$.',
   'Obtener el periodo mínimo y contar las ocurrencias de cada prefijo.',
 ]} perfiles={['visual','simulador','laboratorio','feynman']} />
+
+
+<Pregunta q={"Si falla una comparación después de reconocer varias letras, ¿qué parte de ese trabajo todavía sirve?"} />
 
 ## 1. Bordes: lo que sobrevive al fallo
 
@@ -46,6 +50,9 @@ La cadena es $5\to3\to1\to0$: `ababa`, `aba`, `a` y la cadena vacía. Cada salto
 </Predice>
 
 <StringsFig fig="bordes">**Cómo leerlo.** Cada caja es un candidato de prefijo que puede sobrevivir tras un fallo. Las flechas eliminan candidatos imposibles sin volver a leer el texto.</StringsFig>
+
+
+<Pregunta q={"¿Por qué un borde permite continuar sin retroceder en el texto?"} respuesta={"El borde es a la vez sufijo de lo ya reconocido y prefijo del patrón; esas letras siguen siendo una coincidencia posible."} />
 
 ## 2. Construir la función prefijo
 
@@ -74,6 +81,9 @@ En $i=5$, `c` falla contra $P[3]$ y luego contra $P[1]$. Los saltos son $3\lefta
 
 <PrefixFunctionSim client:visible />
 
+
+<Pregunta q={"¿Cómo usaríamos la función prefijo para buscar sin probar cada posición desde cero?"} />
+
 ## 3. Buscar con KMP
 
 El estado $k$ ahora es la cantidad de letras del patrón que coinciden con el **sufijo** del texto leído. Tras reportar una coincidencia completa bajamos $k$ de inmediato; así nunca se indexa $P[m]$.
@@ -96,6 +106,9 @@ $\pi(\texttt{aba})=[0,0,1]$. Se lee `a,b,a`: $k=1,2,3$, y se reporta inicio 0. S
 </Practica>
 
 <KmpAnim client:visible />
+
+
+<Pregunta q={"¿Por qué el costo de buscar con KMP es O(n+m) aunque un fallo pueda causar varios saltos?"} respuesta={"El texto avanza una vez por carácter y k solo puede crecer con esos avances; los saltos por fallo lo disminuyen, así que suman O(n). Construir π cuesta O(m)."} />
 
 ## 4. Aplicaciones de π
 

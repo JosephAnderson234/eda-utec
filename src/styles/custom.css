@@ -1650,3 +1650,56 @@ main:has(.so-hero) .content-panel {
 .rush-min { margin-left: auto; font-size: .78rem; color: var(--pg-muted); }
 .rush-foco { display: block; padding-left: calc(5ch + 2.2rem); }
 .rush-break { font-size: .8rem; color: var(--pg-muted); padding: .15rem .7rem .15rem 1.1rem; }
+
+/* ---------- Concepto nuevo (estilo narrativo) ---------- */
+.concepto {
+	margin: 1rem 0;
+	padding: 0.7rem 1rem;
+	border-left: 4px solid var(--pg-c2);
+	border-radius: 0 8px 8px 0;
+	background: color-mix(in srgb, var(--pg-c2) 8%, var(--pg-surface));
+}
+.concepto__t {
+	margin: 0 0 0.25rem !important;
+	font-size: 0.8rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--pg-c2);
+}
+.concepto__t span {
+	text-transform: none;
+	font-size: 0.95rem;
+	color: var(--sl-color-white);
+}
+.concepto__b > :first-child { margin-top: 0; }
+.concepto__b > :last-child { margin-bottom: 0; }
+.historia-mapa ol { margin-top: 0.25rem; }
+
+/* ---------- Preguntas retóricas y de recuperación ---------- */
+.pregunta {
+	margin: 1rem 0;
+	padding: 0.6rem 1rem;
+	border-radius: 8px;
+	border: 1px dashed color-mix(in srgb, var(--pg-c4) 55%, var(--pg-border));
+	background: color-mix(in srgb, var(--pg-c4) 6%, var(--pg-surface));
+}
+.pregunta--recuerda {
+	border-color: color-mix(in srgb, var(--pg-c1) 55%, var(--pg-border));
+	background: color-mix(in srgb, var(--pg-c1) 6%, var(--pg-surface));
+}
+.pregunta__t {
+	margin: 0 !important;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: var(--pg-muted);
+}
+.pregunta__q {
+	margin: 0.2rem 0 0 !important;
+	font-style: italic;
+}
+.pregunta details { margin-top: 0.4rem; }
+.pregunta summary { cursor: pointer; font-size: 0.85rem; color: var(--sl-color-accent); }
+.pregunta details p { margin: 0.3rem 0 0 !important; }

@@ -1,9 +1,10 @@
 ---
 title: 'Vista geométrica y rectángulos independientes'
-description: 'Dynamic Optimality IV (semana 9): repaso de la vista geométrica (satisfacción arboral), rectángulos independientes, rectángulos positivos y negativos, la prueba completa de OPT ≥ |I| + MIS/2 por un argumento de carga, y su papel como herramienta de cotas inferiores.'
+description: 'Dynamic Optimality IV (semana 9) contado como historia: por qué hace falta una cota inferior para OPT, cómo se dibuja una ejecución de BST como puntos, qué son los rectángulos independientes y la prueba completa de OPT ≥ |I| + MIS/2.'
 ---
 
 import EnSimple from '../../../components/EnSimple.astro';
+import Concepto from '../../../components/Concepto.astro';
 import Solucion from '../../../components/Solucion.astro';
 import Fuente from '../../../components/Fuente.astro';
 import Quiz from '../../../components/Quiz.tsx';
@@ -15,114 +16,162 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
-<EnSimple>
-La gran pregunta de esta unidad: **¿existe un árbol binario de búsqueda (BST) que, para cualquier secuencia de búsquedas, sea casi tan bueno como el mejor árbol posible para esa secuencia?** A eso se le llama **optimalidad dinámica**.
-- Para decir «casi tan bueno como el mejor», primero hay que saber **cuánto cuesta el mejor**, y eso es muy difícil de calcular. Lo que sí se puede es demostrar que el mejor cuesta **al menos** cierto valor: una **cota inferior**.
-- Hoy aprendemos una técnica para conseguir cotas inferiores **dibujando**: cada acceso es un punto en un plano (llave, tiempo), y contamos **rectángulos** que no se estorban entre sí. Cada uno obliga a cualquier árbol a hacer al menos medio trabajo extra.
+<EnSimple titulo="Cómo leer esta página">
+Esta página es **una sola historia** que se lee de arriba abajo. Ningún término se usa antes de explicarlo: cada vez que aparece una idea nueva, verás un recuadro **📌 Concepto nuevo** justo en ese lugar, con su significado en palabras simples. Si llegas a una palabra que no entiendes y no tiene recuadro, es que ya se explicó más arriba.
 </EnSimple>
 
-<Rush id="rectangulos" clave={"El teorema $\\text{OPT} \\ge \\lvert I\\rvert + \\tfrac12\\,\\text{MIS}$ (con signo: $\\text{OPT}^\\pm \\ge \\lvert I\\rvert + \\text{MIS}^\\pm$) y qué es un par de rectángulos independientes."} lee={"§1 (ejecución válida ⇔ conjunto arboralmente satisfecho), §2, §3 y el enunciado del §5."} salta={"§4, la prueba del lema: léela en diagonal, sin rehacer cada caso."} haz={"Peldaño 3: 10 rectángulos independientes en 20 accesos, ¿qué afirmas sobre OPT?"} />
+<Rush id="rectangulos" clave={"El teorema $\\text{OPT} \\ge \\lvert I\\rvert + \\tfrac12\\,\\text{MIS}$ (con signo: $\\text{OPT}^\\pm \\ge \\lvert I\\rvert + \\text{MIS}^\\pm$) y qué es un par de rectángulos independientes."} lee={"Capítulos 1 a 5 y el 7. Son la historia completa sin la prueba."} salta={"El capítulo 6, la prueba del lema: léelo en diagonal, quedándote con la idea de los recibos."} haz={"Peldaño 3: 10 rectángulos independientes en 20 accesos, ¿qué afirmas sobre OPT?"} />
 
 <Objetivos
 	objetivos={[
+		'Explicar con tus palabras qué es OPT y por qué hace falta una <strong>cota inferior</strong> para hablar de optimalidad dinámica.',
 		'Decidir si un conjunto de puntos es <strong>arboralmente satisfecho</strong> y qué significa eso para una ejecución de BST.',
 		'Reconocer cuándo dos rectángulos son <strong>independientes</strong> y clasificar un rectángulo como positivo o negativo.',
 		'Reproducir la prueba de $\\text{OPT} \\ge |I| + \\tfrac12\\,\\text{MIS}$: segmento vertical, elección de $p$ y $q$, carga y corolario.',
-		'Explicar por qué esta cota sirve como herramienta aunque calcular el MIS sea NP-difícil.',
 	]}
-	prerrequisitos={[{ t: 'Splay trees, Greedy y la vista geométrica (parcial)', href: '/' }]}
+	prerrequisitos={[{ t: 'Saber qué es un árbol binario de búsqueda (BST) y cómo se busca en él', href: '/' }]}
 	perfiles={['visual', 'socratico', 'feynman']}
 />
 
-## 1. Repaso: la vista geométrica
+<div class="historia-mapa">
 
-En el modelo BST, una búsqueda empieza en la raíz y puede **tocar** nodos (y rotar) con costo 1 por nodo tocado. Una ejecución completa se dibuja como un conjunto de puntos $(x, t)$: «en el tiempo $t$ se tocó la llave $x$». La entrada $I$ es el conjunto de puntos de los **accesos pedidos** (uno por fila).
+**El hilo de la historia, en 8 capítulos:**
 
-**Satisfacción arboral.** Un conjunto de puntos es *arboralmente satisfecho* si, para todo par de puntos que no estén en la misma fila ni columna, el rectángulo que forman contiene **otro** punto del conjunto (en el borde o adentro).
+1. Un árbol que se puede reacomodar, y la pregunta de la unidad.
+2. Por qué necesitamos un **piso**: la cota inferior.
+3. Dibujar una ejecución como puntos en un plano.
+4. Rectángulos vacíos: cada uno obliga a trabajar.
+5. Separar los rectángulos que suben de los que bajan.
+6. La prueba, contada paso a paso.
+7. Juntar las dos mitades: el teorema.
+8. Para qué sirve todo esto.
 
-> **Teorema (de clases anteriores).** Un conjunto de puntos representa una ejecución válida de BST **si y solo si** es arboralmente satisfecho. Por eso $\text{OPT}(I)$ = el menor superconjunto arboralmente satisfecho de $I$.
+</div>
+
+
+<Pregunta q={"Si un BST puede reacomodarse después de cada búsqueda, ¿contra qué costo tendría sentido comparar su desempeño?"} />
+
+## 1. Un árbol que se puede reacomodar
+
+Imagina un **árbol binario de búsqueda** (BST) con las llaves $1, 2, \dots, n$. Alguien te va dando, una por una, las llaves que quiere buscar: primero la 3, después la 2, después la 1… Cada búsqueda empieza en la raíz y baja hasta la llave pedida.
+
+<Concepto termino="Secuencia de accesos">
+La lista de llaves que se buscan, en orden: por ejemplo $3, 2, 1, 4$. Se escribe $x_1, x_2, \dots, x_m$: $x_t$ es la llave que se busca en el instante $t$.
+</Concepto>
+
+<Concepto termino="Costo en el modelo BST (tocar un nodo)">
+Lo único que cuesta es **tocar** un nodo: pasar por él, leerlo o moverlo cuesta 1. Una búsqueda cuesta la cantidad de nodos que toca. El costo total es la suma sobre toda la secuencia.
+</Concepto>
+
+Hasta aquí es un BST normal. Ahora viene la parte interesante: el árbol **se puede reacomodar** mientras trabaja. Si la llave 3 se busca muchísimas veces, conviene subirla cerca de la raíz para que las próximas búsquedas sean baratas.
+
+<Concepto termino="Rotación">
+La operación que reacomoda un BST sin romper el orden de las llaves: un hijo sube a ocupar el lugar de su padre y el padre baja. Solo se puede rotar nodos que se tocaron, así que reacomodar también cuesta.
+</Concepto>
+
+Hay dos maneras de jugar este juego, según cuánto sabes del futuro:
+
+<Concepto termino="Online y offline">
+Un algoritmo **online** conoce solo las búsquedas que ya pasaron; tiene que decidir cómo reacomodarse sin saber qué viene. Uno **offline** conoce la secuencia entera desde el principio, así que puede prepararse a la perfección.
+</Concepto>
+
+<Concepto termino="OPT">
+$\text{OPT}(X)$ es el costo del **mejor BST offline posible** para la secuencia $X$: el que, conociendo todo el futuro, toca la menor cantidad total de nodos. Es el récord imbatible para esa secuencia.
+</Concepto>
+
+Ningún algoritmo real conoce el futuro, así que nadie puede igualar a OPT siempre. Pero sí se puede soñar con quedar **cerca**:
+
+<Concepto termino="Competitivo y optimalidad dinámica">
+Un algoritmo online es **$c$-competitivo** si, para **toda** secuencia, cuesta a lo más $c$ veces OPT (más algo pequeño). Si $c$ es una constante, decimos que es **dinámicamente óptimo**. La gran pregunta abierta de la unidad: **¿existe un BST dinámicamente óptimo?**
+</Concepto>
+
+Ya hay dos candidatos que se cree que lo son, aunque nadie lo ha demostrado. Los vimos antes del parcial; aquí solo necesitas saber que existen:
+
+- **Splay tree**: después de cada búsqueda, sube la llave buscada hasta la raíz con rotaciones.
+- **Greedy**: un algoritmo que se describe con el dibujo del capítulo 3; después de cada búsqueda, toca exactamente lo mínimo para que el dibujo siga siendo válido.
+
+
+<Pregunta q={"¿Por qué conocer toda la secuencia puede reducir el costo de OPT?"} respuesta={"Porque un BST offline puede planear sus reacomodos conociendo los accesos futuros; OPT es el menor costo entre esas estrategias."} />
+
+## 2. Por qué necesitamos un piso
+
+Supón que quieres demostrar que Greedy es dinámicamente óptimo. Tendrías que mostrar que, para toda secuencia, Greedy cuesta $O(\text{OPT})$. Problema: **no sabemos calcular OPT**. Es el mejor árbol entre infinitas estrategias posibles.
+
+La salida es la misma que en una carrera. Si no sabes cuál es el récord mundial, pero puedes demostrar que **nadie puede correr 100 metros en menos de 9 segundos**, y tu corredor hace 9,5, entonces ya sabes que está muy cerca del mejor posible, sea quien sea el mejor.
+
+<Concepto termino="Cota inferior de OPT">
+Un número $L(X)$, que sí sabemos calcular, tal que $\text{OPT}(X) \ge L(X)$ para toda secuencia. Es un **piso**: ningún BST, ni siquiera el offline perfecto, puede costar menos. Si un algoritmo cuesta $O(L(X))$, entonces cuesta $O(\text{OPT}(X))$.
+</Concepto>
+
+**Toda esta página construye un piso.** Para hacerlo, primero necesitamos una forma de ver una ejecución entera de un BST de un vistazo.
+
+
+<Pregunta q={"Si el costo de una ejecución es cuántos nodos toca, ¿cómo podríamos verlo de un vistazo en un dibujo?"} />
+
+## 3. Dibujar una ejecución como puntos
+
+Toma una hoja cuadriculada. El eje horizontal son las **llaves** (de izquierda a derecha, de menor a mayor). El eje vertical es el **tiempo** (cada fila es una búsqueda).
+
+<Concepto termino="Vista geométrica">
+Una ejecución de BST se dibuja como un conjunto de puntos $(x, t)$: hay un punto en $(x, t)$ si **en el instante $t$ se tocó la llave $x$**. El costo de la ejecución es simplemente la **cantidad de puntos**.
+</Concepto>
+
+<Concepto termino="La entrada $I$">
+Los puntos que **sí o sí** aparecen: en la fila $t$, el punto de la llave buscada $(x_t, t)$. Hay exactamente uno por fila. Así que $|I| = m$, la cantidad de búsquedas. Cualquier ejecución dibuja **al menos** esos puntos, y casi siempre más: los nodos tocados en el camino.
+</Concepto>
+
+Ahora la pregunta clave: si te doy un conjunto de puntos cualquiera, ¿puede ser el dibujo de un BST real? No siempre. Para saberlo hay que mirar los rectángulos.
+
+<Concepto termino="Rectángulo inducido por dos puntos">
+Dos puntos $a$ y $b$ que no están en la misma fila ni en la misma columna son esquinas opuestas de un único rectángulo, llamado $ab$. Dos de sus esquinas son $a$ y $b$ (puntos reales); las otras dos son «virtuales»: no tienen por qué ser puntos del conjunto.
+</Concepto>
+
+<Concepto termino="Arboralmente satisfecho">
+Un conjunto de puntos es **arboralmente satisfecho** si **todo** rectángulo inducido por dos de sus puntos contiene **un tercer punto** del conjunto, en el borde o adentro. Un rectángulo que no contiene ninguno se llama **vacío** o **no satisfecho**.
+</Concepto>
+
+La idea intuitiva: si en el instante $t_1$ tocaste $a$ y en $t_2$ tocaste $b$, entre esos dos momentos el árbol tuvo que «conectar» de algún modo esas dos llaves, y eso deja un rastro: algún nodo intermedio tocado. Por eso el teorema de las clases anteriores es:
+
+> **Teorema.** Un conjunto de puntos es una ejecución válida de BST **si y solo si** es arboralmente satisfecho.
 
 <OptimalidadFig fig="satisfecho">
-**Cómo leerlo.** Accesos 3, 2, 1, 4 (ejemplo propio). El rectángulo entre $(3, 1)$ y $(1, 3)$ contiene el punto $(2, 2)$: ese par está satisfecho. Pero el par $(2, 2)$–$(1, 3)$ no tiene ningún otro punto en su rectángulo: los accesos solos **no** son una ejecución válida, y cualquier BST tendrá que tocar nodos extra. Contar cuántos es el juego de las cotas inferiores.
+**Cómo leerlo.** Accesos 3, 2, 1, 4 (ejemplo propio). El rectángulo entre $(3, 1)$ y $(1, 3)$ contiene el punto $(2, 2)$: ese par está satisfecho. Pero el par $(2, 2)$–$(1, 3)$ no tiene ningún otro punto en su rectángulo: es un rectángulo **vacío**. Los accesos solos **no** son una ejecución válida, y cualquier BST tendrá que tocar nodos extra.
 </OptimalidadFig>
 
-**Lo que nos falta.** Ya tenemos un algoritmo *Greedy* conjeturado óptimo, pero ninguna cota inferior demostrada contra la cual medirlo. ¿Cómo se demuestra que **ningún** BST puede hacerlo mejor que cierto valor?
+De aquí sale una frase que vamos a usar todo el rato: **$\text{OPT}(I)$ es la menor cantidad de puntos de un conjunto arboralmente satisfecho que contiene a $I$**. Es decir, OPT = los $|I|$ puntos obligatorios + los puntos extra mínimos que hay que agregar para llenar todos los rectángulos vacíos.
 
-## 2. Rectángulos independientes
+Así que el piso que buscamos se reduce a una pregunta de dibujo: **¿cuántos puntos extra hay que agregar, como mínimo?**
 
-De cualquier par de puntos $a, b$ sale un único rectángulo $ab$. Solo 2 de sus 4 esquinas son puntos reales de la entrada; las otras 2 son «virtuales».
 
-**Definición.** Dos rectángulos son **independientes** si no están arboralmente satisfechos entre sí, y **ninguna esquina de uno está estrictamente dentro del otro**.
+<Pregunta q={"¿Por qué un conjunto de puntos de acceso puede necesitar puntos extra?"} respuesta={"Porque una ejecución válida debe ser arboralmente satisfecha: todo rectángulo inducido por dos puntos necesita un tercer punto en su borde o interior."} />
+
+## 4. Rectángulos vacíos: cada uno obliga a trabajar
+
+Cada rectángulo vacío de $I$ necesita que alguien le ponga un punto adentro. Entonces uno pensaría: «cuento los rectángulos vacíos y ese es el número de puntos extra». No funciona, porque **un solo punto puede llenar varios rectángulos a la vez** si se superponen.
+
+Lo que sí funciona es contar rectángulos que **no se ayudan entre sí**: rectángulos tan separados que ningún punto puede servirle a muchos de ellos a la vez.
+
+<Concepto termino="Rectángulos independientes">
+Dos rectángulos vacíos son **independientes** si **ninguna esquina de uno queda estrictamente dentro del otro**. Pueden estar separados, cruzarse o compartir una esquina; lo prohibido es que una esquina se meta en el interior del otro. Las diapositivas lo dicen así: «no están arboralmente satisfechos entre sí, y ninguna esquina de uno está estrictamente dentro del otro».
+</Concepto>
 
 <OptimalidadFig fig="independientes">
 **Cómo leerlo.** Los dos primeros pares son independientes: separados, o cruzados sin que una esquina caiga adentro del otro. En el tercero, una esquina del rectángulo azul cae estrictamente dentro del violeta: no son independientes.
 </OptimalidadFig>
 
-**Teorema (cota de rectángulos independientes).**
+<Concepto termino="MIS (Maximum Independent Set)">
+El **mayor** conjunto de rectángulos de la entrada que son independientes de a pares. Encontrarlo es un problema **NP-difícil**: no se conoce ningún algoritmo eficiente que lo resuelva siempre. Pero no lo necesitamos exacto, como verás enseguida.
+</Concepto>
 
-$$\text{OPT} \;\ge\; |I| + \tfrac12\,\text{MIS},$$
+Con eso ya se puede enunciar el resultado de la clase:
 
-donde MIS es el **mayor conjunto de rectángulos independientes** que se puede formar sobre la entrada. Calcularlo es un *Maximum Independent Set*, NP-difícil en general; pero no importa: **es una cota inferior, no un algoritmo**. Basta exhibir *algún* conjunto independiente grande para acotar OPT por abajo.
+> **Teorema (cota de rectángulos independientes).** $$\text{OPT} \;\ge\; |I| + \tfrac12\,\text{MIS}.$$
 
-## 3. Rectángulos con signo
+En palabras: además de los $|I|$ puntos obligatorios, todo BST tiene que pagar al menos **medio punto extra por cada rectángulo** de un conjunto independiente.
 
-Según la pendiente entre los dos puntos que lo inducen, un rectángulo es **positivo** (sube hacia la derecha) o **negativo**.
-
-- Un conjunto es **satisfecho positivo** si todos sus rectángulos positivos están arboralmente satisfechos; análogamente, **satisfecho negativo**.
-- $\text{OPT}^+$ = el conjunto satisfecho positivo más chico que contiene a $I$ (análogo $\text{OPT}^-$).
-
-**Lema.** $\text{OPT}^+ \ge |I| + \text{MIS}^+$, donde $\text{MIS}^+$ es el mayor conjunto independiente de rectángulos positivos.
-
-## 4. La prueba del lema, paso a paso
-
-<Predice pregunta="Antes de leer: si $p$ y $q$ son dos puntos de $\text{OPT}^+$ con $p$ a la izquierda y abajo de $q$, y su rectángulo es positivo, ¿qué tiene que pasar para que $\text{OPT}^+$ siga siendo satisfecho positivo?">
-El rectángulo $pq$ tiene que contener **otro punto** de $\text{OPT}^+$. Si $p$ y $q$ se eligen como los puntos «más cercanos» posibles a cada lado de una línea, no puede haber otro punto entre ellos… salvo que estén **en la misma fila**, en cuyo caso el rectángulo es un segmento y no hay nada que satisfacer. Esa es la clave del paso 2.
-</Predice>
-
-Se asumen coordenadas $x$, $y$ distintas (siempre se logra perturbando la entrada). Sea $S$ un MIS de rectángulos positivos.
-
-**Paso 1 · el segmento vertical.** Tomar el **rectángulo más ancho** de $S$ y trazar un segmento vertical que lo cruce de borde a borde **sin tocar ningún otro rectángulo** de $S$. Existe por un argumento de casos sobre cómo los demás pueden relacionarse con el más ancho (por independencia, ninguno tiene una esquina adentro, así que ninguno lo cruza de lado a lado).
-
-**Paso 2 · elegir $p$ y $q$.**
-- $p$: el punto de $\text{OPT}^+$ más a la derecha y arriba, del **lado izquierdo** del segmento (dentro del rectángulo).
-- $q$: el punto de $\text{OPT}^+$ más a la izquierda y abajo, del **lado derecho**, y no por debajo de $p$.
-
-<OptimalidadFig fig="pq">
-**Cómo leerlo.** La línea roja es el segmento del paso 1. $p$ y $q$ son los puntos de $\text{OPT}^+$ más pegados al segmento a cada lado. Deben tener **la misma coordenada $y$**: si no, el rectángulo positivo $pq$ no tendría ningún otro punto adentro (por cómo se eligieron) y no estaría satisfecho, contradicción.
-</OptimalidadFig>
-
-**Paso 3 · la carga.** El segmento horizontal $pq$ cruza el segmento vertical del rectángulo más ancho, que **no pertenece a ningún otro** rectángulo de $S$: así $pq$ no vuelve a ser contado por otro rectángulo. Se le «carga» ese segmento a ese rectángulo.
-
-**El argumento de conteo.** Si en una misma fila hay $k$ segmentos $pq$ consecutivos, a lo más **uno** de los $k + 1$ puntos involucrados pertenece a $I$ (hay un solo acceso por fila). Así, cada segmento «agrega» al menos un punto nuevo, que no es de la entrada. Sumando sobre todas las filas:
-
-$$\text{OPT}^+ \ge |I| + \text{MIS}^+ . \qquad\blacksquare$$
-
-## 5. El corolario: el teorema
-
-Como $\text{OPT}$ tiene que ser satisfecho positivo **y** negativo a la vez:
-
-$$
-\begin{aligned}
-\text{OPT} &\ge \max\{\text{OPT}^+, \text{OPT}^-\} \ge \tfrac12\left(\text{OPT}^+ + \text{OPT}^-\right) \\
-&\ge |I| + \tfrac12\text{MIS}^+ + \tfrac12\text{MIS}^- \;\ge\; |I| + \tfrac12\,\text{MIS},
-\end{aligned}
-$$
-
-porque un MIS se parte en sus rectángulos positivos y negativos ($\text{MIS} \le \text{MIS}^+ + \text{MIS}^-$). Eso prueba el teorema.
-
-<Practica nivel={1} titulo="Resuelto: ¿por qué el promedio y no la suma?">
-$\text{OPT}^+$ y $\text{OPT}^-$ pueden compartir puntos (los de $I$ y los extra). Sumar $\text{OPT}^+ + \text{OPT}^-$ contaría dos veces los puntos de OPT; pero el máximo de dos números siempre es $\ge$ su promedio, y el promedio sí se puede acotar sumando las dos desigualdades del lema y dividiendo por 2. De ahí sale el $\tfrac12$ delante del MIS y el $|I|$ entero (porque $\tfrac12|I| + \tfrac12|I| = |I|$).
-</Practica>
-
-<Practica nivel={2} titulo="Complétalo: los tres hechos que usa el paso 3">
-1. El segmento $pq$ cruza el segmento vertical del rectángulo más ancho, que no toca **\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**; por eso $pq$ se cuenta **\_\_\_\_\_** vez.
-2. En cada fila hay exactamente **\_\_\_** punto(s) de $I$.
-3. Por lo tanto, $k$ segmentos consecutivos en una fila aportan al menos **\_\_** puntos que no son de $I$.
-<Solucion>
-1. ningún otro rectángulo de $S$; una sola vez. 2. uno (un acceso por unidad de tiempo). 3. $k$: hay $k + 1$ puntos y a lo más uno es de $I$.
-</Solucion>
-</Practica>
+¿Y lo del NP-difícil? No importa, porque es un piso: si encuentras a mano **cualquier** conjunto de $k$ rectángulos independientes, entonces $\text{MIS} \ge k$ y ya puedes afirmar $\text{OPT} \ge |I| + k/2$. Un conjunto más pequeño que el máximo solo da un piso más bajo, pero igual de válido.
 
 <Practica nivel={3} titulo="Solo: si encuentras 10 rectángulos independientes en una secuencia de 20 accesos, ¿qué puedes afirmar sobre cualquier BST?">
 <Solucion>
@@ -130,9 +179,99 @@ $\text{MIS} \ge 10$, así que $\text{OPT} \ge 20 + \tfrac12\cdot 10 = 25$: **tod
 </Solucion>
 </Practica>
 
+Ahora toca demostrar el teorema. El $\tfrac12$ es una pista de cómo: la prueba parte el problema en dos mitades.
+
+## 5. Separar los rectángulos que suben de los que bajan
+
+Un rectángulo tiene dos esquinas reales $a$ y $b$. Si unes $a$ con $b$ con una diagonal, esa diagonal sube o baja.
+
+<Concepto termino="Rectángulo positivo y negativo">
+Es **positivo** si la diagonal entre sus dos puntos reales sube hacia la derecha (el punto de la izquierda está más abajo), y **negativo** si baja.
+</Concepto>
+
+Demostrar algo para todos los rectángulos a la vez es difícil. Para una sola orientación es mucho más fácil, así que la estrategia es: **resolver solo los positivos, resolver solo los negativos, y juntar.** Para eso hacen falta versiones «con signo» de las ideas anteriores.
+
+<Concepto termino="Satisfecho positivo, $\text{OPT}^+$ y $\text{MIS}^+$">
+Un conjunto es **satisfecho positivo** si todos sus rectángulos **positivos** tienen un tercer punto (los negativos pueden quedar vacíos). $\text{OPT}^+$ es la menor cantidad de puntos de un conjunto satisfecho positivo que contiene a $I$, y $\text{MIS}^+$ es el mayor conjunto independiente formado solo por rectángulos positivos. Con «negativo» todo es igual: $\text{OPT}^-$ y $\text{MIS}^-$.
+</Concepto>
+
+> **Lema.** $\text{OPT}^+ \ge |I| + \text{MIS}^+$.
+
+Fíjate: aquí **no hay $\tfrac12$**. Con una sola orientación, cada rectángulo independiente obliga a un punto extra **completo**. El $\tfrac12$ aparece recién al juntar las dos mitades, en el capítulo 7.
+
+## 6. La prueba del lema, paso a paso
+
+<Predice pregunta="Antes de leer: si $p$ y $q$ son dos puntos de $\text{OPT}^+$ con $p$ a la izquierda y abajo de $q$, su rectángulo es positivo. ¿Qué tiene que pasar para que $\text{OPT}^+$ siga siendo satisfecho positivo?">
+El rectángulo $pq$ tiene que contener **otro punto** de $\text{OPT}^+$. Si $p$ y $q$ se eligen como los puntos «más cercanos» posibles a cada lado de una línea, no puede haber otro punto entre ellos… salvo que estén **en la misma fila**, en cuyo caso el «rectángulo» es un segmento plano y no hay nada que satisfacer. Esa es la clave del paso 2.
+</Predice>
+
+**El plan de la prueba.** Tomamos un conjunto $S$ de rectángulos positivos independientes de tamaño $\text{MIS}^+$. Vamos a darle a cada rectángulo de $S$ su propio **recibo**: un trocito de la ejecución que demuestra que el árbol tuvo que pagar un punto extra por ese rectángulo. Si los recibos son todos distintos, hay al menos $|S|$ puntos extra, y listo.
+
+<Concepto termino="Argumento de carga">
+Técnica de prueba en la que a cada objeto que queremos contar (aquí, cada rectángulo de $S$) se le **asigna** algo que cuesta (aquí, un punto extra), cuidando que dos objetos distintos nunca reciban lo mismo. Así el costo total es al menos la cantidad de objetos. Es como verificar que cada cliente pagó revisando que cada uno tiene su propio recibo.
+</Concepto>
+
+<Concepto termino="Perturbar la entrada">
+Mover los puntos una distancia minúscula para que no haya dos con la misma $x$ ni la misma $y$. No cambia qué rectángulos son vacíos o independientes, y evita casos especiales molestos. Siempre se puede hacer, así que lo asumimos.
+</Concepto>
+
+**Paso 1 · el segmento vertical.** Tomamos el **rectángulo más ancho** de $S$ y trazamos una línea vertical que lo cruce de arriba abajo **sin tocar ningún otro rectángulo** de $S$. ¿Por qué existe esa línea? Por dos razones juntas: como es el **más ancho**, ningún otro rectángulo lo atraviesa completo de izquierda a derecha; y como son **independientes**, ninguno mete una esquina en su interior. Entonces los demás solo pueden asomarse por los costados, y en el medio queda una franja libre. (Las diapositivas lo justifican con un análisis de casos.)
+
+**Paso 2 · elegir $p$ y $q$.** Miramos los puntos de $\text{OPT}^+$ dentro del rectángulo, a cada lado de la línea:
+- $p$: el punto más a la derecha y arriba del **lado izquierdo**;
+- $q$: el punto más a la izquierda y abajo del **lado derecho**, que no esté por debajo de $p$.
+
+<OptimalidadFig fig="pq">
+**Cómo leerlo.** La línea roja es el segmento del paso 1. $p$ y $q$ son los puntos de $\text{OPT}^+$ más pegados a la línea, uno a cada lado. Deben tener **la misma coordenada $y$**: si no, el rectángulo positivo $pq$ no tendría ningún otro punto adentro (por cómo se eligieron) y $\text{OPT}^+$ no sería satisfecho positivo, una contradicción.
+</OptimalidadFig>
+
+Así que $p$ y $q$ están en la misma fila, y el segmento horizontal $pq$ cruza la línea roja. **Ese segmento es el recibo del rectángulo.**
+
+**Paso 3 · cada recibo es único.** El segmento $pq$ cruza la línea vertical, y esa línea no toca ningún otro rectángulo de $S$. Por lo tanto ningún otro rectángulo puede reclamar ese mismo segmento: cada rectángulo de $S$ recibe un segmento distinto.
+
+**El conteo final.** Queda pasar de segmentos a puntos. Mira una fila: si en ella hay $k$ segmentos recibo seguidos, involucran $k + 1$ puntos. Pero en cada fila hay **un solo** punto de $I$ (una búsqueda por instante). Entonces al menos $k$ de esos puntos son extra. Cada recibo aporta al menos un punto que no es de la entrada. Sumando todas las filas:
+
+$$\text{OPT}^+ \ge |I| + |S| = |I| + \text{MIS}^+ . \qquad\blacksquare$$
+
+<Practica nivel={2} titulo="Complétalo: los tres hechos que usa el paso 3">
+1. El segmento $pq$ cruza la línea vertical del rectángulo más ancho, que no toca **\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**; por eso $pq$ se cuenta **\_\_\_\_\_** vez.
+2. En cada fila hay exactamente **\_\_\_** punto(s) de $I$.
+3. Por lo tanto, $k$ segmentos consecutivos en una fila aportan al menos **\_\_** puntos que no son de $I$.
+<Solucion>
+1. ningún otro rectángulo de $S$; una sola vez. 2. uno (una búsqueda por unidad de tiempo). 3. $k$: hay $k + 1$ puntos y a lo más uno es de $I$.
+</Solucion>
+</Practica>
+
+## 7. Juntar las dos mitades: el teorema
+
+Un BST real tiene que satisfacer **todos** los rectángulos, positivos y negativos. Así que su ejecución es satisfecha positiva **y** satisfecha negativa a la vez, y por eso cuesta al menos lo que cada mitad por separado:
+
+$$
+\begin{aligned}
+\text{OPT} &\ge \max\{\text{OPT}^+, \text{OPT}^-\} \ge \tfrac12\left(\text{OPT}^+ + \text{OPT}^-\right) \\
+&\ge \tfrac12\left(|I| + \text{MIS}^+\right) + \tfrac12\left(|I| + \text{MIS}^-\right) \\
+&= |I| + \tfrac12\left(\text{MIS}^+ + \text{MIS}^-\right) \;\ge\; |I| + \tfrac12\,\text{MIS}.
+\end{aligned}
+$$
+
+El último paso usa que un conjunto independiente cualquiera se parte en sus rectángulos positivos y negativos, y cada parte sigue siendo independiente: $\text{MIS} \le \text{MIS}^+ + \text{MIS}^-$. Eso prueba el teorema del capítulo 4.
+
+<Practica nivel={1} titulo="Resuelto: ¿por qué el promedio y no la suma?">
+$\text{OPT}^+$ y $\text{OPT}^-$ hablan del mismo dibujo: un mismo punto puede servirles a las dos mitades. Sumar $\text{OPT}^+ + \text{OPT}^-$ contaría dos veces esos puntos, así que $\text{OPT} \ge \text{OPT}^+ + \text{OPT}^-$ sería falso. Lo que sí vale es que el máximo de dos números es al menos su promedio, y el promedio se acota sumando las dos desigualdades del lema y dividiendo por 2. De ahí salen el $\tfrac12$ delante del MIS y el $|I|$ entero ($\tfrac12|I| + \tfrac12|I| = |I|$).
+</Practica>
+
+## 8. Para qué sirve todo esto
+
+Volvamos al capítulo 2. Queríamos un piso para OPT, y ahora tenemos uno: contar rectángulos independientes. Este método no es un algoritmo, es una **vara de medir**. Si un algoritmo cuesta $O(\text{piso})$ para toda secuencia, entonces es $O(1)$-competitivo.
+
+En las dos páginas siguientes, el método produce pisos concretos y fáciles de calcular:
+
+- **Wilber-1** y **Wilber-2** (página siguiente): dos maneras sistemáticas de encontrar muchos rectángulos independientes contando «alternancias».
+- **Tango trees** (la página después): un BST online que se analiza justo contra Wilber-1, y por eso se sabe que es $O(\lg\lg n)$-competitivo.
+
 <Practica nivel={4} titulo="Variante: ¿sirve la cota para medir un algoritmo concreto, como Splay o Greedy?">
 <Solucion>
-Sí, como **vara de medir**: si un algoritmo cuesta $O(\text{cota})$ para toda secuencia, es $O(1)$-competitivo. Ninguna de las cotas de rectángulos (Wilber-1, Wilber-2, Signed-Greedy) es en sí un algoritmo; los algoritmos (Tango, Splay, Greedy) se analizan **contra** ellas. Lo vemos en las páginas siguientes.
+Sí, como **vara de medir**: si un algoritmo cuesta $O(\text{cota})$ para toda secuencia, es $O(1)$-competitivo. Ninguna de las cotas de rectángulos (Wilber-1, Wilber-2, Signed-Greedy) es en sí un algoritmo; los algoritmos (Tango, Splay, Greedy) se analizan **contra** ellas.
 </Solucion>
 </Practica>
 
@@ -142,6 +281,7 @@ Sí, como **vara de medir**: si un algoritmo cuesta $O(\text{cota})$ para toda s
 		{ mal: '«Dos rectángulos que se cruzan nunca son independientes.»', bien: 'Pueden cruzarse siempre que <strong>ninguna esquina</strong> de uno quede estrictamente dentro del otro.' },
 		{ mal: '«OPT ≥ |I| + MIS.»', bien: 'Con signo sí: $\\text{OPT}^+ \\ge |I| + \\text{MIS}^+$. Sin signo se pierde un factor: $\\text{OPT} \\ge |I| + \\frac12\\text{MIS}$.' },
 		{ mal: '«p y q pueden estar en filas distintas.»', bien: 'Si lo estuvieran, su rectángulo positivo no tendría otro punto adentro: contradicción con que $\\text{OPT}^+$ es satisfecho positivo.' },
+		{ mal: '«OPT es lo que cuesta Splay o Greedy.»', bien: 'OPT es el mejor BST <strong>offline</strong>, que conoce toda la secuencia. Splay y Greedy son online y solo se conjetura que quedan a un factor constante de OPT.' },
 	]}
 />
 
@@ -149,23 +289,23 @@ Sí, como **vara de medir**: si un algoritmo cuesta $O(\text{cota})$ para toda s
 	client:visible
 	id="rectangulos"
 	preguntas={[
+		{ q: '¿Qué es $\\text{OPT}(X)$?', opts: ['el costo de un splay tree', 'el costo del mejor BST que conoce toda la secuencia de antemano', 'la altura del árbol', 'el número de búsquedas'], ok: 1 },
 		{ q: 'Un conjunto de puntos es una ejecución válida de BST si y solo si…', opts: ['tiene un punto por fila', 'es arboralmente satisfecho', 'no tiene rectángulos', 'es independiente'], ok: 1 },
 		{ q: '¿Cuántas esquinas de un rectángulo $ab$ son puntos reales?', opts: ['4', '2', '1', '0'], ok: 1 },
 		{ q: 'La cota de rectángulos independientes dice…', opts: ['$\\text{OPT} \\le |I| + \\text{MIS}$', '$\\text{OPT} \\ge |I| + \\frac12\\text{MIS}$', '$\\text{OPT} = \\Theta(\\text{MIS})$', '$\\text{OPT} \\ge 2\\,\\text{MIS}$'], ok: 1 },
 		{ q: 'En la prueba, ¿por qué $p$ y $q$ tienen la misma $y$?', opts: ['por perturbación', 'si no, el rectángulo $pq$ no estaría satisfecho', 'por la independencia', 'porque son de $I$'], ok: 1 },
-		{ q: '¿Por qué un segmento $pq$ no se cuenta dos veces?', opts: ['porque es horizontal', 'porque cruza el segmento vertical del rectángulo más ancho, que no toca a ningún otro de $S$', 'porque $p\\in I$', 'porque MIS es máximo'], ok: 1 },
-		{ q: 'El MIS de rectángulos…', opts: ['se calcula en $O(n)$', 'es NP-difícil en general, pero sirve como cota', 'es un algoritmo de BST', 'siempre es 0'], ok: 1 },
+		{ q: '¿Por qué un segmento $pq$ no se cuenta dos veces?', opts: ['porque es horizontal', 'porque cruza la línea vertical del rectángulo más ancho, que no toca a ningún otro de $S$', 'porque $p\\in I$', 'porque MIS es máximo'], ok: 1 },
 	]}
 />
 
 <Feynman
-	consigna="Explica la prueba de $\text{OPT}^+ \ge |I| + \text{MIS}^+$ en cinco pasos, como si la escribieras en el examen."
+	consigna="Cuenta la historia completa en cinco frases, como si se la explicaras a un compañero que no vino a clase: qué es OPT, por qué necesitamos un piso, cómo se dibuja una ejecución, qué son los rectángulos independientes y por qué cada uno obliga a pagar."
 	claves={[
-		'Perturbar para coordenadas distintas; tomar un MIS $S$ de rectángulos positivos.',
-		'Paso 1: segmento vertical que cruza el más ancho de $S$ sin tocar los demás.',
-		'Paso 2: $p$ (izquierda, lo más a la derecha y arriba) y $q$ (derecha, lo más a la izquierda y abajo, no debajo de $p$) tienen la misma $y$, o el rectángulo $pq$ no estaría satisfecho.',
-		'Paso 3: cada $pq$ se carga a un único rectángulo; en una fila, $k$ segmentos tienen $k+1$ puntos y solo uno es de $I$.',
-		'Corolario: promedio de $\\text{OPT}^+$ y $\\text{OPT}^-$ da $|I| + \\frac12\\text{MIS}$.',
+		'OPT es el costo del mejor BST offline; no se sabe calcular, por eso se buscan cotas inferiores (pisos).',
+		'Una ejecución es un conjunto de puntos (llave, tiempo); es válida si y solo si es arboralmente satisfecha.',
+		'Los rectángulos vacíos obligan a agregar puntos; si son independientes, ningún punto sirve a muchos a la vez.',
+		'Con una sola orientación, cada rectángulo recibe su propio segmento $pq$ (recibo), que aporta un punto extra: $\\text{OPT}^+ \\ge |I| + \\text{MIS}^+$.',
+		'Promediando positivos y negativos: $\\text{OPT} \\ge |I| + \\frac12\\text{MIS}$.',
 	]}
 />
 

@@ -17,6 +17,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import GrafosFig from '../../../components/fig/GrafosFig.astro';
 import Rush from '../../../components/Rush.astro';
 import CentroideAnim from '../../../components/anim/CentroideAnim.tsx';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Imagina cortar una red de pasillos por una sala central. Al cerrarla, ningún grupo restante debe tener más de la mitad de las salas. Repites el corte dentro de cada grupo: así puedes razonar sobre caminos que cruzan una sala separadora sin examinar toda la red cada vez.
@@ -30,6 +31,9 @@ Imagina cortar una red de pasillos por una sala central. Al cerrarla, ningún gr
   'Contar caminos de longitud fija y mantener el marcado más cercano.',
   'Elegir entre centroides y Heavy-Light según la consulta.'
 ]} prerrequisitos={[{t:'RMQ, cartesian tree y LCA',href:'/estaticos/rmq-lca/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
+
+
+<Pregunta q={"¿Qué nodo permitiría partir un árbol en componentes que no sean demasiado grandes?"} />
 
 ## 1. El nodo que separa por mitades
 
@@ -54,6 +58,9 @@ centroide(r):
 ```
 
 **Correctitud** sigue de la demostración anterior. **Complejidad:** un DFS para tamaños y un descenso por un camino, $O(s)$ tiempo en esa componente.
+
+
+<Pregunta q={"¿Por qué el descenso hacia un hijo de más de la mitad termina en un centroide?"} respuesta={"Al detenerse ningún hijo supera la mitad; si se descendió, la componente hacia el padre también es menor que la mitad."} />
 
 ## 2. Recursión y árbol de centroides
 
@@ -82,6 +89,9 @@ descomponer(r, padreC, nivel):
 
 <CentroideAnim client:visible />
 
+
+<Pregunta q={"Si retiramos centroides recursivamente, ¿dónde se cuenta un camino entre componentes distintas?"} />
+
 ## 3. Contar caminos de longitud fija
 
 Para contar caminos de longitud $k$, procesa un centroide $c$. Recorre cada componente vecina por separado y mide la distancia $d$ de sus nodos a $c$. Antes de incorporar una componente, `cnt[t]` guarda cuántos nodos de las componentes **ya procesadas**, y el propio $c$, están a distancia $t$.
@@ -91,6 +101,9 @@ Para cada nodo actual a distancia $d$, suma `cnt[k−d]` a la respuesta. Luego i
 **Correctitud.** Un par contado tiene extremos en componentes diferentes, o uno es $c$; por tanto, su camino pasa por $c$ y su longitud es la suma de las dos distancias. El orden «consultar antes de incorporar» evita pares dentro de una misma componente, que se contarán en una llamada recursiva. Cada camino aparece en el primer centroide que separa sus extremos, exactamente una vez.
 
 **Complejidad.** Si las distancias se limitan a $k$ y `cnt` se limpia solo en índices tocados, cada nivel hace $O(n)$ trabajo: $O(n\lg n)$ tiempo y $O(n)$ espacio. Para CSES 2080, también puede utilizarse un arreglo de frecuencias de longitud $k+1$.
+
+
+<Pregunta q={"¿Por qué se consultan las distancias de una componente antes de incorporarlas a cnt?"} respuesta={"Así cnt solo contiene nodos del centroide y de componentes ya procesadas. Cada par contado cruza el centroide, mientras los pares de una misma componente quedan para la llamada recursiva."} />
 
 ## 4. Marcado más cercano
 

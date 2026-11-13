@@ -15,6 +15,7 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 - **B-Tree:** en vez de un árbol donde cada nodo pregunta «¿izquierda o derecha?», cada nodo es **una caja llena de claves** (tantas como caben en un bloque). Con un viaje al depósito traes la caja y eliges **entre cientos de caminos** a la vez. Por eso el árbol es bajito: 3 o 4 niveles para mil millones de claves.
@@ -34,9 +35,15 @@ import Rush from '../../../components/Rush.astro';
 	perfiles={['visual', 'laboratorio', 'debate']}
 />
 
+
+<Pregunta q={"¿Qué desperdicia una búsqueda en un árbol binario cuyos nodos están dispersos en disco?"} />
+
 ## 1. Un árbol binario en disco: el problema
 
 Si los nodos de un árbol binario de búsqueda están repartidos por el disco, **cada paso** de la búsqueda trae un bloque nuevo para leer **una sola clave**. Un árbol balanceado cuesta $\Theta(\lg N)$ transferencias por búsqueda: **peor** que la búsqueda binaria sobre un arreglo ($\lg(N/B)$).
+
+
+<Pregunta q={"¿Por qué un árbol binario balanceado puede gastar una transferencia por nivel?"} respuesta={"Cada nodo del camino puede estar en un bloque distinto, aunque la búsqueda solo lea una clave de cada bloque."} />
 
 ## 2. La idea: nodos del tamaño de un bloque
 
@@ -56,6 +63,9 @@ Un nodo $=$ un bloque: hasta $B$ claves ordenadas y hasta $B + 1$ hijos (uno por
 Cada nodo tiene al menos $\lceil (B+1)/2\rceil$ hijos, así que con $N$ claves la altura es $O(\log_{B+1} N)$: unas $\lg(B+1)$ veces menos que la del árbol binario. **Buscar cuesta $\Theta(\log_{B+1} N)$ transferencias: óptimo.**
 
 Con $N = 10^9$ y $B = 10^3$: 3 o 4 niveles, contra 30 del árbol binario y 20 de la búsqueda binaria.
+
+
+<Pregunta q={"Si un nodo guarda B claves, ¿qué ocurre cuando una inserción intenta guardar una más?"} />
 
 ## 3. Insertar: partir un nodo lleno
 
@@ -78,6 +88,9 @@ Buscar, insertar y eliminar: $O(\log_{B+1} N)$ transferencias.
 - 98 va a $[97, 99]$ → $[97, 98, 99]$: cabe, no se parte nada. Ejemplo propio.
 </Solucion>
 </Practica>
+
+
+<Pregunta q={"¿Por qué dividir la raíz mantiene todas las hojas a la misma profundidad?"} respuesta={"La división crea una raíz nueva sobre los dos nodos resultantes; todas las hojas anteriores bajan un nivel por igual."} />
 
 ## 4. ¿Y si ordenamos con un B-Tree?
 

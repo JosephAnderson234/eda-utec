@@ -15,6 +15,7 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import EnterosFig from '../../../components/fig/EnterosFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Un **B-tree** es rápido porque cada nodo tiene muchas llaves y elige entre muchos caminos de una vez. El problema: para elegir, hay que comparar la consulta con **todas** las llaves del nodo, y eso cuesta.
@@ -40,6 +41,9 @@ Un **B-tree** es rápido porque cada nodo tiene muchas llaves y elige entre much
 	perfiles={['visual', 'laboratorio', 'socratico']}
 />
 
+
+<Pregunta q={"¿Qué ganaría un árbol de muchos hijos si eligiera el hijo correcto en tiempo constante?"} />
+
 ## 1. La idea general: todo el trabajo está en el nodo
 
 Un **B-tree** con hasta $k = w^{1/5}$ llaves por nodo tiene altura
@@ -51,6 +55,9 @@ Cualquier potencia pequeña de $w$ serviría; se elige $1/5$ para que las cuenta
 <Predice pregunta="¿Cuánto cuesta, ingenuamente, buscar $q$ entre las $k = w^{1/5}$ llaves de un nodo? ¿Por qué no basta con «leerlas»?">
 Las $k$ llaves de $w$ bits ocupan $k\cdot w = w^{6/5} > w$ bits: **ni siquiera caben en una palabra**, así que leerlas ya cuesta más de $O(1)$ operaciones de palabra. Si logramos resolver cada nodo en $O(1)$, el predecesor completo cuesta $O(\log_w n)$: todo el trabajo está en el nodo. Hay que **comprimir** las llaves.
 </Predice>
+
+
+<Pregunta q={"¿Por qué la ramificación por sí sola no garantiza una búsqueda rápida?"} respuesta={"Aunque reduce la altura, buscar dentro de cada nodo entre sus llaves también cuesta tiempo; el fusion tree necesita resolver ese paso en O(1)."} />
 
 ## 2. ¿Cuántos bits de una llave importan? El sketch
 
@@ -69,6 +76,9 @@ Dos llaves $x < x'$ difieren por primera vez en algún bit $c$. Ese bit es justo
 $$\text{sk}(x_0) < \text{sk}(x_1) < \cdots < \text{sk}(x_{k-1}).$$
 
 **Todos los sketches caben en una palabra:** $k \cdot r \le k^2 = w^{2/5} \ll w$ bits. El nodo guarda un solo número con los sketches de todas sus llaves.
+
+
+<Pregunta q={"Si solo conservamos los bits que distinguen las llaves guardadas, ¿qué podría fallar con una consulta nueva?"} />
 
 ## 3. El problema: el sketch de $q$ puede mentir
 
@@ -135,6 +145,9 @@ Aquí el sketch de $q$ (11) lo ubicaba junto a $1111$, que es **mayor** que $q$:
 </Practica>
 
 Faltan **tres ingredientes en $O(1)$**: calcular $\text{sk}(q)$, contar llaves con sketch menor o igual, y msb.
+
+
+<Pregunta q={"¿Por qué el sketch de una consulta nueva puede señalar un lugar equivocado?"} respuesta={"Los bits del sketch solo distinguen las llaves guardadas. Una consulta puede separarse de ellas en un bit que no se conservó; por eso se usa el prefijo común más largo para corregir su posición."} />
 
 ## 4. Sketch con una multiplicación
 

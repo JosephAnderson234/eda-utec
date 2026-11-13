@@ -15,6 +15,7 @@ import Feynman from '../../../components/tutor/Feynman.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import EnterosFig from '../../../components/fig/EnterosFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 La vEB de la página anterior es rápida pero **reserva una casilla por cada número posible**. Las dos mejoras de hoy:
@@ -36,9 +37,15 @@ La vEB de la página anterior es rápida pero **reserva una casilla por cada nú
 	perfiles={['visual', 'laboratorio', 'socratico', 'feynman']}
 />
 
+
+<Pregunta q={"Si una vEB reserva espacio para todo el universo, ¿qué podríamos guardar solo para las llaves presentes?"} />
+
 ## 1. Ahorrar espacio en la vEB: dos caminos
 
 Se podría seguir refinando la vEB (no guardar clusters vacíos, usar hash): con refinamientos más complejos (Mehlhorn y Näher) se llega a $\Theta(n)$. En clase se tomó **otro camino**: reducir el problema a una estructura más simple (X-fast) y luego aplicar **indirección** (Y-fast). Para eso hace falta mirar la vEB de otra forma.
+
+
+<Pregunta q={"¿Por qué la vEB clásica puede gastar mucho espacio aunque S tenga pocas llaves?"} respuesta={"Reserva clusters para el universo completo, incluso cuando están vacíos; su espacio depende de u y no de n."} />
 
 ## 2. La vista de árbol
 
@@ -72,6 +79,9 @@ y el punto donde cambia de 1 a 0 se puede encontrar con **búsqueda binaria sobr
 - **Espacio:** $\Theta(u)$: el árbol tiene $2u - 1$ nodos.
 
 Es la misma consulta que la vEB, pero con actualización más cara. Hay que arreglar el espacio.
+
+
+<Pregunta q={"Si en una ruta los valores pasan de unos a ceros una sola vez, ¿cómo hallaríamos rápido ese cambio?"} />
 
 ## 3. X-fast tree: guardar solo los nodos que valen 1
 
@@ -141,6 +151,9 @@ Tiempo $\Theta(w)$ por actualización: hay que tocar toda la ruta, igual que en 
 <Predice pregunta="¿Cómo evitar pagar $w$ por actualización y $w$ de espacio por llave, sin perder el $O(\lg w)$ de la consulta?">
 Haciendo que el X-fast tree guarde solo **$n/w$ llaves**. Si cada llave del X-fast representa a $\Theta(w)$ llaves reales, el espacio total es $(n/w)\cdot w = n$, y la actualización cara (de costo $w$) solo ocurre de vez en cuando. Eso es **indirección**.
 </Predice>
+
+
+<Pregunta q={"¿Por qué basta buscar el último prefijo presente para ubicar un sucesor?"} respuesta={"El siguiente bit indica qué hijo falta; el mínimo del otro hijo o el siguiente elemento de la lista ordenada da el sucesor."} />
 
 ## 4. Y-fast tree: indirección
 

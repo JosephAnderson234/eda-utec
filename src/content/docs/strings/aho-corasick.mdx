@@ -16,6 +16,7 @@ import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Piensa en buscar mil palabras en un libro. KMP una por una leería el libro mil veces. Un **trie** comparte los comienzos de esas palabras, como un árbol de carpetas. Los **enlaces de falla** dicen a qué comienzo todavía útil saltar cuando la siguiente letra no encaja. Aho–Corasick combina ambas ideas y lee el libro una sola vez.
@@ -29,6 +30,9 @@ Piensa en buscar mil palabras en un libro. KMP una por una leería el libro mil 
   'Buscar en $O(n+z)$ y contar ocurrencias con propagación inversa por BFS.',
 ]} prerrequisitos={[{t:'Función prefijo y KMP',href:'/strings/kmp/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
 
+
+<Pregunta q={"Si buscamos muchos patrones, ¿cómo evitar leer el texto una vez por cada uno?"} />
+
 ## 1. Trie: guardar prefijos comunes una sola vez
 
 Un **trie** es un árbol enraizado. Cada arista lleva un carácter; de un nodo no salen dos aristas con el mismo carácter. El camino desde la raíz forma un prefijo y un nodo **terminal** marca una palabra completa. Insertar o buscar una palabra cuesta $O(|P|)$. Si hay $N$ nodos y los patrones suman $M$ caracteres, $N\le 1+M$.
@@ -36,6 +40,9 @@ Un **trie** es un árbol enraizado. Cada arista lleva un carácter; de un nodo n
 Para `he`, `she`, `his` y `hers`, hay 10 nodos incluida la raíz. El prefijo `h` se comparte entre tres patrones.
 
 <StringsFig fig="trie">**Cómo leerlo.** Cada círculo nombra el prefijo de su camino desde la raíz $\varepsilon$. Los círculos verdes son patrones completos; `he` también puede ser prefijo de `hers`.</StringsFig>
+
+
+<Pregunta q={"¿Por qué un trie ahorra nodos cuando varios patrones empiezan igual?"} respuesta={"Esos patrones comparten un solo camino para su prefijo común y se separan recién donde difieren."} />
 
 ## 2. El estado y los enlaces de falla
 
@@ -50,6 +57,9 @@ En particular, `s` es sufijo de `hers` y prefijo de `she`; por eso su enlace no 
 <Predice pregunta="Tras leer ushe, el estado es she. ¿Qué patrones terminan ahí?">
 Terminan `she` en la posición 3 y `he` en la misma posición: $\operatorname{fail}(\texttt{she})=\texttt{he}$, que es terminal.
 </Predice>
+
+
+<Pregunta q={"Si una letra no tiene transición desde el estado actual, ¿qué prefijo aún podría servir?"} />
 
 ## 3. Construir el autómata completo
 
@@ -90,6 +100,9 @@ Cada vuelta del segundo bucle produce una ocurrencia. Si se reportan $z$ ocurren
 <Practica nivel={1} titulo="Resuelto: he, she, his, hers en ushers">
 Los estados tras `u,s,h,e,r,s` son $\varepsilon,\texttt{s},\texttt{sh},\texttt{she},\texttt{her},\texttt{hers}$. En `she` se reportan `she` (inicio 1) y `he` (inicio 2). En `hers` se reporta `hers` (inicio 2). `his` no aparece.
 </Practica>
+
+
+<Pregunta q={"¿Por qué enumerar z ocurrencias cuesta O(n+z) tras construir el autómata?"} respuesta={"Cada carácter del texto usa una transición y cada paso por un enlace de diccionario reporta una ocurrencia. No se recorren fallas que no producen una respuesta."} />
 
 ## 4. Contar sin enumerar
 

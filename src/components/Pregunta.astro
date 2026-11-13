@@ -1,0 +1,24 @@
+---
+/**
+ * Pregunta retórica o de recuperación. Sin `respuesta` es retórica (hace pensar antes de seguir leyendo).
+ * Con `respuesta` se puede desplegar: sirve para recordar lo leído antes de verlo.
+ */
+import { tex } from './tutor/tex';
+interface Props {
+	q: string;
+	respuesta?: string;
+	tipo?: 'retorica' | 'recuerda';
+}
+const { q, respuesta, tipo = respuesta ? 'recuerda' : 'retorica' } = Astro.props;
+const icono = tipo === 'recuerda' ? '🧠 Recuerda sin mirar' : '🤔 Piénsalo';
+---
+<aside class={`pregunta pregunta--${tipo} not-content`}>
+	<p class="pregunta__t">{icono}</p>
+	<p class="pregunta__q" set:html={tex(q)} />
+	{respuesta && (
+		<details>
+			<summary>Ver respuesta</summary>
+			<p set:html={tex(respuesta)} />
+		</details>
+	)}
+</aside>

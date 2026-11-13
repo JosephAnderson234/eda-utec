@@ -16,6 +16,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import OptimalidadFig from '../../../components/fig/OptimalidadFig.astro';
 import Rush from '../../../components/Rush.astro';
 import WilberAnim from '../../../components/anim/WilberAnim.tsx';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Las dos cotas de Wilber son dos formas **concretas y calculables** de encontrar muchos rectángulos independientes, y por lo tanto de decir «ningún árbol puede costar menos que esto».
@@ -37,6 +38,9 @@ Las dos cotas de Wilber son dos formas **concretas y calculables** de encontrar 
 	perfiles={['laboratorio', 'visual', 'socratico']}
 />
 
+
+<Pregunta q={"Si OPT es difícil de calcular, ¿qué patrón obligatorio podríamos contar en cualquier BST?"} />
+
 ## 1. Wilber-2
 
 **Idea de análisis.** Para cada punto $p$ (un acceso): mira los puntos **«visibles» hacia abajo** (anteriores en el tiempo) — aquellos cuyo rectángulo con $p$ no contiene ningún otro punto —, ordenados por $y$ decreciente, y cuenta las **alternancias de signo** de $x_i - p$ (si quedan a la izquierda o a la derecha de $p$).
@@ -50,6 +54,9 @@ Las dos cotas de Wilber son dos formas **concretas y calculables** de encontrar 
 - **Conjetura:** se cree que $\text{Wilber-2} = \Theta(\text{OPT})$. **Abierto.**
 - **Optimalidad llave-independiente:** si las llaves fueran «sin significado» (se pudieran permutar al azar), entonces $\text{OPT} = \Theta(\text{cota del conjunto de trabajo})$. Por eso los **Splay Trees son óptimos llave-independientes**.
 - **El porqué (esbozo):** bajo una permutación aleatoria, $E[\text{Wilber-2}(x_i)] = \Theta(\lg t_i)$, donde $t_i$ es el número de llaves distintas accedidas desde el último acceso a $x_i$: el número esperado de cambios de máximo ya es la cota del conjunto de trabajo, que Splay alcanza.
+
+
+<Pregunta q={"¿Por qué una cota inferior no tiene que describir un algoritmo que podamos ejecutar?"} respuesta={"Solo debe demostrar un costo que toda ejecución válida debe pagar, incluso la óptima."} />
 
 ## 2. Wilber-1: la que usaremos con Tango Trees
 
@@ -72,6 +79,9 @@ Raíz: izq, izq, izq, der, der, der → 1 alternancia. Nodo 1: izq, der → 1. N
 </Solucion>
 </Practica>
 
+
+<Pregunta q={"¿Qué secuencia obligaría a alternar de lado muchas veces en un árbol de referencia?"} />
+
 ## 3. Un caso extremo: la secuencia bit-reversal
 
 **Construcción.** Toma $0, 1, 2, \dots$ en binario e **invierte los bits** de cada uno:
@@ -89,6 +99,9 @@ En cada **nivel** del árbol, los subárboles son disjuntos y suman $\approx n$ 
 Wilber-1 es cota inferior para **todo** BST, no solo para el árbol de referencia. Como en este ejemplo da $\Theta(n\lg n)$, ningún BST, ni siquiera uno que conozca la secuencia y rote libremente, puede bajar de $\Omega(n\lg n)$. El árbol de referencia solo es la «regla» con la que se mide.
 </Solucion>
 </Practica>
+
+
+<Pregunta q={"¿Por qué bit-reversal provoca alternancias a lo largo de los niveles del árbol perfecto?"} respuesta={"Al invertir los bits del contador, el bit que decide el lado de la raíz cambia en cada paso y los de los niveles siguientes también cambian regularmente. Cada nivel aporta del orden de n alternancias en total."} />
 
 ## 4. La consecuencia y el límite de la técnica
 

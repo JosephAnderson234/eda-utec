@@ -17,6 +17,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import EstaticosFig from '../../../components/fig/EstaticosFig.astro';
 import Rush from '../../../components/Rush.astro';
 import SparseTableAnim from '../../../components/anim/SparseTableAnim.tsx';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Tienes las temperaturas de cada día del año y te preguntan **miles de veces**: «¿qué día fue el más frío entre el día $i$ y el día $j$?». Los datos **no cambian**, así que vale la pena prepararse antes.
@@ -37,6 +38,9 @@ Tienes las temperaturas de cada día del año y te preguntan **miles de veces**:
 	perfiles={['visual', 'laboratorio', 'detective', 'feynman']}
 />
 
+
+<Pregunta q={"Si el arreglo nunca cambia y habrá muchas consultas, ¿cuánto trabajo conviene adelantar?"} />
+
 ## 1. El problema y cómo medir una solución
 
 Dado un arreglo $A[0..n-1]$ **estático** (no cambia), responder
@@ -54,6 +58,9 @@ Una solución se mide con el par $\langle P(n), Q(n) \rangle$: tiempo de **prepr
 | Segment tree | $\langle O(n), O(\lg n) \rangle$ | paga por actualizaciones que nunca se usan |
 
 Se busca casi $n$ de preprocesamiento y una consulta que **no dependa** de $j - i$.
+
+
+<Pregunta q={"¿Por qué devolver el índice del mínimo es más útil que devolver solo su valor?"} respuesta={"Con el índice se recupera el valor y también se sabe dónde está el mínimo dentro del intervalo."} />
 
 ## 2. Sparse Table: ⟨O(n lg n), O(1)⟩
 
@@ -113,6 +120,9 @@ Partir $A$ en bloques de tamaño $b$, guardar el mínimo de cada bloque y constr
 Ninguna conviene. Para resolverlo hay que entender **la estructura** de los problemas dentro de un bloque, y la herramienta es un árbol.
 
 <SparseTableAnim client:visible />
+
+
+<Pregunta q={"La Sparse Table responde en O(1), pero ocupa O(n lg n): ¿cómo podríamos bajar el espacio?"} />
 
 ## 3. Cartesian tree: RMQ es un problema de LCA
 
@@ -175,6 +185,9 @@ Se recorre $A$ de izquierda a derecha manteniendo en una pila la **columna derec
 Resultado: raíz 3; `izq = [−1, 0, −1, 1, −1, 4, −1, 5]`, `der = [−1, 2, −1, 7, −1, 6, −1, −1]`. Verificado ejecutando el algoritmo.
 </Solucion>
 </Practica>
+
+
+<Pregunta q={"¿Por qué el LCA de dos posiciones en el cartesian tree devuelve el mínimo entre ellas?"} respuesta={"El inorden del árbol sigue las posiciones del arreglo, así el LCA cae en el intervalo consultado. La propiedad de heap asegura que su valor es el menor de ese tramo."} />
 
 ## 4. LCA y el Euler tour: de vuelta a RMQ, pero ±1
 

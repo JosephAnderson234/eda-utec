@@ -16,6 +16,7 @@ import Detective from '../../../components/tutor/Detective.astro';
 import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
 import Rush from '../../../components/Rush.astro';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Si escribes todos los finales de una palabra en un árbol, muchas rutas tienen tramos largos sin bifurcaciones. El **suffix tree** reemplaza cada tramo por una sola arista que apunta a un segmento del texto. Así puedes seguir un patrón letra por letra y encontrarlo en tiempo proporcional a su longitud. Ukkonen construye ese árbol mientras recibe los caracteres, sin reconstruirlo desde cero.
@@ -29,6 +30,9 @@ Si escribes todos los finales de una palabra en un árbol, muchas rutas tienen t
   'Seguir las reglas, el resto y el punto activo de Ukkonen fase a fase.',
 ]} prerrequisitos={[{t:'Suffix array y LCP',href:'/strings/suffix-array/'},{t:'LCA en árboles',href:'/estaticos/rmq-lca/'}]} perfiles={['visual','laboratorio','detective','feynman']} />
 
+
+<Pregunta q={"Si un trie de todos los sufijos repite largos caminos sin bifurcar, ¿cómo lo haríamos más pequeño?"} />
+
 ## 1. Del trie de sufijos al árbol comprimido
 
 Para $S$ de longitud $n$ añadimos un `$` único y menor que las demás letras. El **trie de sufijos** inserta cada $S[i..]$ carácter por carácter. Puede ocupar $\Theta(n^2)$ nodos, porque muchos tramos solo tienen un hijo. Al comprimir cada tramo en una arista, la etiqueta se guarda como un par de índices $[l,r)$ del texto: representa $S[l..r-1]$ y ocupa espacio constante.
@@ -40,6 +44,9 @@ Un **suffix tree** cumple: aristas no vacías, hijos de un nodo con primeras let
 Para buscar $P$, desde la raíz se elige la arista cuyo primer carácter coincide y se compara el patrón a lo largo de sus etiquetas. Si $P$ se agota, existe: las hojas bajo el punto alcanzado dan sus posiciones. Se leen a lo sumo $|P|$ caracteres, así la decisión cuesta $O(|P|)$ y listar las posiciones añade el costo de salida. `ana` en `banana` conduce a las hojas 3 y 1.
 
 Para dos textos $S$ y $T$, un **árbol generalizado** de `S#T$` usa separadores nuevos y distintos; cada hoja se marca según su origen. El nodo interno más profundo con hojas de ambos orígenes representa una subcadena común más larga. Un recorrido posterior calcula esas marcas en tiempo lineal.
+
+
+<Pregunta q={"¿Por qué comprimir caminos sin bifurcaciones conserva las búsquedas?"} respuesta={"La etiqueta de la arista comprimida contiene los mismos caracteres en el mismo orden; se compara el patrón a lo largo de esa etiqueta."} />
 
 ## 2. SA + LCP contiene la misma estructura
 
@@ -68,6 +75,9 @@ La implementación debe conservar la última rama retirada para partir su arista
 
 <StringsFig fig="lcp">**Cómo leerlo.** Las profundidades positivas 1, 3 y 2 de la tabla originan exactamente los nodos internos `a`, `ana` y `na` al procesar los sufijos en orden.</StringsFig>
 
+
+<Pregunta q={"Al pasar de un sufijo al siguiente, ¿cómo evitaríamos volver a recorrer el árbol desde la raíz?"} />
+
 ## 3. Enlaces de sufijo
 
 La **etiqueta de un nodo** es la concatenación de aristas desde la raíz. Si la etiqueta de un nodo interno es $x\alpha$, con $x$ un carácter, su **suffix link** apunta al nodo cuya etiqueta es $\alpha$: se quita la primera letra. En `banana$`, la cadena es `ana → na → a → raíz`; en `abab$`, `ab → b → raíz`.
@@ -75,6 +85,9 @@ La **etiqueta de un nodo** es la concatenación de aristas desde la raíz. Si la
 <StringsFig fig="tree-abab">**Cómo leerlo.** Los números de las hojas son los inicios de los cinco sufijos de `abab$`. Las flechas rojas punteadas son enlaces de sufijo: quitan la primera letra de `ab` y luego de `b`.</StringsFig>
 
 ¿Por qué existe el nodo destino? Si $x\alpha$ es interno, hay dos continuaciones distintas después de él. Al quitar el primer carácter de ambas apariciones, $\alpha$ conserva esas dos continuaciones; por eso también se bifurca y es un nodo interno, o es la raíz si $\alpha$ es vacío. Los enlaces permiten pasar del sufijo actual al siguiente sin volver a caminar desde la raíz.
+
+
+<Pregunta q={"¿Por qué existe el destino de un enlace de sufijo desde un nodo interno?"} respuesta={"Si la etiqueta es xα, quitar la primera letra de dos apariciones que se bifurcan deja dos continuaciones distintas para α. Por eso α también representa un nodo interno, o la raíz si queda vacío."} />
 
 ## 4. Ukkonen: árbol implícito y tres reglas
 

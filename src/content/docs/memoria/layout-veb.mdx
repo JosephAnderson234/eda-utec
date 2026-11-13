@@ -16,6 +16,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
 import Rush from '../../../components/Rush.astro';
 import VebLayoutAnim from '../../../components/anim/VebLayoutAnim.tsx';
+import Pregunta from '../../../components/Pregunta.astro';
 
 <EnSimple>
 Imagina que guardas un árbol genealógico gigante en cajas, sin saber de qué tamaño serán las cajas. El truco: **corta el árbol por la mitad de su altura**. Guarda primero la parte de arriba, todo junto; después, cada ramita de abajo, cada una toda junta. Y dentro de cada pedazo, repite lo mismo.
@@ -37,6 +38,9 @@ Imagina que guardas un árbol genealógico gigante en cajas, sin saber de qué t
 	]}
 	perfiles={['visual', 'laboratorio', 'socratico', 'feynman']}
 />
+
+
+<Pregunta q={"Si no conocemos el tamaño de bloque, ¿cómo podríamos poner juntos los nodos de muchos tamaños de subárbol?"} />
 
 ## 1. Construcción del layout
 
@@ -64,6 +68,9 @@ Con arriba 2 niveles y abajo 3: pieza superior $\{1, 2, 3\}$ → `1 2 3`. Cada p
 
 <VebLayoutAnim client:visible />
 
+
+<Pregunta q={"¿Por qué el layout de van Emde Boas sirve sin mencionar B al construirlo?"} respuesta={"Corta recursivamente a media altura hasta llegar a nodos sueltos; para cualquier B habrá piezas contiguas de una escala adecuada."} />
+
 ## 2. ¿Cuánto cuesta una búsqueda?
 
 **El análisis sí puede usar $B$** (el algoritmo no). Seguimos la recursión del layout hasta el **primer nivel en que las piezas tienen altura $\le \lg B$**. Como cada nivel de recursión divide la altura por 2, en ese nivel cada pieza tiene altura entre $\tfrac12\lg B$ y $\lg B$: entre $\sqrt B$ y $B$ nodos.
@@ -86,6 +93,9 @@ Porque el $B$ solo aparece **en la demostración**: para cada valor de $B$ elegi
 | Layout de van Emde Boas | $O(\log_{B+1} N)$ | **No** |
 
 **Óptimo en todas las fronteras a la vez**, pero es una estructura **estática**: el árbol es perfecto y sus nodos tienen posición fija. No sabemos insertar ni eliminar.
+
+
+<Pregunta q={"Una búsqueda ya es eficiente: ¿qué se rompe al querer insertar sin mover muchos nodos?"} />
 
 ## 3. Volverlo dinámico, paso a paso
 
@@ -159,6 +169,9 @@ $\log_8 2^{30} = 30/3 = 10$. $\frac{\lg^2 N}{B} = 900/8 \approx 112$: sin indire
 Porque **no conocemos $B$**: el tamaño de grupo tiene que poder elegirse sin él. $\Theta(\lg N)$ es justo lo que hace falta para dividir el $\lg^2 N$ del OFM por $\lg N$. Un grupo se reescribe en $O(1 + \frac{\lg N}{B})$, que para todo $B$ es $O(\log_{B+1} N)$.
 </Solucion>
 </Practica>
+
+
+<Pregunta q={"¿Por qué la indirección reduce el costo amortizado de las actualizaciones?"} respuesta={"La estructura superior guarda un representante por grupo y solo cambia cuando un grupo se parte o fusiona. Ese costo se reparte entre las muchas actualizaciones necesarias para volver a reestructurarlo."} />
 
 <Errores
 	errores={[

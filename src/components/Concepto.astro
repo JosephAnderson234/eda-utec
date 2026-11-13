@@ -1,0 +1,11 @@
+---
+/** Define un término en el momento exacto en que la historia lo necesita por primera vez. */
+interface Props {
+	termino: string;
+}
+const { termino } = Astro.props;
+---
+<aside class="concepto" aria-label={`Concepto nuevo: ${termino}`}>
+	<p class="concepto__t">📌 Concepto nuevo · <span>{termino}</span></p>
+	<div class="concepto__b"><slot /></div>
+</aside>
