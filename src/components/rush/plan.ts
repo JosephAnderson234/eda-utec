@@ -1,39 +1,32 @@
-/** Plan rush: todo el final en menos de 12 horas, en el orden lineal de la ruta. */
+/** Plan rush: las 6 preguntas del final, en orden, con su base mínima. */
 export type Bloque = { id: string; t: string; href: string; min: number; u: string; foco: string };
 
 export const UNIDADES: Record<string, string> = {
 	'0': 'Arranque',
-	'1': '1 · Optimalidad dinámica',
-	'2': '2 · Jerarquía de memoria',
-	'3': '3 · Enteros',
-	'4': '4 · Árboles estáticos',
-	'5': '5 · Grafos dinámicos',
-	'6': '6 · Strings',
+	'1': 'P1 · Cotas de Wilber',
+	'2': 'P2 · Memoria externa',
+	'3': 'P3 · X-fast y Y-fast',
+	'4': 'P4 · Disjoint Sparse Table',
+	'5': 'P5 · Aho–Corasick',
+	'6': 'P6 · Centroides',
 	'7': 'Examen',
 };
 
+/** Solo las 6 preguntas anunciadas por el profesor, más la base mínima que cada una necesita. */
 export const PLAN: Bloque[] = [
-	{ id: 'arranque', t: 'Formulario: lee las 6 tablas una vez', href: '/formulario/', min: 10, u: '0', foco: 'Saber qué cota va con qué modelo' },
-	{ id: 'rectangulos', t: 'Rectángulos independientes', href: '/optimalidad/rectangulos/', min: 20, u: '1', foco: 'OPT ≥ |I| + ½·MIS' },
-	{ id: 'wilber', t: 'Wilber 1 y 2', href: '/optimalidad/wilber/', min: 20, u: '1', foco: 'Contar alternancias' },
-	{ id: 'tango', t: 'Tango y Signed-Greedy', href: '/optimalidad/tango/', min: 20, u: '1', foco: 'Por qué O(lg lg n)' },
-	{ id: 'modelo-externo', t: 'Modelo de memoria externa', href: '/memoria/modelo-externo/', min: 30, u: '2', foco: 'Escanear, buscar, ordenar, permutar' },
-	{ id: 'btree', t: 'B-Trees y cache-oblivious', href: '/memoria/btree/', min: 25, u: '2', foco: 'log_B N y el modelo sin B' },
-	{ id: 'layout-veb', t: 'Layout vEB', href: '/memoria/layout-veb/', min: 30, u: '2', foco: 'Cortar la altura a la mitad' },
-	{ id: 'pma', t: 'PMA y Order Maintenance', href: '/memoria/pma/', min: 25, u: '2', foco: 'Umbrales de densidad, O(lg² N)' },
-	{ id: 'veb', t: 'Árbol de van Emde Boas', href: '/enteros/veb/', min: 45, u: '3', foco: 'Sucesor con una sola llamada' },
-	{ id: 'xfast-yfast', t: 'X-fast y Y-fast', href: '/enteros/xfast-yfast/', min: 35, u: '3', foco: 'Hash por niveles + indirección' },
-	{ id: 'fusion', t: 'Fusion trees', href: '/enteros/fusion/', min: 20, u: '3', foco: 'Sketch y O(log_w n)' },
-	{ id: 'rmq-lca', t: 'RMQ, cartesian tree y LCA', href: '/estaticos/rmq-lca/', min: 55, u: '4', foco: 'Sparse Table + Euler tour' },
-	{ id: 'heavy-light', t: 'Heavy-Light', href: '/grafos/heavy-light/', min: 40, u: '5', foco: 'Camino = O(lg n) rangos' },
-	{ id: 'centroides', t: 'Centroides', href: '/grafos/centroides/', min: 35, u: '5', foco: 'Profundidad lg n, separador' },
-	{ id: 'kmp', t: 'Función prefijo y KMP', href: '/strings/kmp/', min: 25, u: '6', foco: 'Calcular π a mano' },
-	{ id: 'aho-corasick', t: 'Aho–Corasick', href: '/strings/aho-corasick/', min: 25, u: '6', foco: 'Enlaces de falla' },
-	{ id: 'suffix-array', t: 'Suffix array y LCP', href: '/strings/suffix-array/', min: 30, u: '6', foco: 'SA y LCP de banana' },
-	{ id: 'sa-lineal', t: 'DC3 y SA-IS', href: '/strings/sa-lineal/', min: 15, u: '6', foco: 'Solo la recurrencia y la idea' },
-	{ id: 'suffix-tree', t: 'Suffix tree y Ukkonen', href: '/strings/suffix-tree/', min: 35, u: '6', foco: 'SA+LCP ⇔ árbol; reglas de Ukkonen' },
-	{ id: 'simulacro', t: 'Simulacro cronometrado', href: '/repaso/simulacro/', min: 60, u: '7', foco: 'Sin mirar; luego autocorrige' },
-	{ id: 'cierre', t: 'Cierre: repasa tus fallos y el formulario', href: '/formulario/', min: 15, u: '7', foco: 'Solo lo que fallaste' },
+	{ id: 'arranque', t: 'Las 6 preguntas: qué te van a pedir', href: '/final/', min: 10, u: '0', foco: 'Saber qué sale y qué no' },
+	{ id: 'rectangulos', t: 'Base: rectángulos independientes', href: '/optimalidad/rectangulos/', min: 15, u: '1', foco: 'Qué es OPT y por qué un piso' },
+	{ id: 'wilber', t: 'Cotas de Wilber 1 y 2', href: '/optimalidad/wilber/', min: 35, u: '1', foco: 'Contar alternancias a mano' },
+	{ id: 'modelo-externo', t: 'Modelo de memoria externa', href: '/memoria/modelo-externo/', min: 45, u: '2', foco: 'Escanear, buscar, ordenar, permutar' },
+	{ id: 'veb', t: 'Base: predecesor y vEB', href: '/enteros/veb/', min: 25, u: '3', foco: 'El problema del predecesor' },
+	{ id: 'xfast-yfast', t: 'X-fast y Y-fast', href: '/enteros/xfast-yfast/', min: 45, u: '3', foco: 'Hash por niveles + indirección' },
+	{ id: 'rmq-lca', t: 'Base: Sparse Table', href: '/estaticos/rmq-lca/', min: 15, u: '4', foco: 'Dos ventanas solapadas' },
+	{ id: 'disjoint-sparse-table', t: 'Disjoint Sparse Table', href: '/estaticos/disjoint-sparse-table/', min: 35, u: '4', foco: 'Nivel = bit más alto de l XOR r' },
+	{ id: 'kmp', t: 'Base: bordes y función prefijo', href: '/strings/kmp/', min: 15, u: '5', foco: 'Qué es un borde' },
+	{ id: 'aho-corasick', t: 'Aho–Corasick', href: '/strings/aho-corasick/', min: 45, u: '5', foco: 'Trie + enlaces de falla' },
+	{ id: 'centroides', t: 'Descomposición por centroides', href: '/grafos/centroides/', min: 45, u: '6', foco: 'Profundidad lg n, separador' },
+	{ id: 'simulacro-final', t: 'Simulacro de las 6 preguntas', href: '/repaso/final/', min: 60, u: '7', foco: 'Sin mirar; luego autocorrige' },
+	{ id: 'cierre', t: 'Cierre: repasa solo lo que fallaste', href: '/final/', min: 15, u: '7', foco: 'Solo lo que fallaste' },
 ];
 
 export const DESCANSO = 10;

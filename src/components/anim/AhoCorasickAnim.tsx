@@ -1,0 +1,40 @@
+import { useMemo, useState } from 'react';
+import { motion } from 'motion/react';
+import { Controles, Nota, usePlayer, COL } from './Player';
+
+export type NodoAC = { id: number; padre: number; letra: string; cadena: string; hijos: Record<string, number>; falla: number; propios: string[]; salidas: string[] };
+export type CoincidenciaAC = { patron: string; inicio: number; fin: number };
+type PasoAC = { fase: 'inicio' | 'trie' | 'falla' | 'salto' | 'lectura' | 'fin'; visibles: number; fallas: number[]; estado: number; pos: number; hallados: CoincidenciaAC[]; nota: string; foco: number };
+export function construirAhoCorasick(patrones: string[]) {
+ const nodos: NodoAC[] = [{ id: 0, padre: -1, letra: '', cadena: '', hijos: {}, falla: 0, propios: [], salidas: [] }];
+ const inserciones: { visibles: number; foco: number; nota: string }[] = [];
+ for (const patron of patrones) {
+  let v=0;
+  for (const letra of patron) { if (nodos[v].hijos[letra] === undefined) { const id=nodos.length; nodos[v].hijos[letra]=id; nodos.push({id,padre:v,letra,cadena:nodos[v].cadena+letra,hijos:{},falla:0,propios:[],salidas:[]}); } v=nodos[v].hijos[letra]; }
+  if (!nodos[v].propios.includes(patron)) nodos[v].propios.push(patron);
+  inserciones.push({visibles:nodos.length,foco:v,nota:`Insertamos «${patron}»: seguimos o creamos sus aristas y marcamos el nodo ${v} como terminal.`});
+ }
+ const orden:number[]=[]; const cola=Object.values(nodos[0].hijos);
+ nodos[0].salidas=[];
+ for (const v of cola) {nodos[v].falla=0;nodos[v].salidas=[...nodos[v].propios];}
+ while(cola.length){const v=cola.shift()!;orden.push(v);for(const [c,u] of Object.entries(nodos[v].hijos)){let f=nodos[v].falla;while(f!==0&&nodos[f].hijos[c]===undefined)f=nodos[f].falla;nodos[u].falla=nodos[f].hijos[c]??0;nodos[u].salidas=[...nodos[u].propios,...nodos[nodos[u].falla].salidas];cola.push(u);}}
+ return {nodos,inserciones,orden};
+}
+export function buscarAhoCorasick(patrones:string[], texto:string):CoincidenciaAC[]{
+ const {nodos}=construirAhoCorasick(patrones); const out:CoincidenciaAC[]=[];let v=0;
+ for(let i=0;i<texto.length;i++){const c=texto[i];while(v&&nodos[v].hijos[c]===undefined)v=nodos[v].falla;v=nodos[v].hijos[c]??0;for(const patron of nodos[v].salidas)out.push({patron,inicio:i-patron.length+1,fin:i});}
+ return out;
+}
+function pasosAC(patrones:string[],texto:string){const {nodos,inserciones,orden}=construirAhoCorasick(patrones);const pasos:PasoAC[]=[{fase:'inicio',visibles:1,fallas:[],estado:0,pos:-1,hallados:[],foco:0,nota:'Empezamos en la raíz. Insertaremos los patrones, calcularemos fallas por BFS y leeremos el texto letra por letra.'}];
+ for(const x of inserciones)pasos.push({fase:'trie',visibles:x.visibles,fallas:[],estado:0,pos:-1,hallados:[],foco:x.foco,nota:x.nota});
+ const fallas:number[]=[];for(const v of orden){fallas.push(v);const f=nodos[v].falla;pasos.push({fase:'falla',visibles:nodos.length,fallas:[...fallas],estado:0,pos:-1,hallados:[],foco:v,nota:`Falla(${v}: «${nodos[v].cadena}») = ${f}: el mayor sufijo propio de la cadena del nodo que también es un camino en el trie. ${nodos[v].salidas.length?`Salidas: ${nodos[v].salidas.join(', ')}${nodos[f].salidas.length?' (heredadas por la falla).':'.'}`:'Sin salidas.'}`});}
+ let v=0;const hallados:CoincidenciaAC[]=[];for(let i=0;i<texto.length;i++){const c=texto[i];while(v&&nodos[v].hijos[c]===undefined){const anterior=v;v=nodos[v].falla;pasos.push({fase:'salto',visibles:nodos.length,fallas:[...fallas],estado:v,pos:i,hallados:[...hallados],foco:anterior,nota:`No hay arista «${c}» desde ${anterior}. Seguimos una falla a ${v} para conservar el mayor sufijo que aún puede coincidir; no avanzamos en el texto.`});}v=nodos[v].hijos[c]??0;const nuevos=nodos[v].salidas.map(patron=>({patron,inicio:i-patron.length+1,fin:i}));hallados.push(...nuevos);pasos.push({fase:'lectura',visibles:nodos.length,fallas:[...fallas],estado:v,pos:i,hallados:[...hallados],foco:v,nota:`Leemos T[${i}]=«${c}» y llegamos al nodo ${v}. ${nuevos.length?`Encontramos ${nuevos.map(x=>`${x.patron} en ${x.inicio}..${x.fin}`).join(', ')}; las salidas heredadas también cuentan.`:'Aún no hay un patrón completo.'}`});}
+ pasos.push({fase:'fin',visibles:nodos.length,fallas:[...fallas],estado:v,pos:texto.length,hallados:[...hallados],foco:v,nota:`Fin del texto: ${hallados.length} coincidencias. Las fallas permiten continuar sin volver a leer caracteres.`});return {nodos,pasos};}
+function posiciones(nodos:NodoAC[]){const xy:{x:number;y:number}[]=Array(nodos.length);let hoja=0;const visitar=(v:number):number=>{const hijos=Object.values(nodos[v].hijos);const x=hijos.length?(hijos.map(visitar).reduce((a,b)=>a+b,0)/hijos.length):++hoja;xy[v]={x,y:nodos[v].cadena.length};return x;};visitar(0);return {xy,hojas:hoja,prof:Math.max(...nodos.map(n=>n.cadena.length))};}
+export default function AhoCorasickAnim(){const [entrada,setEntrada]=useState('he, she, his, hers');const [patrones,setPatrones]=useState(['he','she','his','hers']);const [textoEntrada,setTextoEntrada]=useState('ushers');const [texto,setTexto]=useState('ushers');const [error,setError]=useState('');const {nodos,pasos}=useMemo(()=>pasosAC(patrones,texto),[patrones,texto]);const p=usePlayer(pasos.length,1000);const s=pasos[p.i];const {xy,hojas,prof}=useMemo(()=>posiciones(nodos),[nodos]);const X=(v:number)=>32+(xy[v].x-1)*Math.max(48,660/Math.max(1,hojas-1));const Y=(v:number)=>40+xy[v].y*76;const ancho=Math.max(720,64+(hojas-1)*Math.max(48,660/Math.max(1,hojas-1)));
+ const cambiarPatrones=(v:string)=>{setEntrada(v);p.go(0);const xs=v.split(/[\s,;]+/).filter(Boolean);if(!xs.length||xs.length>6||xs.some(x=>!/[a-z]{1,6}/.test(x))){setError('Usa de 1 a 6 patrones a-z, de 1 a 6 letras.');return;}setError('');setPatrones([...new Set(xs)]);};
+ const cambiarTexto=(v:string)=>{setTextoEntrada(v);p.go(0);if(!/^[a-z]{0,20}$/.test(v)){setError('El texto admite hasta 20 letras a-z.');return;}setError('');setTexto(v);};
+ return <div className="pg not-content"><h4>🎬 Animación: Aho-Corasick</h4><p className="pg-sub">Primero creamos el trie, luego las fallas por BFS y al final leemos el texto. Los números indican el orden de creación.</p><div className="pg-row"><label className="pg-field"><span>Patrones</span><input value={entrada} onChange={e=>cambiarPatrones(e.target.value)}/></label><label className="pg-field"><span>Texto</span><input value={textoEntrada} onChange={e=>cambiarTexto(e.target.value)}/></label></div>{error&&<p role="alert" className="an-s">{error} Se muestra la última entrada válida.</p>}
+ <div className="an-scroll"><svg width={ancho} height={80+prof*76} viewBox={`0 0 ${ancho} ${80+prof*76}`} role="img" aria-label="Trie con enlaces de falla">{nodos.slice(1,s.visibles).map(n=><g key={`e${n.id}`}><line x1={X(n.padre)} y1={Y(n.padre)} x2={X(n.id)} y2={Y(n.id)} stroke="var(--pg-border)" strokeWidth="2"/><text x={(X(n.padre)+X(n.id))/2+5} y={(Y(n.padre)+Y(n.id))/2} className="an-t">{n.letra}</text></g>)}{s.fallas.map(v=>{const f=nodos[v].falla;return <path key={`f${v}`} d={`M ${X(v)} ${Y(v)+18} Q ${(X(v)+X(f))/2+20} ${Math.max(Y(v),Y(f))+38} ${X(f)} ${Y(f)+18}`} fill="none" stroke={COL[2]} strokeWidth="1.5" strokeDasharray="5 4" opacity=".65"/>})}{nodos.slice(0,s.visibles).map(n=><g key={n.id}><motion.circle cx={X(n.id)} cy={Y(n.id)} r={n.id===s.foco||n.id===s.estado?20:16} fill={n.id===s.estado&&s.fase==='lectura'?COL[3]:n.propios.length?COL[1]:'var(--pg-surface)'} stroke={n.id===s.foco?COL[4]:'var(--pg-border)'} strokeWidth="2"/><text x={X(n.id)} y={Y(n.id)+5} textAnchor="middle" className="an-t">{n.id}</text>{n.propios.length>0&&<text x={X(n.id)} y={Y(n.id)+32} textAnchor="middle" className="an-s">{n.propios.join(',')}</text>}</g>)}</svg></div>
+ <div className="pg-row">{[...texto].map((c,i)=><span key={i} className="an-pill" style={{borderColor:i===s.pos?COL[3]:undefined,opacity:i<=s.pos?1:.5}}>{c}<small className="an-s">{i}</small></span>)}</div><p className="an-s">Estado: {s.estado} · coincidencias: {s.hallados.map(x=>`${x.patron} ${x.inicio}..${x.fin}`).join('; ')||'∅'}</p><Nota k={`${patrones.join(',')}-${texto}-${p.i}`}>{s.nota}</Nota><Controles p={p}/></div>;
+}

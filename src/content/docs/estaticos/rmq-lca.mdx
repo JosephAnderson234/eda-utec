@@ -25,7 +25,7 @@ Tienes las temperaturas de cada día del año y te preguntan **miles de veces**:
 - **El camino largo y elegante:** convertir la pregunta en otra sobre un **árbol genealógico** («¿cuál es el ancestro común más cercano de estas dos personas?»), y esa, de vuelta, en una pregunta sobre una lista que **sube o baja de 1 en 1**. Esa lista tiene tan poca variedad que se pueden **precalcular todas las respuestas posibles** para trozos chicos: ⟨O(n), O(1)⟩.
 </EnSimple>
 
-<Rush id="rmq-lca" clave={"Sparse Table $\\langle O(n\\lg n), O(1)\\rangle$; RMQ ⇔ LCA vía cartesian tree; LCA ⇔ ±1 RMQ vía Euler tour; cuatro rusos para $\\langle O(n), O(1)\\rangle$."} lee={"§2, §3 y §4 completos; de §5, la idea de bloques de $\\frac12\\lg n$."} salta={"Los detalles de las tablas de §5."} anim={"La animación de Sparse Table (al final de §2): construye la tabla y consulta $(1, 6)$."} haz={"Peldaño 3: $\\text{RMQ}_A(4, 6)$ pasando por el Euler tour."} />
+<Rush id="rmq-lca" clave={"Sparse Table $\\langle O(n\\lg n), O(1)\\rangle$; RMQ ⇔ LCA vía cartesian tree; LCA ⇔ ±1 RMQ vía Euler tour; cuatro rusos para $\\langle O(n), O(1)\\rangle$."} lee={"Solo §1 y §2 (Sparse Table). La Disjoint Sparse Table es su variante para operaciones que no son idempotentes."} salta={"§3 a §5 (cartesian tree, LCA, cuatro rusos): no entran en el final."} anim={"La animación de Sparse Table (al final de §2): construye la tabla y consulta $(1, 6)$."} haz={"Peldaño 3: $\\text{RMQ}_A(4, 6)$ pasando por el Euler tour."} />
 
 <Objetivos
 	objetivos={[

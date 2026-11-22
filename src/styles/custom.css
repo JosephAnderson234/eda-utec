@@ -1703,3 +1703,10 @@ main:has(.so-hero) .content-panel {
 .pregunta details { margin-top: 0.4rem; }
 .pregunta summary { cursor: pointer; font-size: 0.85rem; color: var(--sl-color-accent); }
 .pregunta details p { margin: 0.3rem 0 0 !important; }
+
+/* ---------- Rush: temas fuera del final ---------- */
+.rush--fuera {
+	opacity: 0.85;
+	border-color: var(--pg-border) !important;
+	background: var(--pg-surface) !important;
+}

@@ -11,18 +11,26 @@ interface Props {
 	haz: string;
 }
 const { id, clave, lee, salta, anim, haz } = Astro.props;
-const slot = cronograma().find((x) => x.tipo === 'bloque' && x.id === id) as { min: number; inicio: number; u: string } | undefined;
-if (!slot) throw new Error(`Rush: id desconocido ${id}`);
-const min = slot.min;
-const bloque = `${UNIDADES[slot.u]} · empieza en la hora ${hhmm(slot.inicio)}`;
+const slot = cronograma().find((x) => x.tipo === 'bloque' && x.id === id) as { min: number; inicio: number; u: string; t: string } | undefined;
+const base = slot?.t.startsWith('Base:');
 ---
-<aside class="rush not-content" aria-label="Modo rush">
-	<p class="rush__t">⚡ Modo rush <span class="rush__min">{min} min</span><span class="an-s">{bloque} · <a href="/rush/">ver el plan de 12 h</a></span></p>
-	<dl>
-		<dt>🎯 Lo que sale sí o sí</dt><dd set:html={tex(clave)} />
-		<dt>📖 Lee</dt><dd set:html={tex(lee)} />
-		{salta && <><dt>⏭️ Salta si vas tarde</dt><dd set:html={tex(salta)} /></>}
-		{anim && <><dt>🎬 Mira</dt><dd set:html={tex(anim)} /></>}
-		<dt>✍️ Haz</dt><dd set:html={tex(haz)} />
-	</dl>
-</aside>
+{slot ? (
+	<aside class="rush not-content" aria-label="Modo rush">
+		<p class="rush__t">
+			{base ? '🧱 Base para el final' : '🎯 Pregunta del final'} <span class="rush__min">{slot.min} min</span>
+			<span class="an-s">{UNIDADES[slot.u]} · empieza en la hora {hhmm(slot.inicio)} · <a href="/rush/">ver el plan</a></span>
+		</p>
+		<dl>
+			<dt>🎯 Lo que sale sí o sí</dt><dd set:html={tex(clave)} />
+			<dt>📖 Lee</dt><dd set:html={tex(lee)} />
+			{salta && <><dt>⏭️ Salta si vas tarde</dt><dd set:html={tex(salta)} /></>}
+			{anim && <><dt>🎬 Mira</dt><dd set:html={tex(anim)} /></>}
+			<dt>✍️ Haz</dt><dd set:html={tex(haz)} />
+		</dl>
+	</aside>
+) : (
+	<aside class="rush rush--fuera not-content" aria-label="Fuera del final">
+		<p class="rush__t">⚪ No entra en el final</p>
+		<p style="margin:0">Este tema no está entre las <a href="/final/">6 preguntas anunciadas</a>. Léelo solo si te sobra tiempo o si una de esas páginas te manda aquí.</p>
+	</aside>
+)}

@@ -1,0 +1,147 @@
+---
+title: 'Simulacro de las 6 preguntas'
+description: 'Un examen de práctica con la misma estructura que el final anunciado: una pregunta por subtema (Wilber, memoria externa, X/Y-fast, Disjoint Sparse Table, Aho–Corasick, centroides), con soluciones verificadas paso a paso.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+import Rush from '../../../components/Rush.astro';
+
+<EnSimple titulo="Cómo hacerlo">
+60 minutos, 10 por pregunta, sin abrir otras páginas. Escribe en papel. Abre cada solución **solo después** de terminar todas. Los ejemplos son propios; las respuestas se verificaron con un script.
+</EnSimple>
+
+<Rush id="simulacro-final" clave={"Reconocer qué técnica pide cada pregunta y ejecutarla a mano sin mirar."} lee={"Resuelve todo primero; después corrige pregunta por pregunta."} haz={"Anota cada fallo: en el bloque de cierre vuelves solo a esas páginas."} />
+
+## Pregunta 1 · Cotas de Wilber
+
+Árbol de referencia: el BST perfecto con llaves $0$ a $6$ (raíz $3$; el nodo $1$ tiene hijos $0$ y $2$; el nodo $5$ tiene hijos $4$ y $6$).
+
+**a)** Calcula Wilber-1 de la secuencia $5, 1, 6, 0, 4, 2, 3$, mostrando los lados que ve cada nodo.
+**b)** ¿Qué afirmas sobre el costo de **cualquier** BST para esa secuencia?
+**c)** ¿Por qué Tango no puede ser $O(1)$-competitivo usando solo esta cota?
+
+<Solucion>
+**a)** Cada nodo mira solo los accesos de su subárbol, sin contarse a sí mismo:
+- Raíz 3: $5, 1, 6, 0, 4, 2$ → D, I, D, I, D, I → **5 alternancias** (el acceso final al 3 se ignora).
+- Nodo 1: ve $1$ (se ignora), $0, 2$ → I, D → **1**.
+- Nodo 5: ve $5$ (se ignora), $6, 4$ → D, I → **1**.
+- Las hojas no tienen dos lados. **Wilber-1 = 7.**
+
+**b)** Todo BST, incluso uno offline que conoce la secuencia, cuesta $\Omega(\text{Wilber-1} + m) = \Omega(7 + 7)$ con $m = 7$ accesos: Wilber-1 es una cota inferior de OPT, salvo constantes.
+
+**c)** Tango fija el árbol de referencia **sin conocer la secuencia** (es online). Para un árbol fijo, Wilber-1 puede quedar $\Theta(\lg\lg n)$ por debajo de OPT, y cada cambio de hijo preferido le cuesta a Tango $O(\lg\lg n)$: por eso es $O(\lg\lg n)$-competitivo.
+</Solucion>
+
+## Pregunta 2 · Modelo de memoria externa
+
+$N = 2^{30}$ elementos, $M = 2^{20}$, $B = 2^{10}$ (en elementos).
+
+**a)** ¿Cuántas transferencias cuesta escanear, buscar en un B-tree, ordenar y permutar? Simplifica las cuentas.
+**b)** ¿Por qué permutar no cuesta $N/B$ como escanear?
+
+<Solucion>
+**a)**
+- Escanear: $N/B = 2^{30}/2^{10} = 2^{20}$.
+- Buscar: $\log_{B+1} N \approx \log_{2^{10}} 2^{30} = 30/10 = 3$ transferencias.
+- Ordenar: $\frac NB \log_{M/B}\frac NB = 2^{20}\cdot\log_{2^{10}} 2^{20} = 2^{20}\cdot 2 = 2^{21}$.
+- Permutar: $\min\{N, \text{ordenar}\} = \min\{2^{30}, 2^{21}\} = 2^{21}$: aquí conviene ordenar por posición de destino.
+
+**b)** Cada elemento puede ir a un bloque distinto del destino: escribirlos uno por uno cuesta hasta $N$ transferencias. La alternativa es ordenar por destino, y la cota es el mínimo de las dos estrategias.
+</Solucion>
+
+## Pregunta 3 · X-fast y Y-fast trees
+
+Universo $u = 16$ ($w = 4$ bits) y $S = \{3, 6, 10, 13\}$.
+
+**a)** Escribe las tablas hash de los niveles 1 a 3 (prefijos en binario).
+**b)** Haz Sucesor(8) y Sucesor(7) con la búsqueda binaria sobre niveles: qué prefijos consultas y qué puntero sigues.
+**c)** Con $n = 10^6$ llaves y $w = 64$, ¿cuántos grupos tiene un Y-fast y cuánto espacio usa su X-fast?
+
+<Solucion>
+**a)** $3 = 0011$, $6 = 0110$, $10 = 1010$, $13 = 1101$.
+- Nivel 1: $\{0, 1\}$.
+- Nivel 2: $\{00, 01, 10, 11\}$.
+- Nivel 3: $\{001, 011, 101, 110\}$.
+
+**b) Sucesor(8)**, $8 = 1000$. Búsqueda binaria del prefijo más largo presente: nivel 2 «10» ✓, nivel 3 «100» ✗. El nodo más profundo es «10». El siguiente bit de 8 es 0, pero «10» no tiene hijo izquierdo: su puntero al descendiente apunta al **mínimo del subárbol derecho**, que es $10$. **Sucesor(8) = 10.**
+
+**Sucesor(7)**, $7 = 0111$: nivel 2 «01» ✓, nivel 3 «011» ✓, nivel 4 «0111» ✗. El nodo es «011». El siguiente bit es 1, pero «011» no tiene hijo derecho: su puntero apunta al **máximo del subárbol izquierdo**, $6$, que es el predecesor. Por la lista enlazada de hojas, el siguiente es $10$. **Sucesor(7) = 10.** Ambas usan $O(\lg w)$ consultas a tablas hash.
+
+**c)** Grupos de $\Theta(w)$ llaves: unos $10^6/64 \approx 15\,625$ grupos, uno con su representante. El X-fast guarda $O(w)$ prefijos por representante: $O\!\left(\frac nw\cdot w\right) = O(n)$. Más los BSTs de los grupos, que suman $O(n)$: **espacio total $\Theta(n)$**.
+</Solucion>
+
+## Pregunta 4 · Disjoint Sparse Table
+
+$A = [4, 1, 7, 3, 6, 2, 5, 8]$ con la **suma**.
+
+**a)** Construye $T[0]$, $T[1]$ y $T[2]$.
+**b)** Responde $[2, 5]$, $[5, 6]$ y $[0, 3]$ indicando el nivel con el XOR.
+**c)** ¿Por qué no basta una Sparse Table normal?
+
+<Solucion>
+**a)**
+- $T[0] = A = [4, 1, 7, 3, 6, 2, 5, 8]$.
+- $T[1]$ (bloques de 4, centros 2 y 6): $[5, 1, 7, 10, 8, 2, 5, 13]$.
+- $T[2]$ (centro 4): izquierda $15, 11, 10, 3$; derecha $6, 8, 13, 21$ → $[15, 11, 10, 3, 6, 8, 13, 21]$.
+
+**b)**
+- $[2, 5]$: $010 \oplus 101 = 111$, nivel 2 → $T[2][2] + T[2][5] = 10 + 8 = 18$ ✓ ($7+3+6+2$).
+- $[5, 6]$: $101 \oplus 110 = 011$, nivel 1 → $T[1][5] + T[1][6] = 2 + 5 = 7$ ✓.
+- $[0, 3]$: $000 \oplus 011 = 011$, nivel 1 → $T[1][0] + T[1][3] = 5 + 10 = 15$ ✓.
+
+**c)** La suma no es idempotente: las dos ventanas de la Sparse Table se pisan y los elementos comunes se cuentan dos veces. Por ejemplo, $[2, 5]$ con dos ventanas de largo 4 da $A[2..5] + A[2..5] = 36$ en vez de 18.
+</Solucion>
+
+## Pregunta 5 · Aho–Corasick
+
+Patrones $\{a, ab, bab, bc, bca, c, caa\}$ y texto $abccab$.
+
+**a)** Dibuja el trie y calcula los enlaces de falla.
+**b)** Recorre el texto y lista todas las ocurrencias con sus posiciones (desde 0).
+**c)** ¿Cuánto cuesta el recorrido completo?
+
+<Solucion>
+**a)** Nodos (cadena → falla): a → raíz, b → raíz, c → raíz, ab → **b**, ba → **a**, bc → **c**, ca → **a**, bab → **ab**, bca → **ca**, caa → **a**.
+
+Los de salida que importan: bc hereda «c» por su falla; bab hereda «ab»; caa hereda «a»; bca hereda la salida de «ca» → «a».
+
+**b)** Estado tras cada carácter:
+- $a$ → «a»: ocurrencia **a** en $[0, 0]$.
+- $b$ → «ab»: **ab** en $[0, 1]$.
+- $c$ → «bc»: **bc** en $[1, 2]$ y, por la falla, **c** en $[2, 2]$.
+- $c$ → «c» (desde «bc» no hay transición con c; se sigue la falla a «c», tampoco; a la raíz, que sí): **c** en $[3, 3]$.
+- $a$ → «ca»: por la falla, **a** en $[4, 4]$.
+- $b$ → «ab» (desde «ca» no hay b; falla a «a», que sí): **ab** en $[4, 5]$.
+
+Total: **7 ocurrencias**.
+
+**c)** $O(n + m + z)$: $n$ el texto, $m$ la suma de los largos de los patrones (construcción) y $z$ las ocurrencias reportadas. Los saltos por falla se amortizan contra el avance en el texto, igual que en KMP.
+</Solucion>
+
+## Pregunta 6 · Centroid Decomposition
+
+Árbol de 9 nodos con aristas $1\text{–}2$, $2\text{–}3$, $3\text{–}4$, $4\text{–}5$, $5\text{–}6$, $6\text{–}7$, $3\text{–}8$, $5\text{–}9$.
+
+**a)** Encuentra el centroide y el tamaño de las componentes al quitarlo.
+**b)** Sigue la recursión un nivel más. ¿Qué profundidad tiene el árbol de centroides?
+**c)** ¿Por qué todo camino $u$–$v$ pasa por un centroide de algún nivel?
+
+<Solucion>
+**a)** El centroide es **4**: al quitarlo quedan $\{1, 2, 3, 8\}$ y $\{5, 6, 7, 9\}$, de 4 nodos cada una, $\le 9/2$. Ningún otro nodo lo cumple: al quitar 3, por ejemplo, queda la componente $\{4, 5, 6, 7, 9\}$ de 5.
+
+**b)** En $\{1, 2, 3, 8\}$ hay dos centroides válidos: 2 deja $\{1\}$ y $\{3, 8\}$; 3 deja $\{1, 2\}$ y $\{8\}$. En $\{5, 6, 7, 9\}$ también: 5 o 6. Cualquiera sirve. Eligiendo 2 y 5, el siguiente nivel queda con componentes de tamaño $\le 2$, y la profundidad total es **4 niveles** (0 a 3). Como cada nivel al menos parte a la mitad, la profundidad es $\le \lfloor\lg 9\rfloor + 1 = 4$: $O(\lg n)$.
+
+**c)** Toma el primer centroide $c$ de la recursión que queda en el camino de $u$ a $v$, o que es uno de ellos. Antes de $c$, $u$ y $v$ estaban en la misma componente. Al quitar $c$ quedan en componentes distintas o uno es $c$, así que el camino pasa por $c$. Por eso basta mirar, para cada centroide, los caminos que lo atraviesan.
+</Solucion>
+
+## Autocorrección
+
+| Pregunta | Si fallaste… | Vuelve a |
+| --- | --- | --- |
+| 1 | contar lados por nodo, o qué se ignora | [Wilber](/optimalidad/wilber/), §2 y la animación |
+| 2 | las fórmulas o los logaritmos | [Memoria externa](/memoria/modelo-externo/), §3 a §6 |
+| 3 | el puntero al descendiente o el espacio | [X/Y-fast](/enteros/xfast-yfast/), §3 y §4 |
+| 4 | el centro o el nivel con XOR | [Disjoint Sparse Table](/estaticos/disjoint-sparse-table/), capítulos 3 a 5 |
+| 5 | las fallas o las salidas heredadas | [Aho–Corasick](/strings/aho-corasick/), §2 y §3 |
+| 6 | el tamaño de las componentes | [Centroides](/grafos/centroides/), §1 y §2 |

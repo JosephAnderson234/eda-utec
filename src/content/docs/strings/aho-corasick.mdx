@@ -17,12 +17,13 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import StringsFig from '../../../components/fig/StringsFig.astro';
 import Rush from '../../../components/Rush.astro';
 import Pregunta from '../../../components/Pregunta.astro';
+import AhoCorasickAnim from '../../../components/anim/AhoCorasickAnim.tsx';
 
 <EnSimple>
 Piensa en buscar mil palabras en un libro. KMP una por una leería el libro mil veces. Un **trie** comparte los comienzos de esas palabras, como un árbol de carpetas. Los **enlaces de falla** dicen a qué comienzo todavía útil saltar cuando la siguiente letra no encaja. Aho–Corasick combina ambas ideas y lee el libro una sola vez.
 </EnSimple>
 
-<Rush id="aho-corasick" clave={"Trie + enlaces de falla (el mayor sufijo propio que también está en el trie); búsqueda $O(n + z)$; contar sin enumerar propagando por los enlaces."} lee={"§1, §2 y §3."} salta={"§4, salvo la idea de propagar conteos."} haz={"Peldaño 1 y después el 3: he, she, his, hers en ushers."} />
+<Rush id="aho-corasick" clave={"Trie + enlaces de falla (el mayor sufijo propio que también está en el trie); búsqueda $O(n + z)$; contar sin enumerar propagando por los enlaces."} lee={"Toda la página. Es la pregunta 5: construir el trie, los enlaces de falla y recorrer un texto a mano."} anim={"La animación del autómata (en §3): mira el trie, cada enlace de falla y el recorrido de ushers; después prueba tus propios patrones."} haz={"Peldaño 1 y después el 3: he, she, his, hers en ushers."} />
 
 <Objetivos objetivos={[
   'Construir un trie y explicar qué representa el estado después de leer un prefijo del texto.',
@@ -96,6 +97,8 @@ Buscar-AC(T):
 ```
 
 Cada vuelta del segundo bucle produce una ocurrencia. Si se reportan $z$ ocurrencias, la búsqueda cuesta $O(n+z)$ después de construir el autómata. Para patrones duplicados, un nodo terminal puede representar varios identificadores y cada uno se reporta.
+
+<AhoCorasickAnim client:visible />
 
 <Practica nivel={1} titulo="Resuelto: he, she, his, hers en ushers">
 Los estados tras `u,s,h,e,r,s` son $\varepsilon,\texttt{s},\texttt{sh},\texttt{she},\texttt{her},\texttt{hers}$. En `she` se reportan `she` (inicio 1) y `he` (inicio 2). En `hers` se reporta `hers` (inicio 2). `his` no aparece.

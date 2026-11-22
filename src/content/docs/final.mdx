@@ -1,0 +1,97 @@
+---
+title: 'Las 6 preguntas del final'
+description: 'Lo que anunció el profesor para el examen final de CS3014: una pregunta por subtema (Wilber, memoria externa, X/Y-fast, Disjoint Sparse Table, Aho–Corasick y centroides), con qué tienes que saber hacer en cada una y dónde repasarla.'
+---
+
+import EnSimple from '../../components/EnSimple.astro';
+import Pregunta from '../../components/Pregunta.astro';
+import { LinkCard } from '@astrojs/starlight/components';
+
+<EnSimple titulo="Lo que anunció el profesor">
+El examen final tiene **6 preguntas**, una por subtema:
+
+1. Cotas de Wilber
+2. Modelo de memoria externa
+3. X-fast trees y Y-fast trees
+4. Disjoint Sparse Table
+5. Aho–Corasick
+6. Centroid Decomposition
+
+El resto de la web (Tango, B-Trees, PMA, fusion trees, suffix arrays…) **no entra**. Solo vuelves a esas páginas si una de las 6 te manda a una idea base. Las páginas que no entran muestran un aviso ⚪ arriba.
+</EnSimple>
+
+**Cómo usar esta página.** Cada pregunta tiene una lista de lo que tienes que **saber hacer sin mirar**. Ve marcándola en tu cabeza, o mejor, en papel. El orden de abajo es también el orden del [plan rush](/rush/) y del [simulacro](/repaso/final/).
+
+## Pregunta 1 · Cotas de Wilber
+
+**Base que necesitas:** qué es OPT y por qué buscamos un piso → [Rectángulos independientes](/optimalidad/rectangulos/), capítulos 1 a 4.
+
+Tienes que poder:
+- Calcular **Wilber-1** a mano: dado un árbol de referencia y una secuencia, contar las alternancias izquierda/derecha en cada nodo y sumarlas.
+- Explicar por qué es una **cota inferior** de OPT (cada alternancia es un rectángulo independiente más).
+- Describir **Wilber-2** (alternancias entre los puntos visibles hacia abajo) y su conjetura: $\text{Wilber-2} = \Theta(\text{OPT})$, abierta.
+- Explicar la **secuencia bit-reversal** y por qué da $\Theta(n\lg n)$, y el límite de la técnica: con el árbol fijo de antemano, Wilber-1 puede quedar $\Theta(\lg\lg n)$ lejos de OPT.
+
+<LinkCard title="Cotas de Wilber 1 y 2" href="/optimalidad/wilber/" description="Con la animación de alternancias: escribe tu secuencia y cuenta." />
+
+## Pregunta 2 · Modelo de memoria externa
+
+Tienes que poder:
+- Describir el modelo: memoria rápida de tamaño $M$, disco en **bloques** de $B$, y el costo se mide en **transferencias de bloques**, no en comparaciones.
+- Dar y justificar las **cuatro cotas**: escanear $\Theta(N/B)$, buscar $\Theta(\log_{B+1} N)$, ordenar $\Theta\!\left(\frac NB \log_{M/B}\frac NB\right)$, permutar $\Theta(\min\{N, \text{ordenar}\})$.
+- **Sustituir números** ($N$, $M$, $B$ potencias de 2) y comparar contra el modelo RAM.
+- Explicar por qué el merge sort de $M/B$ vías gana al de 2 vías.
+
+<LinkCard title="Modelo de memoria externa" href="/memoria/modelo-externo/" description="Las cuatro cotas, con animación de transferencias." />
+
+## Pregunta 3 · X-fast y Y-fast trees
+
+**Base que necesitas:** el problema del predecesor en word RAM → [Árbol de van Emde Boas](/enteros/veb/), §1 a §4.
+
+Tienes que poder:
+- Dibujar el **trie binario** de un conjunto pequeño y las **tablas hash por nivel** del X-fast.
+- Hacer **Sucesor(x)** paso a paso: búsqueda binaria sobre los niveles, el puntero al descendiente y la lista enlazada de hojas. Costo $O(\lg w)$.
+- Explicar el **espacio**: X-fast $O(nw)$; Y-fast baja a $\Theta(n)$ con grupos de $\Theta(w)$ llaves en BSTs y un representante por grupo.
+- Justificar por qué los grupos miden $\Theta(w)$ y por qué las actualizaciones son $O(\lg w)$ **amortizadas**.
+
+<LinkCard title="X-fast y Y-fast trees" href="/enteros/xfast-yfast/" description="Con la animación de la búsqueda binaria sobre niveles." />
+
+## Pregunta 4 · Disjoint Sparse Table
+
+**Base que necesitas:** la Sparse Table clásica → [RMQ](/estaticos/rmq-lca/), solo §1 y §2.
+
+Tienes que poder:
+- Explicar por qué la Sparse Table **no sirve para sumar** (ventanas que se pisan; hace falta idempotencia).
+- **Construir la tabla** a mano: por nivel, acumulados desde el centro de cada bloque hacia afuera.
+- Responder una consulta con el **bit más alto de $l \oplus r$** y **una** combinación.
+- Comparar con sumas de prefijos, Sparse Table y segment tree: $\langle O(n\lg n), O(1)\rangle$ para cualquier operación asociativa.
+
+<LinkCard title="Disjoint Sparse Table" href="/estaticos/disjoint-sparse-table/" description="Página nueva, en formato de historia, con animación de construcción y consulta." />
+
+## Pregunta 5 · Aho–Corasick
+
+**Base que necesitas:** qué es un borde → [Función prefijo](/strings/kmp/), §1 y §2.
+
+Tienes que poder:
+- Construir el **trie** de un conjunto de patrones.
+- Calcular los **enlaces de falla** por BFS: el mayor sufijo propio de la cadena del nodo que también está en el trie.
+- Recorrer un texto a mano y listar **todas las ocurrencias**, incluidas las que se heredan por los enlaces (los de salida).
+- Dar el costo $O(n + m + z)$ y explicar cómo **contar** ocurrencias sin enumerarlas.
+
+<LinkCard title="Trie y Aho–Corasick" href="/strings/aho-corasick/" description="Con la animación del trie, las fallas y el recorrido." />
+
+## Pregunta 6 · Centroid Decomposition
+
+Tienes que poder:
+- Encontrar el **centroide** de un árbol (al quitarlo, toda componente tiene a lo más $n/2$ nodos) y demostrar que siempre existe.
+- Hacer la **recursión** nivel por nivel y dibujar el árbol de centroides.
+- Justificar profundidad $O(\lg n)$ y construcción $O(n\lg n)$.
+- Usar la propiedad clave: todo camino $u$–$v$ pasa por el **primer centroide** que los separa. Aplicarla a contar caminos o a «marcado más cercano».
+
+<LinkCard title="Descomposición por centroides" href="/grafos/centroides/" description="Con la animación de la recursión por niveles." />
+
+<Pregunta q={"De las seis, ¿cuáles se resuelven sobre todo con una **traza a mano** y cuáles con una **justificación de cota**? Sepáralas antes de empezar a repasar."} respuesta={"Traza a mano: Wilber-1, Sucesor en X-fast, la tabla de la Disjoint Sparse Table, el autómata de Aho–Corasick y la recursión de centroides. Cota: las cuatro de memoria externa, el espacio de X/Y-fast y la profundidad $O(\\lg n)$ de centroides. En casi todas te pedirán las dos cosas."} />
+
+## Cuando termines
+
+Haz el [simulacro de las 6 preguntas](/repaso/final/) con cronómetro y sin mirar. Corrige con las soluciones y vuelve **solo** a las páginas de lo que fallaste.

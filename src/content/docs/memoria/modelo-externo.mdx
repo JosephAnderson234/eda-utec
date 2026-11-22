@@ -16,6 +16,7 @@ import Dominio from '../../../components/tutor/Dominio.tsx';
 import MemoriaFig from '../../../components/fig/MemoriaFig.astro';
 import Rush from '../../../components/Rush.astro';
 import Pregunta from '../../../components/Pregunta.astro';
+import MemoriaExternaAnim from '../../../components/anim/MemoriaExternaAnim.tsx';
 
 <EnSimple>
 Imagina que estudias en tu escritorio (la **memoria**, pequeña y rápida) y los libros están en un **depósito** lejano (el **disco**, enorme y lento). Cada viaje al depósito tarda muchísimo, pero puedes traer **una caja entera de libros** por viaje.
@@ -24,7 +25,7 @@ Imagina que estudias en tu escritorio (la **memoria**, pequeña y rápida) y los
 - El **modelo de memoria externa** cuenta exactamente eso: viajes (transferencias de bloques). Con él aparecen las dos cotas que organizan toda la unidad: escanear cuesta $N/B$ y ordenar cuesta $\frac{N}{B}\log_{M/B}\frac{N}{B}$.
 </EnSimple>
 
-<Rush id="modelo-externo" clave={"Las cuatro cotas: escanear $\\Theta(N/B)$, buscar $\\Theta(\\log_{B+1} N)$, ordenar $\\Theta(\\frac NB\\log_{M/B}\\frac NB)$, permutar $\\Theta(\\min\\{N, \\text{ordenar}\\})$."} lee={"§2 (el modelo), §3, §4 y §5."} salta={"§1 si ya sabes qué es un bloque; la prueba de §6."} haz={"Peldaño 2: $N = 2^{40}$, $M = 2^{30}$, $B = 2^{10}$."} />
+<Rush id="modelo-externo" clave={"Las cuatro cotas: escanear $\\Theta(N/B)$, buscar $\\Theta(\\log_{B+1} N)$, ordenar $\\Theta(\\frac NB\\log_{M/B}\\frac NB)$, permutar $\\Theta(\\min\\{N, \\text{ordenar}\\})$."} lee={"Toda la página. Es la pregunta 2: las cuatro cotas, de dónde sale cada una y la cuenta con números."} anim={"La animación de transferencias (final de §5): compara Escanear, Acceso disperso y Merge sort con los mismos $N$, $B$ y $M$."} haz={"Peldaño 2: $N = 2^{40}$, $M = 2^{30}$, $B = 2^{10}$."} />
 
 <Objetivos
 	objetivos={[
@@ -165,6 +166,8 @@ $N/B = 2^{30}$, $N/M = 2^{10}$, $M/B = 2^{20}$. Binario: 30 pasadas. Múltiple: 
 **Teorema (Aggarwal y Vitter).** En el modelo de comparaciones, todo algoritmo de ordenamiento en memoria externa hace $\Omega\!\left(\frac NB \log_{M/B}\frac NB\right)$ transferencias en el peor caso.
 
 *La idea, sin los detalles:* hay $N!$ órdenes posibles, así que hacen falta $\lg(N!) \approx N\lg N$ bits. Cuando entra un bloque a memoria, lo único nuevo que se puede aprender es cómo se **intercalan** sus $B$ elementos con los que ya estaban: a lo más $\binom{M}{B}$ posibilidades, unos $B\lg\frac MB$ bits. Dividiendo salen del orden de $\frac{N\lg N}{B\lg(M/B)} = \frac NB\log_{M/B} N$ transferencias; el argumento completo afina el $N$ de dentro del logaritmo a $N/B$. **La mezcla múltiple es óptima.**
+
+<MemoriaExternaAnim client:visible />
 
 ## 6. Permutar no es un escaneo
 

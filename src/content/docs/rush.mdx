@@ -1,18 +1,18 @@
 ---
-title: 'Modo rush: todo el final en menos de 12 h'
-description: 'Plan intensivo para el final de CS3014: 21 bloques en orden lineal, descansos incluidos, qué leer y qué saltar en cada página, y siete animaciones para entender lo central rápido.'
+title: 'Modo rush: las 6 preguntas del final'
+description: 'Plan intensivo para el final de CS3014 enfocado en las 6 preguntas anunciadas: cada pregunta con su base mínima, descansos incluidos, animaciones y un simulacro final.'
 ---
 
 import EnSimple from '../../components/EnSimple.astro';
 import RushPlan from '../../components/rush/RushPlan.tsx';
 
 <EnSimple titulo="La idea del rush">
-No vas a leer la web completa: vas a hacer **triaje**. En cada tema hay una o dos ideas que dan casi todos los puntos (una cota, una traza, un truco) y mucho detalle que solo sirve si te sobra tiempo. Cada página empieza con un recuadro **⚡ Modo rush** que te dice exactamente qué leer, qué saltar, qué animación mirar y qué ejercicio hacer. Tú solo sigue el cronograma.
+El profesor ya dijo qué sale: **6 preguntas**, una por subtema. Este plan cubre solo esas 6 y, antes de cada una, la **base mínima** que necesita (por ejemplo, la Sparse Table antes de la disjunta). Cada página empieza con un recuadro 🎯 o 🧱 que te dice qué leer, qué saltar, qué animación mirar y qué ejercicio hacer. Las páginas que no entran muestran ⚪ y no están en el plan.
 </EnSimple>
 
 ## Las 5 reglas del rush
 
-1. **Orden lineal, sin saltos.** Cada unidad usa la anterior: el sidebar ya está numerado en ese orden (1 → 19). Si te trabas, no saltes al siguiente tema: baja al prerrequisito.
+1. **Una pregunta a la vez.** El sidebar ya está en el orden P1 → P6. Si te trabas, baja a la página 🧱 de base que indica el bloque, no saltes a otra pregunta.
 2. **Primero la animación, después el texto.** Las animaciones 🎬 muestran en 1 minuto lo que el texto explica en 10. Reprodúcela, pausa y **predice el siguiente paso** antes de avanzar.
 3. **Un ejercicio por tema, sin mirar.** El recuadro ⚡ te indica cuál. Si no lo puedes resolver solo, ese tema no está aprendido: márcalo y vuelve en el cierre.
 4. **Cronómetro honesto.** Si un bloque se acaba, pasa al siguiente aunque no hayas terminado: lo que falte lo cubre el simulacro y el cierre.
@@ -24,26 +24,23 @@ No vas a leer la web completa: vas a hacer **triaje**. En cada tema hay una o do
 
 ## Dónde están las animaciones
 
-Tienen ▶ reproducir, pausa, paso a paso y velocidad. Muchas aceptan tus propios datos.
+Tienen ▶ reproducir, pausa, paso a paso y velocidad, y aceptan tus propios datos.
 
-| Unidad | Animación | Qué te enseña en un minuto |
+| Pregunta | Animación | Qué te enseña en un minuto |
 | --- | --- | --- |
-| 1 | [Alternancias de Wilber-1](/optimalidad/wilber/) | Contar alternancias = contar cambios de hijo preferido en Tango |
-| 2 | [Layout vEB en memoria](/memoria/layout-veb/) | Por qué una búsqueda toca pocos bloques sin conocer $B$ |
-| 3 | [Sucesor en vEB](/enteros/veb/) | Una sola llamada recursiva por nivel ⇒ $O(\lg\lg u)$ |
-| 4 | [Sparse Table](/estaticos/rmq-lca/) | Construcción por duplicación y consulta con dos ventanas solapadas |
-| 5 | [Heavy-Light](/grafos/heavy-light/) | Un camino se parte en $O(\lg n)$ rangos del arreglo |
-| 5 | [Centroides](/grafos/centroides/) | Cada nivel parte las componentes a la mitad ⇒ profundidad $\lg n$ |
-| 6 | [KMP](/strings/kmp/) | El texto nunca retrocede; el patrón salta según $\pi$ |
+| P1 | [Alternancias de Wilber-1](/optimalidad/wilber/) | Contar lados por nodo y sumar alternancias |
+| P2 | [Transferencias en memoria externa](/memoria/modelo-externo/) | Escanear vs. acceso disperso vs. merge sort de $M/B$ vías |
+| P3 | [Sucesor en X-fast](/enteros/xfast-yfast/) | Búsqueda binaria sobre niveles y puntero al descendiente |
+| P4 | [Disjoint Sparse Table](/estaticos/disjoint-sparse-table/) | Construir desde los centros y consultar con el XOR |
+| P5 | [Aho–Corasick](/strings/aho-corasick/) | Trie, enlaces de falla y recorrido del texto |
+| P6 | [Centroides](/grafos/centroides/) | Cada nivel parte las componentes a la mitad |
 
-Además siguen los simuladores paso a paso de la [función prefijo](/strings/kmp/) y del [suffix array por duplicación](/strings/suffix-array/).
-
-## Si te quedan menos de 12 horas
+## Si te queda menos tiempo
 
 | Tiempo | Qué recortar |
 | --- | --- |
-| **8 h** | Salta Fusion trees, DC3/SA-IS y Signed-Greedy (solo lee su fila en el [formulario](/formulario/)). Haz solo la parte A del simulacro. |
-| **5 h** | Haz solo los recuadros ⚡ (lee + anima + ejercicio) de los temas ●●● del [panel](/ruta/) y el formulario completo. |
-| **2 h** | [Formulario](/formulario/) + las 7 animaciones + parte A del [simulacro](/repaso/simulacro/). |
+| **5 h** | Salta los bloques 🧱 de base salvo la Sparse Table. Haz el simulacro igual. |
+| **3 h** | 30 min por pregunta: el recuadro 🎯, la animación y el ejercicio que indica. Luego 20 min del simulacro. |
+| **1 h** | [Las 6 preguntas](/final/) + las 6 animaciones con tus propios datos. |
 
-Los recortes son una **estimación propia** según el peso que tuvo cada tema en clase; no son un anuncio del examen.
+Los recortes son una **estimación propia**; lo único confirmado es qué subtemas entran.

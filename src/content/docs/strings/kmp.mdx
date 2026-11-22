@@ -24,7 +24,7 @@ import Pregunta from '../../../components/Pregunta.astro';
 Imagina que buscas una palabra en una cinta larga. Si ya comprobaste `ababa` y la siguiente letra falla, **no hace falta volver a leer esas cinco letras**: el final `aba` coincide con el comienzo `aba`. KMP guarda cuánto del comienzo sobrevive al fallo. Así el dedo que recorre la cinta nunca retrocede.
 </EnSimple>
 
-<Rush id="kmp" clave={"Calcular $\\pi$ a mano, KMP en $O(n + m)$ y periodo mínimo $n - \\pi[n-1]$."} lee={"§1, §2 y §3."} salta={"§4, salvo el periodo."} anim={"El simulador de $\\pi$ (§2) y la animación de búsqueda (final de §3)."} haz={"Peldaño 2: $\\pi$ y el periodo de abab."} />
+<Rush id="kmp" clave={"Calcular $\\pi$ a mano, KMP en $O(n + m)$ y periodo mínimo $n - \\pi[n-1]$."} lee={"§1 y §2: bordes y función prefijo. Los enlaces de falla de Aho–Corasick son la misma idea sobre un trie."} salta={"§3 a §5: no entran en el final."} anim={"El simulador de $\\pi$ (§2) y la animación de búsqueda (final de §3)."} haz={"Peldaño 2: $\\pi$ y el periodo de abab."} />
 
 <Objetivos objetivos={[
   'Reconocer un <strong>borde</strong> y calcular la función prefijo π a mano.',

@@ -6,22 +6,26 @@ hero:
   title: 'Estructuras de Datos Avanzadas: <span class="grad">el final, desde cero</span>'
   tagline: 'Semanas 9 a 14 de CS3014, explicadas para quien llega nuevo: primero la idea en palabras simples, después la versión formal, con figuras, ejercicios por niveles y autoevaluación.'
   actions:
-    - text: '⚡ Modo rush: todo en 12 h'
-      link: /rush/
+    - text: '🎯 Las 6 preguntas del final'
+      link: /final/
       icon: right-arrow
       variant: primary
-    - text: 'Ruta de estudio'
-      link: /ruta/
+    - text: '⚡ Rush de las 6 preguntas'
+      link: /rush/
       variant: secondary
-    - text: 'Formulario de cotas'
-      link: /formulario/
+    - text: 'Simulacro'
+      link: /repaso/final/
       variant: minimal
 ---
 
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 import EnSimple from '../../components/EnSimple.astro';
 
-<EnSimple titulo="De qué trata el final, en una frase por unidad">
+<EnSimple titulo="El profesor ya anunció las 6 preguntas">
+El final tiene **una pregunta por subtema**: Cotas de Wilber, Modelo de memoria externa, X-fast y Y-fast trees, **Disjoint Sparse Table**, Aho–Corasick y Centroid Decomposition. Empieza por [Las 6 preguntas del final](/final/): ahí está qué tienes que saber hacer en cada una. Lo demás de esta web queda como consulta.
+</EnSimple>
+
+<EnSimple titulo="De qué trata el curso, en una frase por unidad">
 1. **Optimalidad dinámica:** ¿existe un árbol de búsqueda casi tan bueno como el mejor posible para *cualquier* secuencia? Aprendemos a demostrar cuánto cuesta **como mínimo** (cotas inferiores) y un árbol que se acerca: Tango.
 2. **Jerarquía de memoria:** en una computadora real lo caro es **traer datos** de la memoria lenta, no compararlos. Estructuras que traen pocos bloques, incluso sin saber de qué tamaño son.
 3. **Enteros:** si las llaves son números, podemos mirar sus **bits** y buscar el vecino más cercano más rápido que $\lg n$.
