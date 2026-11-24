@@ -1,0 +1,149 @@
+---
+title: 'Problema 2 · Modelo de memoria externa'
+description: 'Transferencias de bloque, mezcla múltiple y búsqueda orientada a I/O.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+
+<EnSimple titulo="Cómo usar este problema">Dedica 25 minutos, en papel y sin mirar la página del tema. Es un problema propio con el formato del simulacro del curso: contexto y procedimiento, (a) Conocimientos 3 pts, (b) Análisis 3 pts, (c) Diseño 2 pts, (d) Profundidad 2 pts. Las respuestas se verificaron con un script.</EnSimple>
+
+## Enunciado
+
+### Contexto
+
+En el modelo de Aggarwal–Vitter caben $M$ elementos en memoria interna; el disco transfiere bloques de $B$ elementos. El costo que medimos es el número de **transferencias de bloque** (I/O), no las comparaciones dentro de memoria. En todo el problema, salvo cuando se varía un parámetro expresamente, $N=2^{20}$, $M=2^{12}$ y $B=2^6$. Una pasada completa que lee y escribe cuesta $2N/B$ I/O. Una corrida es una subsecuencia ya ordenada, almacenada consecutivamente. La siguiente rutina crea corridas de tamaño $M$ y luego las fusiona.
+
+```text
+procedimiento ORDENAR-EXT(A, N)
+  // Fase 1: corridas
+  para cada trozo de M elementos consecutivos de A hacer
+    leerlo (M/B transferencias), ordenarlo en memoria, escribirlo como corrida
+  // Fase 2: mezcla múltiple
+  k ← M/B − 1                       // un bloque por corrida y uno de salida
+  mientras haya más de una corrida hacer
+    agrupar las corridas de a k y mezclar cada grupo en una corrida
+  devolver la única corrida
+```
+
+Suponemos divisibilidad en las cuentas principales, bloques de entrada que se reponen al agotarse y un bloque de salida que se escribe al llenarse; se escribe al final cualquier bloque parcial. Las búsquedas preguntan por una llave o por el intervalo en que debería estar.
+
+### (a) Conocimientos · 3 pts
+
+Calcula los I/O de un escaneo, una búsqueda binaria en arreglo ordenado y una búsqueda en B-tree con hasta $B$ llaves por nodo. Ejecuta `ORDENAR-EXT`: número de corridas, fan-in $k$, corridas después de cada mezcla, pasadas e I/O totales. Compara con mezclar de a dos desde corridas de tamaño $M$ y con merge sort binario puro que empieza en bloques.
+
+### (b) Análisis · 3 pts
+
+**Demuestra que** una búsqueda por comparaciones necesita $\Omega(\log_{B+1}N)$ I/O y que `ORDENAR-EXT` usa $O((N/B)(1+\log_{M/B}(N/M)))=O((N/B)\log_{M/B}(N/B))$ I/O. Justifica la correctitud de la mezcla, cuándo se repone un bloque, el trabajo de cada pasada y la identidad de logaritmos.
+
+### (c) Diseño · 2 pts
+
+1. Mantén $N$ y $B$ fijos. ¿Cuál es la menor potencia de dos $M$ que permite **una sola** pasada de mezcla? Justifica por qué $M=2^{13}$ no basta.
+2. Dada una permutación $\pi$ que indica la posición de destino de cada elemento, diseña una permutación externa usando `ORDENAR-EXT`. Compárala con mover elementos uno por uno para $M=2^{12}$ y $B\in\{1,2,4,8,16,32,64,128\}$.
+
+### (d) Profundidad · 2 pts
+
+Chris propone guardar un arreglo ordenado y usar búsqueda binaria porque hace $\lg N$ comparaciones, y también propone usar merge sort binario porque «cada pasada cuesta igual». ¿Son algoritmos correctos? Compara sus I/O con las alternativas anteriores y explica qué información útil de un bloque o de la memoria deja sin usar cada propuesta.
+
+## Solución
+
+### (a) Conocimientos
+
+<Solucion>
+
+Un escaneo lee cada bloque una vez: $N/B=2^{20}/2^6=2^{14}=16\,384$ I/O. Para búsqueda binaria, los primeros $\lg(N/B)=14$ pasos pueden caer en bloques distintos; los últimos $\lg B=6$ pasos se concentran en un bloque. Contando ese bloque final, el costo aproximado es **$14+1=15$ I/O**, frente a $\lg N=20$ comparaciones. Un B-tree con $B=64$ llaves separa hasta $B+1=65$ intervalos en cada nodo. La altura de búsqueda es $\lceil\log_{65}(N+1)\rceil=4$ niveles y, con un bloque por nodo, **4 I/O**.
+
+Para ordenar, $N/M=2^{20}/2^{12}=256$ corridas. Caben $M/B=64$ bloques internos: $63$ de entrada y uno de salida, luego $k=63$. La primera mezcla reúne hasta $63$ corridas y deja $\lceil256/63\rceil=5$; la segunda reúne las cinco y deja una. Son **dos mezclas**, más la fase de corridas: tres pasadas completas. Cada una lee y escribe $16\,384$ bloques, es decir $32\,768$ I/O. Total **$3\cdot32\,768=98\,304$ I/O**.
+
+| Método | Corridas o bloques iniciales | Pasadas completas | I/O |
+| --- | ---: | ---: | ---: |
+| Corridas en $M$ y mezcla de a $63$ | 256 | $1+2=3$ | 98 304 |
+| Corridas en $M$ y mezcla de a $2$ | 256 | $1+\lg256=9$ | 294 912 |
+| Merge sort binario desde bloques | 16 384 | $\lg16\,384=14$ | 458 752 |
+
+El último renglón usa la convención del enunciado: cada nivel de mezcla lee y escribe todo. No se añade una fase previa de corridas en memoria.
+
+</Solucion>
+
+### (b) Análisis
+
+<Solucion>
+
+**Cota de búsqueda.** Considera las $N+1$ respuestas posibles de una búsqueda fallida: antes de la primera llave, entre dos llaves consecutivas o después de la última. Un bloque con a lo sumo $B$ llaves ordenadas puede separar las posibilidades en a lo sumo $B+1$ intervalos según las comparaciones efectuadas. Por ello, tras $t$ bloques, un árbol de decisión de fan-out a lo sumo $B+1$ distingue a lo sumo $(B+1)^t$ respuestas. Debe cumplirse $(B+1)^t\ge N+1$, así que $t\ge\log_{B+1}(N+1)=\Omega(\log_{B+1}N)$. Un B-tree alcanza ese orden con nodos de un bloque. Esta prueba usa el **modelo de comparaciones**; no afirma lo mismo para cualquier operación imaginable sobre las llaves. ∎
+
+**Correctitud de la mezcla.** Mantén en memoria el primer bloque aún no consumido de cada una de hasta $k=M/B-1$ corridas y un bloque de salida. El siguiente elemento global es el mínimo entre las cabezas de las corridas: cada corrida está ordenada, de modo que ninguno de sus elementos restantes puede preceder a su cabeza. Se emite ese mínimo y se avanza solo en su corrida. Cuando se agota su bloque de entrada, se trae el siguiente bloque de **esa** corrida; cuando se llena el bloque de salida, se escribe. El invariante «la salida contiene exactamente el prefijo ordenado de todos los elementos consumidos» vale al inicio y se preserva en cada emisión; al agotarse todas las corridas, la salida es una corrida ordenada con todos sus elementos. ∎
+
+**Costo.** La fase inicial lee y escribe los $N$ elementos una vez: $2N/B$ I/O. Cada pasada de mezcla también lee cada bloque de entrada una vez y escribe cada bloque resultante una vez, otros $2N/B$ I/O, salvo redondeos de bloques parciales. Si hay $R=N/M$ corridas, cada pasada reduce su número por un factor hasta $k$; bastan $h=\lceil\log_k R\rceil$ pasadas, o cero si $R\le1$. Por tanto el costo exacto bajo estas convenciones es $(1+h)2N/B$, y asintóticamente
+
+$$O\!\left(\frac NB\left(1+\log_{M/B}\frac NM\right)\right).$$
+
+El $-1$ de $k=M/B-1$ no cambia la base asintótica cuando $M/B$ permite una mezcla de al menos dos corridas. Finalmente,
+
+$$1+\log_{M/B}\frac NM =\log_{M/B}\frac MB+\log_{M/B}\frac NM =\log_{M/B}\frac NB.$$
+
+Así se obtiene $O((N/B)\log_{M/B}(N/B))$. En los rangos habituales este orden es óptimo para ordenar externamente; la cota inferior de ordenación de Aggarwal–Vitter se menciona aquí sin demostrarla. ∎
+
+</Solucion>
+
+### (c) Diseño
+
+<Solucion>
+
+Una sola mezcla exige $R=N/M\le k=M/B-1$. Con $M=2^{13}$, hay $128$ corridas y solo $127$ bloques de entrada: **falta uno**. Con $M=2^{14}$, hay $64$ corridas y $k=255$; sí caben. Como al reducir $M$ aumentan las corridas y disminuye el fan-in, **$2^{14}$ es la menor potencia de dos** que satisface la desigualdad.
+
+| $\lg M$ | Corridas $N/M$ | $k=M/B-1$ | Mezclas |
+| ---: | ---: | ---: | ---: |
+| 8 | 4096 | 3 | 8 |
+| 9 | 2048 | 7 | 4 |
+| 10 | 1024 | 15 | 3 |
+| 11 | 512 | 31 | 2 |
+| 12 | 256 | 63 | 2 |
+| 13 | 128 | 127 | 2 |
+| 14 | 64 | 255 | 1 |
+
+Para aplicar $\pi$, adjunta a cada elemento su índice de destino $\pi(i)$, ordena los registros por ese índice con `ORDENAR-EXT` y escribe la secuencia resultante. Como $\pi$ es una permutación, hay un registro por destino, así que el orden final es precisamente el pedido. Las cuentas siguientes usan la convención del problema de contar la ordenación como $2(N/B)(1+\text{mezclas})$; los registros se consideran elementos de tamaño constante.
+
+| $B$ | I/O por ordenar por destino | Mover uno a uno, aprox. |
+| ---: | ---: | ---: |
+| 1 | 4 194 304 | 1 048 576 |
+| 2 | 2 097 152 | 1 048 576 |
+| 4 | 1 048 576 | 1 048 576 |
+| 8 | 524 288 | 1 048 576 |
+| 16 | 393 216 | 1 048 576 |
+| 32 | 196 608 | 1 048 576 |
+| 64 | 98 304 | 1 048 576 |
+| 128 | 49 152 | 1 048 576 |
+
+La estrategia por destino gana para $B>4$ en esta instancia, empata para $B=4$ y pierde con bloques diminutos. Se elige la mejor de las dos: la complejidad de permutar en el modelo es $\Theta(\min\{N,\operatorname{sort}(N)\})$ en las condiciones habituales.
+
+Para leer la tabla, no se debe sustituir $B$ únicamente en el factor $N/B$: al cambiar $B$, cambia también el número de bloques de memoria $M/B$ y por tanto el fan-in $k=M/B-1$. Para $B=8$, por ejemplo, $M/B=512$ y $k=511$, suficientes para fusionar las $256$ corridas de una vez; hay dos pasadas completas y $2(2N/8)=524\,288$ I/O. Para $B=16$, $k=255$, **uno menos** que las $256$ corridas; se requieren dos mezclas y el costo sube a $3(2N/16)=393\,216$. Este salto de número de pasadas explica por qué la columna de costos no se obtiene dividiendo siempre entre dos al duplicar $B$. Para $B=64$ se recuperan las tres pasadas del apartado (a).
+
+</Solucion>
+
+### (d) Profundidad
+
+<Solucion>
+
+La búsqueda binaria es **correcta**: compara con el elemento medio y descarta la mitad imposible. Pero sus $20$ comparaciones no implican $4$ I/O. En la instancia, cuesta aproximadamente $14$–$15$ I/O, mientras el B-tree usa $4$. En general la razón entre $\lg(N/B)$ y $\log_{B+1}N$ puede ser del orden de $\lg B$. La búsqueda binaria aprovecha solo aproximadamente una decisión binaria de cada bloque; los otros elementos del bloque podrían separar hasta $B+1$ intervalos.
+
+Merge sort binario también ordena correctamente, pero si parte de bloques necesita $14$ pasadas frente a las $3$ de `ORDENAR-EXT`: $458\,752$ frente a $98\,304$ I/O. Si primero crea corridas de tamaño $M$ y luego mezcla de a dos, aún requiere $9$ pasadas. Cada pasada cuesta lo mismo, precisamente por eso conviene **reducir el número de pasadas** usando a la vez hasta $M/B-1$ bloques de entrada. En términos asintóticos, la mezcla múltiple reduce los niveles por un factor relacionado con $\lg(M/B)$; para estos parámetros $\lg(M/B)=6$. Lo que Chris deja sin usar es la capacidad de memoria para comparar simultáneamente las cabezas de muchas corridas.
+
+</Solucion>
+
+## Rúbrica estimada
+
+Esta es una **estimación propia**, no la rúbrica oficial.
+
+| Parte | Qué da puntos | Error típico que los quita |
+| --- | --- | --- |
+| (a), 3 pts | 16 384, 15, 4, secuencia 256→5→1 y 98 304 I/O | Contar solo lecturas en una pasada que también escribe |
+| (b), 3 pts | Árbol de decisión, invariante de mezcla, pasadas e identidad de logaritmos | Dar solo la fórmula sin explicar reposición de bloques |
+| (c), 2 pts | Desigualdad para una mezcla, $M=2^{14}$ y algoritmo por destino | Confundir $M/B$ con el número de bloques **de entrada** disponibles |
+| (d), 2 pts | Separar comparaciones de I/O y explicar el uso de bloques y memoria | Afirmar que los algoritmos de Chris son incorrectos |
+
+## Qué repasar si fallaste
+
+- [Modelo y costo de escanear](/memoria/modelo-externo/).
+- [Búsqueda y B-trees](/memoria/modelo-externo/).
+- [Ordenación y mezcla múltiple](/memoria/modelo-externo/).
+- [Permutación externa](/memoria/modelo-externo/).

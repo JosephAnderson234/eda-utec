@@ -40,6 +40,18 @@ export default defineConfig({
 					],
 				},
 				{
+					label: '📝 Examen tipo · formato del profesor',
+					items: [
+						{ label: 'Formato y ranking de facilidad', slug: 'examen-tipo', badge: { text: 'nuevo', variant: 'success' } },
+						{ label: '1 · Disjoint Sparse Table (P4)', slug: 'examen-tipo/p4-disjoint-sparse-table' },
+						{ label: '2 · Memoria externa (P2)', slug: 'examen-tipo/p2-memoria-externa' },
+						{ label: '3 · Aho–Corasick (P5)', slug: 'examen-tipo/p5-aho-corasick' },
+						{ label: '4 · Cotas de Wilber (P1)', slug: 'examen-tipo/p1-wilber' },
+						{ label: '5 · X-fast y Y-fast (P3)', slug: 'examen-tipo/p3-xfast-yfast' },
+						{ label: '6 · Centroid Decomposition (P6)', slug: 'examen-tipo/p6-centroides' },
+					],
+				},
+				{
 					label: 'Herramientas',
 					items: [
 						{ label: 'Modo rush · 6 preguntas', slug: 'rush', badge: { text: 'rush', variant: 'caution' } },

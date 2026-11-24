@@ -1,0 +1,145 @@
+---
+title: 'Problema 1 · Cotas de Wilber'
+description: 'Alternancias en un árbol de referencia, puntos visibles y la secuencia bit-reversal.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+
+<EnSimple titulo="Cómo usar este problema">Dedica 25 minutos, en papel y sin mirar la página del tema. Es un problema propio con el formato del simulacro del curso: contexto y procedimiento, (a) Conocimientos 3 pts, (b) Análisis 3 pts, (c) Diseño 2 pts, (d) Profundidad 2 pts. Las respuestas se verificaron con un script.</EnSimple>
+
+## Enunciado
+
+### Contexto
+
+Sea $P$ el BST perfecto con llaves $1,\ldots,15$: raíz $8$, hijos $4,12$, nietos $2,6,10,14$ y hojas impares. Para **Wilber-1**, cada nodo $y$ conserva, en orden temporal, los accesos que caen estrictamente en su subárbol izquierdo o derecho. Marca I o D, omite los accesos a $y$ y los que están fuera de su subárbol, cuenta los cambios entre marcas consecutivas y suma sobre todos los nodos. Una marca aislada aporta cero.
+
+```text
+procedimiento WILBER-1(P, X)
+  total ← 0
+  para cada nodo y de P hacer
+    lados ← secuencia vacía
+    para cada acceso x de X, en orden, hacer
+      si x está en el subárbol izquierdo de y entonces agregar I a lados
+      si no, si x está en el subárbol derecho de y entonces agregar D a lados
+    total ← total + (número de posiciones t con lados[t] ≠ lados[t+1])
+  devolver total
+```
+
+Para **Wilber-2**, dibuja el acceso $(x_i,i)$ como punto de llave y tiempo. Un acceso anterior $(x_j,j)$, con $j\lt i$ y $x_j\ne x_i$, es *visible* desde $(x_i,i)$ cuando el rectángulo cerrado con esos extremos no contiene otro punto con tiempo estrictamente entre $j$ e $i$. Lista los visibles del más reciente al más antiguo, marca I si $x_j\lt x_i$ y D si $x_j>x_i$, y cuenta las alternancias. Suma sobre todos los tiempos. Ambas cantidades son cotas inferiores de $\mathrm{OPT}$ salvo constantes y el término de los $m$ accesos.
+
+### (a) Conocimientos · 3 pts
+
+1. Ejecuta `WILBER-1` para $X=(6,13,2,9,14,5,11,3)$. Da las marcas de **cada nodo con aporte positivo**, su aporte y el total. Explica qué ocurre con el acceso a la raíz y con el nodo $4$.
+2. Usa ahora las llaves $1,\ldots,7$ y $X'=(4,2,6,1,7,3,5)$. Calcula Wilber-2 en cada tiempo, con detalle de los visibles en $t=6$ y $t=7$. Justifica por qué los puntos de llaves $1$ y $2$ no son visibles desde el último acceso.
+
+### (b) Análisis · 3 pts
+
+Sea $n=2^k-1$, $P$ el BST perfecto de esas llaves y $X=(\operatorname{rev}_k(1),\ldots,\operatorname{rev}_k(2^k-1))$, donde $\operatorname{rev}_k$ invierte exactamente $k$ bits. Para $k=3$, $X=(4,2,6,1,5,3,7)$. **Demuestra que** cada nodo de profundidad $d\le k-2$ aporta exactamente $2^{k-d}-3$ alternancias; deduce la suma $(k-1)2^k-3(2^{k-1}-1)=\Theta(n\lg n)$ y el valor asintótico de $\mathrm{OPT}$.
+
+### (c) Diseño · 2 pts
+
+Para el BST perfecto de $1,\ldots,7$, demuestra una cota superior universal de Wilber-1 sobre **permutaciones** de las siete llaves. Diseña una permutación que alcance esa cota y ejecútala nodo por nodo.
+
+### (d) Profundidad · 2 pts
+
+Chris propone escoger $P$ **después** de ver $X$, maximizando Wilber-1. ¿Sigue siendo cota inferior? Para $X=(4,2,6,1,5,3,7)$, di el mínimo y el máximo entre los 429 BST de esas llaves y muestra árboles que los atestigüen. ¿Puede Tango usar así $P$? Explica qué información pierde una elección inadecuada.
+
+## Solución
+
+### (a) Conocimientos
+
+<Solucion>
+
+**Wilber-1.** La raíz $8$ nunca aparece en $X$, por lo que no hay acceso a la raíz que omitir. El nodo $4$ tampoco aparece; sí debe omitir los accesos fuera de su subárbol.
+
+| Nodo $y$ | Accesos que ve, en orden | Marcas | Cambios |
+| --- | --- | --- | ---: |
+| 8 | 6, 13, 2, 9, 14, 5, 11, 3 | I D I D D I D I | 6 |
+| 4 | 6, 2, 5, 3 | D I D I | 3 |
+| 12 | 13, 9, 14, 11 | D I D I | 3 |
+| 10 | 9, 11 | I D | 1 |
+
+En $8$ se comparan siete pares consecutivos: cambian todos salvo el par D,D de $9,14$; por eso aporta $6$. Los nodos $2,6,14$ ven respectivamente solo $3\to\mathrm D$, $5\to\mathrm I$, $13\to\mathrm I$. El nodo $8$ no tiene acceso propio y el $4$ tampoco; los demás nodos internos no ven lados alternantes y las hojas no tienen hijos. **Total: $6+3+3+1=13$.**
+
+**Wilber-2.** Escribimos visibles de más reciente a más antiguo. En la columna de marcas, I significa que el visible tiene llave menor que la llave actual.
+
+| $t$ | Llave | Llaves visibles | Marcas | Alternancias |
+| ---: | ---: | --- | --- | ---: |
+| 1 | 4 | — | — | 0 |
+| 2 | 2 | 4 | D | 0 |
+| 3 | 6 | 2, 4 | I I | 0 |
+| 4 | 1 | 6, 2 | D D | 0 |
+| 5 | 7 | 1, 6 | I I | 0 |
+| 6 | 3 | 7, 1, 6, 2, 4 | D I D I D | 4 |
+| 7 | 5 | 3, 7, 6, 4 | I D D I | 2 |
+
+Para $t=6$, los cinco visibles alternan D→I→D→I→D, cuatro cambios. Para $t=7$, la secuencia I→D→D→I tiene dos. El punto $(1,4)$ no es visible desde $(5,7)$: el rectángulo $[1,5]\times[4,7]$ contiene $(3,6)$. El punto $(2,2)$ tampoco: su rectángulo $[2,5]\times[2,7]$ también contiene $(3,6)$. Los puntos de llaves $6$ y $7$ sí son visibles porque los puntos intermedios quedan fuera de sus intervalos de llaves. **Wilber-2 $=4+2=6$.**
+
+La visibilidad se decide por un punto **dentro del rectángulo cerrado**, no por cercanía temporal o numérica tomada por separado. Para $t=6$, la llave actual es $3$: al mirar hacia atrás, $7$ y $6$ quedan a su derecha; $1$ y $2$ a la izquierda; $4$ también a la derecha. Para cada uno, los puntos aparecidos después tienen llave fuera del intervalo hasta $3$, de modo que ninguno bloquea el rectángulo. Para $t=7$, $3$ es visible por ser el acceso inmediatamente anterior; $7$ es visible porque el intermedio $3$ queda por debajo del intervalo $[5,7]$; $6$ también, ya que $3$ y $7$ no están entre $5$ y $6$; y $4$ es visible porque ninguno de los puntos posteriores tiene llave entre $4$ y $5$. Esta comprobación individual evita inferir mal la lista a partir de la sola alternancia I/D.
+
+</Solucion>
+
+### (b) Análisis
+
+<Solucion>
+
+**Enunciado.** Para cada profundidad $d\lt k-1$, un nodo aporta exactamente $2^{k-d}-3$ cambios; las hojas aportan cero.
+
+**Idea.** Invertir bits transforma la pertenencia a un subárbol, determinada por bits altos de una llave, en una clase de congruencia determinada por bits bajos del contador $c$. Dentro de esa clase, el bit que decide I/D alterna a cada paso.
+
+**Prueba.** Escribe cada entero con $k$ bits, incluidos ceros iniciales. Un nodo $y$ a profundidad $d$ corresponde a un prefijo alto fijo de $d$ bits. Sea $r$ el entero cuyos $d$ bits son ese prefijo, **leído al revés**. Entonces $\operatorname{rev}_k(c)$ comparte ese prefijo si y solo si $c\equiv r\pmod{2^d}$. Entre $0$ y $2^k-1$, los contadores candidatos son
+
+$$c=r+m2^d,\qquad m=0,1,\ldots,2^{k-d}-1.$$
+
+El bit siguiente de la llave invertida, el que decide el lado de $y$, es el bit $d$ de $c$, o sea la paridad de $m$: par da I e impar da D. Sin embargo, los primeros **dos** candidatos no se marcan. Con $m=0$, los $k-d$ bits bajos restantes de la llave invertida son cero: se obtiene el extremo izquierdo del intervalo del prefijo, un ancestro o, si $r=0$, la llave cero excluida de $X$. Con $m=1$, el bit que identifica a $y$ está encendido y todos los bits de menor peso son cero: el acceso es al propio $y$, que el procedimiento ignora. Estos son los únicos candidatos excluidos: los $m=2,\ldots,2^{k-d}-1$ representan exactamente las otras llaves del subárbol de $y$. Por tanto quedan $2^{k-d}-2$ marcas y sus paridades alternan estrictamente. Su número de cambios es $2^{k-d}-3$. Cuando $d=k-1$, la fórmula no se aplica: la hoja no ve acceso lateral y aporta cero. ∎
+
+Hay $2^d$ nodos en el nivel $d$. La contribución del nivel es $2^d(2^{k-d}-3)=2^k-3\cdot2^d$. Sumando $d=0,\ldots,k-2$ y usando $\sum_{d=0}^{k-2}2^d=2^{k-1}-1$:
+
+$$\mathrm{Wilber\text{-}1}(P,X)=(k-1)2^k-3(2^{k-1}-1)=\Theta(2^kk)=\Theta(n\lg n).$$
+
+Como Wilber-1 es cota inferior de $\mathrm{OPT}$, $\mathrm{OPT}=\Omega(n\lg n)$. Un BST balanceado tiene altura $O(\lg n)$ y ejecuta los $n$ accesos en $O(n\lg n)$, de modo que $\mathrm{OPT}=\Theta(n\lg n)$. Para comprobar la fórmula: $k=3\to7$, $k=4\to27$, $k=5\to83$ y $k=10\to7683$.
+
+La cuenta exacta de las dos exclusiones importa. No bastaría decir «las marcas alternan»: una subsecuencia alternante puede dejar de alternar si se le quitan elementos interiores. Aquí se quitan precisamente los contadores $m=0$ y $m=1$, que son **los dos primeros** de la progresión; los restantes $m=2,3,\ldots$ son consecutivos y conservan la alternancia. En $k=3$, el nivel de la raíz aporta $2^3-3=5$; los dos nodos de profundidad uno aportan $2^2-3=1$ cada uno; las hojas aportan cero. Eso recupera $5+1+1=7$ sin enumerar todos los nodos del árbol.
+
+</Solucion>
+
+### (c) Diseño
+
+<Solucion>
+
+Para cualquier permutación, si un nodo tiene un subárbol de $s$ nodos, ve a lo sumo $s-1$ accesos laterales: el único acceso a sí mismo se ignora. Una lista de a lo sumo $s-1$ marcas tiene a lo sumo $s-2$ cambios. En el árbol perfecto de siete llaves, la raíz tiene $s=7$ y aporta a lo sumo $5$; cada uno de sus dos hijos tiene $s=3$ y aporta a lo sumo $1$; las hojas aportan $0$. Así, Wilber-1 $\le 5+1+1=7$.
+
+La permutación bit-reversal $4,2,6,1,5,3,7$ alcanza el límite: la raíz $4$ omite el primer acceso y ve I D I D I D, que produce $5$ cambios; el nodo $2$ ve $1,3$, I D, y aporta $1$; el nodo $6$ ve $5,7$, I D, y aporta $1$. Total **$7$**. También sirve $1,4,5,2,6,3,7$. Como controles, $504$ de las $5040$ permutaciones alcanzan $7$ y el orden $1,2,3,4,5,6,7$ solo da $3$.
+
+</Solucion>
+
+### (d) Profundidad
+
+<Solucion>
+
+**Sí es cota inferior.** Para todo $P$ fijo, $\mathrm{Wilber\text{-}1}(P,X)\le O(\mathrm{OPT}(X))$ con las mismas constantes de la cota del método. Tomar el máximo sobre todos los $P$ conserva la desigualdad: si cada número está por debajo de una cota común, su máximo también. La elección posterior no cambia esta afirmación matemática.
+
+Para $X=(4,2,6,1,5,3,7)$, el BST perfecto alcanza $7$, que es el máximo entre los $429$ BST posibles de siete llaves. En la cadena $1\to2\to\cdots\to7$ de hijos derechos, todos los subárboles izquierdos están vacíos; ningún nodo puede tener una alternancia I↔D, así que el valor es $0$, el mínimo posible.
+
+**Tango** fija su árbol de referencia antes de conocer la secuencia: es un algoritmo online. No puede maximizar sobre árboles elegidos a posteriori sin usar conocimiento del futuro. Su garantía sigue siendo $O(\lg\lg n)$ competitiva, no $O(1)$ por este argumento. La cota maximizada continúa siendo válida, pero ya no describe una sola estructura de referencia que Tango mantenga online. La cadena ilustra la otra pérdida posible: una $P$ mala puede dar una cota correcta pero inútil, igual a cero.
+
+</Solucion>
+
+## Rúbrica estimada
+
+Esta es una **estimación propia**, no la rúbrica oficial.
+
+| Parte | Qué da puntos | Error típico que los quita |
+| --- | --- | --- |
+| (a), 3 pts | Marcas por nodo, visibles en orden temporal, totales 13 y 6 | Contar el acceso al propio nodo o declarar visible un punto con otro dentro del rectángulo |
+| (b), 3 pts | Congruencia, exclusión de dos candidatos, suma por niveles y ambas cotas de OPT | Afirmar alternancia sin explicar qué accesos se ignoran |
+| (c), 2 pts | Cota 7 para toda permutación y testigo que la alcanza | Usar $s-1$ como número de cambios, en vez de marcas |
+| (d), 2 pts | Validez del máximo, testigos 0 y 7 y límite online de Tango | Confundir validez de una cota con posibilidad de usarla online |
+
+## Qué repasar si fallaste
+
+- [Wilber-2 y puntos visibles](/optimalidad/wilber/#1-wilber-2).
+- [Wilber-1 y Tango Trees](/optimalidad/wilber/#2-wilber-1-la-que-usaremos-con-tango-trees).
+- [La secuencia bit-reversal](/optimalidad/wilber/#3-un-caso-extremo-la-secuencia-bit-reversal).
+- [Rectángulos independientes](/optimalidad/rectangulos/).

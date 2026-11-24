@@ -1,0 +1,161 @@
+---
+title: 'Problema 4 · Disjoint Sparse Table'
+description: 'Consultas de rango asociativas, XOR y composición afín no conmutativa.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+
+<EnSimple titulo="Cómo usar este problema">Dedica 25 minutos, en papel y sin mirar la página del tema. Es un problema propio con el formato del simulacro del curso: contexto y procedimiento, (a) Conocimientos 3 pts, (b) Análisis 3 pts, (c) Diseño 2 pts, (d) Profundidad 2 pts. Las respuestas se verificaron con un script.</EnSimple>
+
+## Enunciado
+
+### Contexto
+
+Sea $A[0..n-1]$ un arreglo estático, inicialmente con $n$ potencia de dos, y $\oplus$ una operación **asociativa**: $(a\oplus b)\oplus c=a\oplus(b\oplus c)$. No suponemos conmutatividad, idempotencia ni inversos. Para el nivel $k=0,\ldots,\lg n-1$, cada bloque de tamaño $2^{k+1}$ tiene inicio $s$ y centro $m=s+2^k$. La Disjoint Sparse Table guarda, para $i$ a la izquierda, $T[k][i]=A[i]\oplus\cdots\oplus A[m-1]$, y para $i$ a la derecha, $T[k][i]=A[m]\oplus\cdots\oplus A[i]$. El orden de términos siempre es el del arreglo.
+
+```text
+procedimiento CONSTRUIR-DST(A, n)
+  para k ← 0 hasta lg n − 1 hacer
+    h ← 2^k
+    para cada bloque [s, s+2h−1] hacer
+      m ← s+h
+      T[k][m−1] ← A[m−1]
+      para i ← m−2 bajando hasta s hacer T[k][i] ← A[i] ⊕ T[k][i+1]
+      T[k][m] ← A[m]
+      para i ← m+1 hasta s+2h−1 hacer T[k][i] ← T[k][i−1] ⊕ A[i]
+  devolver T
+
+procedimiento CONSULTA(l, r)
+  si l = r entonces devolver A[l]
+  k ← msb(l XOR r)                 // índice del bit 1 más significativo, desde 0
+  devolver T[k][l] ⊕ T[k][r]
+```
+
+### (a) Conocimientos · 3 pts
+
+Para $A=[6,2,9,4,7,3,8,5]$ y $\oplus=+$, construye $T[0]$, $T[1]$, $T[2]$ indicando centros y acumulaciones. Ejecuta `CONSULTA` para $(1,5)$, $(2,3)$, $(4,4)$, $(3,4)$, $(0,7)$ y $(5,7)$; muestra índices en binario, XOR, nivel y sumandos.
+
+### (b) Análisis · 3 pts
+
+**Demuestra que** `CONSULTA` devuelve $A[l]\oplus\cdots\oplus A[r]$ para cualquier operación asociativa; que construir cuesta $O(n\lg n)$ tiempo y espacio y consultar cuesta $O(1)$ operaciones; y explica el ajuste si $n$ no es potencia de dos.
+
+### (c) Diseño · 2 pts
+
+Ahora cada elemento representa una función afín $f_i(x)=a_ix+b_i\pmod{10}$. El arreglo de pares es
+
+$$F=[(3,1),(2,5),(7,0),(1,4),(9,2),(2,3),(3,3),(1,1)].$$
+
+Define $f\oplus g$ como «aplicar primero $f$, luego $g$». Construye $T[1]$ y $T[2]$, responde `CONSULTA(1,6)` y `CONSULTA(2,5)`, y aplica cada función resultante a $x=1$. Explica por qué el orden importa.
+
+### (d) Profundidad · 2 pts
+
+Chris propone usar una Sparse Table normal con dos rangos de potencia de dos que se superponen para la suma, y después propone usar sumas prefijas para toda operación. ¿Cuándo es correcta cada idea? Exhibe un fallo de la primera en el arreglo de (a), explica por qué las sumas prefijas sí resuelven la suma y qué propiedad falta para las funciones de (c).
+
+## Solución
+
+### (a) Conocimientos
+
+<Solucion>
+
+En el nivel $0$ cada mitad contiene un elemento; los centros de los bloques de dos son $1,3,5,7$ y $T[0]=A$. En el nivel $1$ los centros son $2$ y $6$. Por ejemplo, en $[0,3]$, a la izquierda $T[1][1]=2$ y $T[1][0]=6+2=8$; a la derecha $T[1][2]=9$ y $T[1][3]=9+4=13$. En $[4,7]$, a la izquierda $T[1][5]=3$, $T[1][4]=7+3=10$; a la derecha $T[1][6]=8$, $T[1][7]=8+5=13$.
+
+En el nivel $2$ el único centro es $4$. Los sufijos de la mitad izquierda, desde $3$ hacia $0$, son $4$, $9+4=13$, $2+13=15$, $6+15=21$. Los prefijos de la mitad derecha, desde $4$ hacia $7$, son $7$, $7+3=10$, $10+8=18$, $18+5=23$.
+
+| Nivel | $i=0$ | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| $T[0]$ | 6 | 2 | 9 | 4 | 7 | 3 | 8 | 5 |
+| $T[1]$ | 8 | 2 | 9 | 13 | 10 | 3 | 8 | 13 |
+| $T[2]$ | 21 | 15 | 13 | 4 | 7 | 10 | 18 | 23 |
+
+Los índices usan tres bits. Para $l=r$ no hay bit distinto: se devuelve $A[l]$ antes de calcular `msb`.
+
+| Consulta | $l_2$ XOR $r_2$ | $k$ | Cálculo | Resultado |
+| --- | --- | ---: | --- | ---: |
+| $(1,5)$ | `001` XOR `101` = `100` | 2 | $T[2][1]+T[2][5]=15+10$ | **25** |
+| $(2,3)$ | `010` XOR `011` = `001` | 0 | $T[0][2]+T[0][3]=9+4$ | **13** |
+| $(4,4)$ | `100` = `100` | — | $A[4]$ | **7** |
+| $(3,4)$ | `011` XOR `100` = `111` | 2 | $T[2][3]+T[2][4]=4+7$ | **11** |
+| $(0,7)$ | `000` XOR `111` = `111` | 2 | $T[2][0]+T[2][7]=21+23$ | **44** |
+| $(5,7)$ | `101` XOR `111` = `010` | 1 | $T[1][5]+T[1][7]=3+13$ | **16** |
+
+</Solucion>
+
+### (b) Análisis
+
+<Solucion>
+
+**Correctitud.** Si $l=r$, el rango tiene un solo elemento y la rutina devuelve $A[l]$. Supón $l\lt r$ y sea $k=\operatorname{msb}(l\mathbin{\mathrm{XOR}}r)$. Los bits por encima de $k$ son iguales en ambos índices; por ello están dentro del mismo bloque alineado de tamaño $2^{k+1}$. En el bit $k$ difieren y, como $l\lt r$, $l$ tiene $0$ y $r$ tiene $1$. Por tanto $l$ está en la mitad izquierda y $r$ en la derecha de ese bloque. Si $m$ es su centro, $l\le m-1\lt m\le r$. Por definición de la tabla,
+
+$$T[k][l]=A[l]\oplus\cdots\oplus A[m-1],\qquad T[k][r]=A[m]\oplus\cdots\oplus A[r].$$
+
+Los dos intervalos son **disjuntos, consecutivos y en orden**. La asociatividad permite unir sus agregados sin cambiar el resultado: $T[k][l]\oplus T[k][r]=A[l]\oplus\cdots\oplus A[r]$. No se intercambian términos, así que no hace falta conmutatividad; ninguno se repite, así que no hace falta idempotencia. ∎
+
+**Costo.** Para cada $k$, los bloques particionan las $n$ posiciones. Cada mitad se recorre una vez y cada posición recibe exactamente un valor $T[k][i]$; el trabajo de un nivel es $O(n)$ y guarda $n$ agregados. Hay $\lg n$ niveles, luego tiempo y espacio $O(n\lg n)$. Una consulta hace una comprobación, un cálculo de bit más significativo y una sola combinación $\oplus$: $O(1)$ evaluaciones de la operación, suponiendo `msb` de máquina o tabla precalculada. ∎
+
+Si $n$ no es potencia de dos, se rellena hasta $N'=2^{\lceil\lg n\rceil}<2n$ y se construye sobre esa longitud. Los valores de relleno no necesitan combinarse para responder consultas válidas $0\le l\le r\lt n$: el bloque elegido corta $[l,r]$ en dos trozos contenidos enteramente en el arreglo original. Se pueden dejar indefinidas las celdas de relleno y evitar operaciones con ellas; si hay identidad para $\oplus$, también puede usarse como relleno. Los costos permanecen $O(n\lg n)$ porque $N'<2n$. ∎
+
+</Solucion>
+
+### (c) Diseño
+
+<Solucion>
+
+Representa $f(x)=a_fx+b_f$ por $(a_f,b_f)$. Aplicar $f$ y después $g$ produce
+
+$$g(f(x))=a_g(a_fx+b_f)+b_g=(a_ga_f)x+(a_gb_f+b_g)\pmod{10},$$
+
+así que $(a_f,b_f)\oplus(a_g,b_g)=(a_ga_f,a_gb_f+b_g)\pmod{10}$. La composición de funciones es asociativa, aunque no conmutativa. Por ejemplo, el par de las posiciones $0,1$ es $(3,1)\oplus(2,5)=(6,7)$, mientras invertirlas daría $(6,6)$.
+
+El nivel $1$ usa centros $2$ y $6$. En el primer bloque, izquierda: $T[1][1]=(2,5)$ y $T[1][0]=(3,1)\oplus(2,5)=(6,7)$; derecha: $T[1][2]=(7,0)$ y $T[1][3]=(7,0)\oplus(1,4)=(7,4)$. En el segundo, izquierda: $T[1][5]=(2,3)$, $T[1][4]=(9,2)\oplus(2,3)=(8,7)$; derecha: $T[1][6]=(3,3)$, $T[1][7]=(3,3)\oplus(1,1)=(3,4)$.
+
+| Nivel | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| $T[1]$ | (6,7) | (2,5) | (7,0) | (7,4) | (8,7) | (2,3) | (3,3) | (3,4) |
+| $T[2]$ | (2,3) | (4,9) | (7,4) | (1,4) | (9,2) | (8,7) | (4,4) | (4,5) |
+
+Para comprobar $T[2]$, con centro $4$ se parte de $T[2][3]=(1,4)$ y se antepone sucesivamente $(7,0)$, $(2,5)$, $(3,1)$: salen $(7,4)$, $(4,9)$, $(2,3)$. A la derecha se parte de $(9,2)$ y se posponen $(2,3)$, $(3,3)$, $(1,1)$: salen $(8,7)$, $(4,4)$, $(4,5)$.
+
+En ambas consultas, el XOR tiene bit más significativo $k=2$. Así,
+
+$$\operatorname{CONSULTA}(1,6)=(4,9)\oplus(4,4)=(6,0),\quad (6,0)(1)=6.$$
+
+$$\operatorname{CONSULTA}(2,5)=(7,4)\oplus(8,7)=(6,9),\quad (6,9)(1)=15\bmod10=5.$$
+
+La mitad izquierda se aplica **antes** de la derecha. Intercambiar los operandos puede dar otra función; por eso las acumulaciones izquierdas se construyen como $A[i]\oplus T[k][i+1]$ y no al revés.
+
+También puede verificarse directamente con las funciones: `CONSULTA(1,6)` representa aplicar las funciones de posiciones $1,2,3,4,5,6$ en ese orden. Empezando en $1$, las salidas sucesivas son $7,9,3,9,1,6$ módulo $10$; el último valor coincide con $(6,0)(1)=6$. Para `CONSULTA(2,5)`, desde $1$ las posiciones $2,3,4,5$ dan $7,1,1,5$, igual a $(6,9)(1)=5$. Esta simulación comprueba la **interpretación** de los pares además de la aritmética de la tabla. Si se aplicara la composición al revés, la coincidencia no estaría garantizada.
+
+Como controles adicionales, `CONSULTA(0,3)` usa $k=1$: $(6,7)\oplus(7,4)=(2,3)$, que lleva $1$ a $5$. `CONSULTA(5,6)` también usa $k=1$: $(2,3)\oplus(3,3)=(6,2)$, que lleva $1$ a $8$. En la primera consulta, el producto de coeficientes es $7\cdot6=42\equiv2\pmod{10}$ y el término libre es $7\cdot7+4=53\equiv3\pmod{10}$. En la segunda, son $3\cdot2=6$ y $3\cdot3+3=12\equiv2\pmod{10}$. Son verificaciones independientes de la tabla de $T[2]$.
+
+</Solucion>
+
+### (d) Profundidad
+
+<Solucion>
+
+La Sparse Table normal combina dos ventanas de longitud $2^j$ que cubren el rango y pueden superponerse. Es válida para una operación **idempotente** como mínimo: repetir los elementos superpuestos no cambia el mínimo. Con suma es incorrecta. Para $[1,6]$ en el arreglo de (a), las ventanas $[1,4]$ y $[3,6]$ suman respectivamente $2+9+4+7=22$ y $4+7+3+8=22$; combinarlas da $44$, cuando el rango completo suma $2+9+4+7+3+8=33$. Las posiciones $3,4$ se contaron dos veces.
+
+Las sumas prefijas sí sirven porque la suma tiene inverso: define $P[0]=0$, $P[j+1]=P[j]+A[j]$. Entonces $\sum_{i=l}^r A[i]=P[r+1]-P[l]$, con $O(n)$ espacio y $O(1)$ consulta. Para las funciones afines módulo $10$, esa cancelación no existe en general: $f(x)=2x+b\pmod{10}$ no es invertible porque $2$ no tiene inverso módulo $10$. Tampoco se puede «restar un prefijo» de mínimos o máximos. La DST almacena agregados de **trozos ya separados en el orden correcto** y, por eso, solo exige asociatividad.
+
+Más formalmente, si $Q[j]$ fuera la composición de las funciones anteriores a $j$, recuperar el rango $[l,r]$ a partir de $Q[l]$ y $Q[r+1]$ requeriría deshacer la acción de $Q[l]$. Cuando una función manda dos entradas distintas al mismo residuo módulo $10$, ninguna operación inversa puede recuperar cuál fue la entrada. Por ejemplo, multiplicar por $2$ manda tanto $0$ como $5$ a $0$ módulo $10$. La DST evita la cancelación: almacena directamente el sufijo del bloque izquierdo que empieza en $l$ y el prefijo del derecho que termina en $r$. Su unión no incorpora elementos anteriores a $l$ ni posteriores a $r$.
+
+</Solucion>
+
+## Rúbrica estimada
+
+Esta es una **estimación propia**, no la rúbrica oficial.
+
+| Parte | Qué da puntos | Error típico que los quita |
+| --- | --- | --- |
+| (a), 3 pts | Tres niveles, XOR binario y seis resultados | Evaluar `msb(0)` cuando $l=r$ |
+| (b), 3 pts | Prueba de bloque y mitades, costos y relleno | Apelar a idempotencia o conmutatividad innecesarias |
+| (c), 2 pts | Fórmula de composición, dos niveles y resultados 6 y 5 | Componer derecha antes que izquierda |
+| (d), 2 pts | Contraejemplo 44 frente a 33 e inverso de prefijos | Aplicar ventanas superpuestas a la suma |
+
+## Qué repasar si fallaste
+
+- [Por qué una Sparse Table común falla para suma](/estaticos/disjoint-sparse-table/#2-por-que-la-sparse-table-no-sirve-para-la-suma).
+- [Definición de los agregados disjuntos](/estaticos/disjoint-sparse-table/#3-la-idea-cortar-el-rango-en-un-centro-fijo).
+- [Construcción por niveles](/estaticos/disjoint-sparse-table/#4-construir-la-tabla-nivel-por-nivel).
+- [Nivel por XOR](/estaticos/disjoint-sparse-table/#5-el-truco-del-xor-encontrar-el-nivel-en-o1).

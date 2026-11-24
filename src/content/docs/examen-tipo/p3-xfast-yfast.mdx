@@ -1,0 +1,131 @@
+---
+title: 'Problema 3 · X-fast y Y-fast trees'
+description: 'Prefijos presentes, sucesor por búsqueda binaria y grupos de tamaño Θ(w).'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+
+<EnSimple titulo="Cómo usar este problema">Dedica 25 minutos, en papel y sin mirar la página del tema. Es un problema propio con el formato del simulacro del curso: contexto y procedimiento, (a) Conocimientos 3 pts, (b) Análisis 3 pts, (c) Diseño 2 pts, (d) Profundidad 2 pts. Las respuestas se verificaron con un script.</EnSimple>
+
+## Enunciado
+
+### Contexto
+
+Sea $w=5$ y universo $\{0,\ldots,31\}$. Guardamos $S=\{3,9,12,20,27\}$, cuyas representaciones de cinco bits son `00011`, `01001`, `01100`, `10100`, `11011`. Un X-fast guarda en la tabla hash $T$ una entrada por cada par $(\ell,p)$ donde $p$ es un prefijo presente de longitud $\ell$; el valor es el par $(\min,\max)$ de llaves bajo ese prefijo. También mantiene las llaves en una lista doblemente enlazada ordenada. En particular $(0,\varepsilon)$ siempre está presente. No hay punteros especiales a descendientes: los mínimos y máximos de $T$ y la lista bastan.
+
+```text
+procedimiento SUCESOR-X(x)
+  lo ← 0;  hi ← w                     // (0, ε) siempre está
+  mientras lo < hi hacer
+    mid ← ⌈(lo + hi)/2⌉
+    si (mid, x >> (w − mid)) está en T entonces lo ← mid
+    si no hi ← mid − 1
+  ℓ ← lo;  p ← x >> (w − ℓ)
+  si ℓ = w entonces devolver el siguiente de x en la lista
+  β ← bit ℓ+1 de x (contando desde el más significativo)
+  si β = 0 entonces devolver T[(ℓ+1, 2p+1)].min
+  si no  y ← T[(ℓ+1, 2p)].max;  devolver el siguiente de y en la lista
+```
+
+Si no existe una llave posterior, `siguiente` devuelve nulo. El acceso hash se toma esperado $O(1)$. Un Y-fast particiona las llaves en grupos contiguos $G_j$ de entre $w/2$ y $2w$ llaves, cada uno en un BST balanceado, y guarda **un representante por grupo** en un X-fast. Un representante es una frontera fijada al crear el grupo; no se borra del X-fast solo porque se borre esa llave de su BST. Si un grupo crece a $2w+1$, se parte en grupos de $w$ y $w+1$; si cae bajo $w/2$, se fusiona con uno vecino y, si queda demasiado grande, se parte de forma balanceada.
+
+### (a) Conocimientos · 3 pts
+
+Escribe las 22 entradas de $T$ por nivel, con sus pares $(\min,\max)$. Ejecuta `SUCESOR-X(14)`, `SUCESOR-X(5)` y `SUCESOR-X(22)`: cada sonda `(mid, prefijo, presente)`, el $\ell$ final, $\beta$, el extremo consultado y el resultado. Como controles, evalúa también $28$ y $10$.
+
+### (b) Análisis · 3 pts
+
+**Demuestra que** el Y-fast ocupa $\Theta(n)$ espacio, responde `SUCESOR` en $O(\lg w)$ tiempo esperado y admite inserción/eliminación en $O(\lg w)$ amortizado esperado. Justifica dónde puede estar el sucesor, la frecuencia mínima entre reestructuraciones y el costo del representante.
+
+### (c) Diseño · 2 pts
+
+Con $n=2^{20}$ y $w=64$, calcula límites para número de representantes, entradas del X-fast de todas las llaves y del X-fast solo de representantes, sondas binarias y altura de un BST de grupo. Diseña `PREDECESOR` en el Y-fast y explica su costo.
+
+### (d) Profundidad · 2 pts
+
+Chris propone grupos de tamaño $\Theta(\lg w)$ «para que los BST sean aún menores». ¿Funciona la idea como estructura? ¿Conserva espacio lineal y actualizaciones $O(\lg w)$ amortizadas? Usa la instancia de (c) para cuantificar entradas y explica qué relación debe tener el tamaño del grupo con $w$.
+
+## Solución
+
+### (a) Conocimientos
+
+<Solucion>
+
+En cada nivel se agrupan las llaves con el mismo prefijo. En niveles $4$ y $5$ cada prefijo de esta instancia identifica una sola llave. Las **$1+2+4+5+5+5=22$ entradas** son:
+
+| Nivel $\ell$ | Prefijos presentes y $T[(\ell,p)]=(\min,\max)$ |
+| ---: | --- |
+| 0 | $\varepsilon:(3,27)$ |
+| 1 | `0`:(3,12); `1`:(20,27) |
+| 2 | `00`:(3,3); `01`:(9,12); `10`:(20,20); `11`:(27,27) |
+| 3 | `000`:(3,3); `010`:(9,9); `011`:(12,12); `101`:(20,20); `110`:(27,27) |
+| 4 | `0001`:(3,3); `0100`:(9,9); `0110`:(12,12); `1010`:(20,20); `1101`:(27,27) |
+| 5 | `00011`:(3,3); `01001`:(9,9); `01100`:(12,12); `10100`:(20,20); `11011`:(27,27) |
+
+La búsqueda binaria prueba el prefijo de $x$ en una profundidad; si está presente, todas las menores están presentes, y si falta, todas las mayores faltan. Eso justifica mover `lo` o `hi`.
+
+| $x$ en binario | Sondas en orden `(mid, prefijo, ¿está?)` | $\ell$ final, bit $\beta$ | Paso final | Sucesor |
+| --- | --- | --- | --- | ---: |
+| $14$=`01110` | `(3,011,sí)`, `(4,0111,no)` | $3$, $1$ | $T[(4,0110)].\max=12$; siguiente de $12$ | **20** |
+| $5$=`00101` | `(3,001,no)`, `(1,0,sí)`, `(2,00,sí)` | $2$, $1$ | $T[(3,000)].\max=3$; siguiente de $3$ | **9** |
+| $22$=`10110` | `(3,101,sí)`, `(4,1011,no)` | $3$, $1$ | $T[(4,1010)].\max=20$; siguiente de $20$ | **27** |
+| $28$=`11100` | `(3,111,no)`, `(1,1,sí)`, `(2,11,sí)` | $2$, $1$ | $T[(3,110)].\max=27$; siguiente de $27$ | **nulo** |
+| $10$=`01010` | `(3,010,sí)`, `(4,0101,no)` | $3$, $1$ | $T[(4,0100)].\max=9$; siguiente de $9$ | **12** |
+
+En los cinco casos el siguiente bit es $1$: el hijo derecho de ese prefijo falta. El máximo del hijo izquierdo es la llave anterior a la posición de $x$ en la lista; avanzar una vez da el sucesor. Para $28$, la lista termina en $27$ y por eso se obtiene nulo. Si el bit faltante fuera $0$, se tomaría el mínimo del hijo derecho presente. Si $x\in S$, $\ell=w$ y se avanza directamente desde su hoja.
+
+</Solucion>
+
+### (b) Análisis
+
+<Solucion>
+
+**Espacio.** Cada grupo no excepcional tiene al menos $w/2$ llaves, de modo que el número de representantes es a lo sumo $2n/w$ (más un posible grupo extremo pequeño durante una actualización). Cada representante aporta a lo sumo $w+1=O(w)$ entradas de prefijo al X-fast; compartir prefijos solo reduce el número real. Su espacio es $O((n/w)w)=O(n)$. Los BST almacenan en total $n$ llaves y ocupan $O(n)$. Como esas llaves deben estar representadas, el total es $\Theta(n)$. ∎
+
+**Consulta.** Encuentra en el X-fast el mayor representante $r_j\le x$, es decir la frontera del grupo que contiene la posición de $x$. El X-fast hace búsqueda binaria entre profundidades $0,\ldots,w$, con $O(\lg w)$ sondas esperadas. Busca el sucesor dentro de $G_j$ en su BST. Si no existe allí, todas las llaves de ese grupo son menores o iguales que $x$; el sucesor global, si existe, es el mínimo del grupo contiguo $G_{j+1}$. No puede saltarse otro grupo. Cada BST tiene a lo sumo $2w$ llaves, de modo que cuesta $O(\lg w)$; el salto al grupo siguiente es constante. Total esperado $O(\lg w)$. En el extremo anterior al primer representante se toma el primer grupo. ∎
+
+**Actualización amortizada.** Localizar el grupo e insertar o eliminar en su BST cuesta $O(\lg w)$. Cambiar la partición exige reconstruir $O(w)$ llaves y añadir o quitar un representante en el X-fast, cuyo camino tiene $w+1$ niveles: costo $O(w)$ esperado. Tras una partición de $2w+1$, los tamaños $w,w+1$ necesitan al menos $w$ inserciones para volver a desbordarse o al menos $w/2$ eliminaciones para quedar por debajo del mínimo. Tras una fusión, el resultado tiene al menos aproximadamente $w-1$ llaves; si excede $1.5w$, se parte equilibradamente en tamaños entre $0.75w$ y $1.25w$. Por cualquiera de las dos ramas hacen falta al menos $w/4$ operaciones que afecten a ese grupo antes de otra reestructuración. Los redondeos para $w$ pequeño cambian solo constantes.
+
+Carga a cada operación una cantidad constante de crédito para su grupo. En $w/4$ operaciones se acumulan $\Omega(w)$ créditos, suficientes para pagar la próxima reconstrucción de costo $O(w)$; al partir, los créditos se asignan a los dos grupos nacientes y cada uno comienza en un tamaño alejado de ambos umbrales. Así, el sobrecosto amortizado de reconstruir es $O(1)$ por actualización. Sumado al costo ordinario, insertar y eliminar cuestan $O(\lg w)$ amortizado esperado. ∎
+
+</Solucion>
+
+### (c) Diseño
+
+<Solucion>
+
+Con $n=2^{20}=1\,048\,576$ y $w=64$, un grupo tiene entre $32$ y $128$ llaves. Por tanto hay entre $n/(2w)=8192$ y $2n/w=32\,768$ representantes. Un X-fast sobre **todas** las llaves tiene a lo sumo $n(w+1)=1\,048\,576\cdot65=68\,157\,440$ entradas. Usado solo para los representantes del Y-fast, la cota cae a $32\,768\cdot65=2\,129\,920$. Son cotas superiores: prefijos compartidos cuentan una sola vez.
+
+La búsqueda binaria sobre $w+1=65$ profundidades realiza a lo sumo $\lceil\lg65\rceil=7$ sondas; un BST balanceado de hasta $128$ llaves tiene alrededor de $\lceil\lg129\rceil=8$ niveles. Esas dos partes explican el costo $O(\lg w)$.
+
+**Procedimiento predecesor.** Usa el X-fast para ubicar la frontera $r_j$ inmediatamente anterior o igual a $x$ y busca el mayor elemento $\le x$ dentro de $G_j$ (o el mayor $\lt x$ si se pide predecesor estricto). Si no hay tal llave, devuelve el máximo de $G_{j-1}$; si tampoco hay grupo anterior, devuelve nulo. Por contigüidad, ningún grupo más antiguo puede mejorar al máximo de $G_{j-1}$. La localización y la búsqueda cuestan $O(\lg w)$ esperado, y el salto es constante. Si $x$ antecede a la primera frontera, la respuesta es nulo.
+
+</Solucion>
+
+### (d) Profundidad
+
+<Solucion>
+
+La estructura con grupos de $\Theta(\lg w)$ **puede responder consultas**: el X-fast sigue encontrando una frontera y el BST del grupo es aún más pequeño. Pero ya no ofrece las dos garantías que motivan al Y-fast. Habría aproximadamente $n/\lg w$ representantes; cada uno puede necesitar $\Theta(w)$ prefijos, de modo que la reserva y la cota de peor caso de la parte X-fast son $\Theta(nw/\lg w)$, mayor que lineal. En la instancia, $\lg w=6$: hay **174 762** grupos completos de seis llaves, más un posible grupo residual. Usando la cifra de grupos completos, $174\,762\cdot65=11\,359\,530$ posibles entradas, frente a $2\,129\,920$ con grupos $\Theta(w)$. Los prefijos compartidos pueden reducir las entradas efectivas, pero no restauran una garantía lineal general.
+
+Además, cambiar un representante en el X-fast sigue tocando $\Theta(w)$ niveles. Si una reconstrucción ocurre tras solo $\Theta(\lg w)$ cambios del grupo, su costo amortizado es $\Theta(w/\lg w)$ por cambio, superior a $O(\lg w)$ asintóticamente. Para pagar el representante con espacio lineal y reconstrucciones amortizadas constantes, el tamaño típico de grupo debe ser al menos del orden de $w$; para mantener la búsqueda dentro del BST en $O(\lg w)$, su logaritmo debe seguir siendo $O(\lg w)$. Los grupos de tamaño $\Theta(w)$ cumplen ambas condiciones.
+
+</Solucion>
+
+## Rúbrica estimada
+
+Esta es una **estimación propia**, no la rúbrica oficial.
+
+| Parte | Qué da puntos | Error típico que los quita |
+| --- | --- | --- |
+| (a), 3 pts | 22 entradas y sondas, bits y respuestas exactos | Usar punteros a descendientes que esta tabla no tiene |
+| (b), 3 pts | Espacio, grupo actual/siguiente y contabilidad de $w/4$ operaciones | Cobrar $O(w)$ a cada actualización sin amortizar |
+| (c), 2 pts | Límites numéricos y predecesor simétrico | Confundir número de representantes con número de entradas |
+| (d), 2 pts | Crecimiento de espacio y reconstrucción por grupo pequeño | Concluir que BST más pequeño implica menor costo total |
+
+## Qué repasar si fallaste
+
+- [Tabla y sucesor del X-fast](/enteros/xfast-yfast/#3-x-fast-tree-guardar-solo-los-nodos-que-valen-1).
+- [Grupos del Y-fast](/enteros/xfast-yfast/#4-y-fast-tree-indireccion).
+- [Amortización de particiones y fusiones](/enteros/xfast-yfast/#5-la-amortizacion-con-cuidado).

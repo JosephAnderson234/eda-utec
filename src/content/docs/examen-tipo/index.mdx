@@ -1,0 +1,83 @@
+---
+title: 'Examen tipo: formato del profesor'
+description: 'Cómo arma el profesor cada problema del final (contexto con procedimiento, Conocimientos, Análisis, Diseño y Profundidad), un ranking de facilidad de los 6 temas y un problema propio igual de completo para cada uno.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Pregunta from '../../../components/Pregunta.astro';
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+<EnSimple titulo="Qué hay en esta sección">
+El simulacro que repartió el profesor muestra **cómo** pregunta: 6 problemas de 10 puntos, uno por unidad, y cada uno con las mismas cuatro partes. El final anunciado sigue esa misma idea con un subtema fijo por unidad. Aquí tienes:
+
+1. El **mapa del formato**: qué pide cada parte y cuántos puntos vale.
+2. Un **ranking de facilidad** de los 6 temas, para decidir en qué orden repasar.
+3. **Un problema propio por tema**, con el mismo formato y la misma dificultad, y su solución completa. Todos los números se verificaron con un script.
+</EnSimple>
+
+## Cómo arma el profesor un problema
+
+Cada problema vale **10 puntos** y siempre tiene esta forma:
+
+| Parte | Puntos | Qué pide | Cómo se gana |
+| --- | --- | --- | --- |
+| **Contexto** | — | Define la estructura con todas sus convenciones (desempates, qué se ignora) y da un **procedimiento en pseudocódigo** | Leerlo dos veces. Las preguntas usan *ese* procedimiento, no otro que conozcas. |
+| **(a) Conocimientos** | 3 | Ejecutar el procedimiento a mano sobre una instancia pequeña | Mostrar **cada estado intermedio**: tablas, valores por paso, qué se descarta. Solo el resultado final no basta. |
+| **(b) Análisis** | 3 | «Demuestra que…»: una cota, una complejidad o la correctitud | Enunciado, idea, pasos justificados y conclusión. Suele ser la demostración «de clase». |
+| **(c) Diseño** | 2 | Usar la estructura para otra cosa (una variante, otra consulta) y aplicarla a la instancia | Describir el procedimiento, su costo y **ejecutarlo** en el ejemplo. |
+| **(d) Profundidad** | 2 | «Chris propone…» un cambio. ¿Es correcto? ¿Cuánto cuesta? ¿Qué se pierde? | Decir sí o no con argumento, dar una **familia de peor caso** con números y nombrar la información que se pierde. |
+
+Lo que se repite en los seis problemas del simulacro:
+
+- **Las instancias son chicas y exactas**: árboles de 7 a 15 nodos, arreglos de 16 celdas, palabras de 4 bits, textos de 6 a 8 letras. Todo se puede hacer a mano en 5 minutos si sabes el procedimiento.
+- **(b) casi siempre es la demostración que justifica la complejidad** del tema: amortizado, cota inferior, número de niveles.
+- **(d) siempre ataca una pieza** de la estructura (el enlace de falla, el árbol de referencia, la corrección del sketch, los ladders). La respuesta modelo es: «funciona, pero el costo pasa de X a Y; esta familia lo muestra; lo que se pierde es esta información».
+
+<Pregunta q={"Si en (d) te preguntan si la propuesta de Chris es correcta, ¿qué dos cosas tienes que separar siempre?"} respuesta={"La correctitud (¿devuelve lo mismo?) y el costo (¿sigue teniendo la misma complejidad?). Casi siempre la propuesta es correcta pero más cara, y hay que mostrar una familia de peor caso."} />
+
+## Del simulacro al final
+
+El simulacro tenía un problema por unidad. El final anunciado fija **un subtema** de cada unidad:
+
+| Unidad (simulacro) | Qué preguntó el simulacro | Subtema del final | Problema propio |
+| --- | --- | --- | --- |
+| 1 · Optimalidad dinámica | Tango Tree: TANGO-BUSCAR con CORTAR/UNIR, costo con Wilber-1, Chris cambia el árbol de referencia | **Cotas de Wilber** | [P1](/examen-tipo/p1-wilber/) |
+| 2 · Jerarquía de memoria | Packed-Memory Array: inserciones con redistribución, amortizado $O(\lg^2 N)$, Chris usa el mismo umbral en todos los niveles | **Modelo de memoria externa** | [P2](/examen-tipo/p2-memoria-externa/) |
+| 3 · Enteros | Fusion tree: sketches, PREDECESOR-NODO, comparación en paralelo, Chris omite la corrección del prefijo común | **X-fast y Y-fast trees** | [P3](/examen-tipo/p3-xfast-yfast/) |
+| 4 · Static trees | Level Ancestor con ladders y jump pointers, LCA con LA, Chris sin ladders | **Disjoint Sparse Table** | [P4](/examen-tipo/p4-disjoint-sparse-table/) |
+| 5 · Strings | Aho–Corasick: trie, fail y dic, cadena más larga por posición, Chris sin fail | **Aho–Corasick** | [P5](/examen-tipo/p5-aho-corasick/) |
+| 6 · Dynamic graphs | Heavy-Light: cadenas, $s(u) < s(v)/2$, consultas $O(\lg^2 n)$, Chris sin HLD | **Centroid Decomposition** | [P6](/examen-tipo/p6-centroides/) |
+
+**Ojo con P1.** El simulacro mezcló Wilber-1 con Tango: el (c) pedía calcular Wilber-1 *y* los cambios de hijo preferido. El final dice «Cotas de Wilber», así que prepárate para que Tango aparezca como contexto (Wilber-1 = cambios de hijo preferido; Tango es $O(\lg\lg n)$-competitivo).
+
+**P5 ya salió en el simulacro**, con el mismo procedimiento CONSTRUIR-AC. Es el tema donde el formato es más predecible.
+
+## Ranking de facilidad para repasar
+
+De **más fácil** a **más difícil** de dejar listo. El criterio es cuánto cuesta llegar a sacar los 10 puntos, no cuán difícil es el tema en sí. Pesa mucho la parte (b): hay que **escribir** una demostración, no solo ejecutar algo.
+
+| # | Tema | (a) a mano | (b) demostración | Por qué está en este puesto | Tiempo sugerido |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **Disjoint Sparse Table** | Fácil: llenar 3 filas y consultar con XOR | Corta: msb de l XOR r separa l y r en mitades | Una sola idea. Es mecánico y la prueba cabe en 5 líneas. | 40 min |
+| 2 | **Memoria externa** | Fácil: cuentas con potencias de 2 | Media: argumento de información y número de pasadas | Todo son 4 fórmulas. El único riesgo es contar mal las pasadas o el «−1» del abanico. | 50 min |
+| 3 | **Aho–Corasick** | Largo pero mecánico: trie, fail, δ, dic | Media: potencial = profundidad, invariante | Ya salió en el simulacro. El procedimiento es fijo; equivocarse en un fail arrastra todo, así que hay que practicarlo. | 60 min |
+| 4 | **Cotas de Wilber** | Fácil: contar I/D por nodo | **Difícil**: bit-reversal exacto, por qué es cota inferior | Calcular es trivial, pero la (b) exige un argumento con bits y la (d) exige entender qué mide la cota y su relación con Tango. | 60 min |
+| 5 | **X-fast y Y-fast** | Media: tabla de prefijos y búsqueda binaria | Difícil: espacio Θ(n) y amortizado de los grupos | Muchas piezas que encajan: hash por nivel, (min, max), lista enlazada, grupos de Θ(w), representantes y amortización. | 75 min |
+| 6 | **Centroid Decomposition** | Fácil: tamaños y descenso | **La más pesada**: 4 lemas (existencia, profundidad, costo, lema del camino) | Hallar el centroide es fácil, pero el profesor puede pedir varias demostraciones encadenadas. Hay que saberlas escribir de memoria. | 75 min |
+
+**Cómo usar el ranking.** Si tienes poco tiempo, asegura primero los puestos 1 a 3: son unos 30 puntos con menos esfuerzo. Después ve al 6 y apréndete las demostraciones de memoria: vale lo mismo que los demás y la parte (a) es casi gratis. Deja para el final el 4 y el 5, pero no los saltes. En los dos, la parte (a) se gana rápido.
+
+<Pregunta q={"¿Por qué centroides queda último si hallar un centroide es fácil?"} respuesta={"Porque la parte (a) vale 3 de 10. El resto son demostraciones (existencia y unicidad salvo adyacencia, profundidad ≤ lg n, construcción O(n lg n), lema del camino) y un diseño (contar pares a distancia K) que hay que escribir completos."} />
+
+## Los 6 problemas tipo
+
+Cada uno se resuelve en 25 minutos y en papel. Abre las soluciones solo al terminar.
+
+<CardGrid>
+	<LinkCard title="P1 · Cotas de Wilber" description="Wilber-1 y Wilber-2 a mano, bit-reversal exacto, Chris elige P después de ver la secuencia." href="/examen-tipo/p1-wilber/" />
+	<LinkCard title="P2 · Memoria externa" description="Búsqueda, merge sort múltiple y permutar con N = 2^20; cota de información; Chris vuelve a la búsqueda binaria." href="/examen-tipo/p2-memoria-externa/" />
+	<LinkCard title="P3 · X-fast y Y-fast" description="Tabla de prefijos y Sucesor con w = 5; espacio y amortizado del Y-fast; Chris achica los grupos." href="/examen-tipo/p3-xfast-yfast/" />
+	<LinkCard title="P4 · Disjoint Sparse Table" description="Tabla y consultas con XOR; correctitud sin idempotencia; funciones afines; Chris usa prefijos." href="/examen-tipo/p4-disjoint-sparse-table/" />
+	<LinkCard title="P5 · Aho–Corasick" description="Trie, fail, δ y dic sobre babbab; búsqueda O(|T| + z); contar sin enumerar; Chris quita dic." href="/examen-tipo/p5-aho-corasick/" />
+	<LinkCard title="P6 · Centroid Decomposition" description="Descomposición de un árbol de 13 nodos, cuatro lemas demostrados, pares a distancia 3, Chris elige el de mayor grado." href="/examen-tipo/p6-centroides/" />
+</CardGrid>

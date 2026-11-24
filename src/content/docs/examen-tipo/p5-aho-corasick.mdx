@@ -1,0 +1,156 @@
+---
+title: 'Problema 5 · Aho–Corasick'
+description: 'Trie, fallas, enlaces de diccionario y conteo por BFS inverso.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+
+<EnSimple titulo="Cómo usar este problema">Dedica 25 minutos, en papel y sin mirar la página del tema. Es un problema propio con el formato del simulacro del curso: contexto y procedimiento, (a) Conocimientos 3 pts, (b) Análisis 3 pts, (c) Diseño 2 pts, (d) Profundidad 2 pts. Las respuestas se verificaron con un script.</EnSimple>
+
+## Enunciado
+
+### Contexto
+
+El alfabeto es $\Sigma=\{a,b\}$ y los patrones son $\{\texttt{ab},\texttt{bab},\texttt{bb},\texttt{abb},\texttt{b}\}$. Un nodo del trie se nombra por la palabra que va desde la raíz $\varepsilon$ hasta él. `fail(v)` apunta al sufijo propio más largo de la palabra de $v$ que es nodo del trie; `fail(ε)=ε`. La transición $\delta(v,c)$ es el nodo del sufijo más largo de $vc$ que sea prefijo de algún patrón. `dic(v)` es el **primer nodo terminal en la cadena de fallas de $v$**, excluido $v$; si no hay ninguno, vale vacío. El orden BFS visita nodos por profundidad creciente. Un reporte `(i, patrón)` significa que el patrón termina en el índice $i$, con índices desde cero.
+
+```text
+procedimiento CONSTRUIR-AC(patrones)
+  insertar los patrones en un trie; marcar sus nodos terminales
+  fail(ε) ← ε; dic(ε) ← vacío
+  poner en cola BFS los hijos de ε; para ellos fail ← ε
+  mientras la cola no esté vacía hacer
+    sacar v de la cola
+    si fail(v) es terminal entonces dic(v) ← fail(v)
+    si no dic(v) ← dic(fail(v))
+    para cada hijo u de v por letra c hacer
+      fail(u) ← δ(fail(v), c); poner u en cola
+    para cada letra c sin hijo desde v hacer δ(v,c) ← δ(fail(v),c)
+  devolver trie, fail, dic, δ y orden BFS
+
+procedimiento BUSCAR(T)
+  v ← raíz
+  para i ← 0 hasta longitud(T) − 1 hacer
+    v ← δ(v, T[i])
+    u ← v si v es terminal; si no u ← dic(v)
+    mientras u ≠ vacío hacer
+      reportar (i, patrón de u);  u ← dic(u)
+```
+
+La raíz usa $\delta(\varepsilon,c)$ igual a su hijo si existe y $\varepsilon$ si no existe. Al construir `fail` de los hijos directos de la raíz se usa la convención `fail=ε`, evitando confundir su transición con un enlace a sí mismos. En BFS, al calcular `fail(u)`, las transiciones de `fail(v)` ya están disponibles porque ese nodo tiene menor profundidad; las transiciones que faltan desde $v$ se completan después de procesar sus hijos.
+
+### (a) Conocimientos · 3 pts
+
+Construye el trie y da `fail`, `dic` y marca terminal para todos sus nodos; escribe la tabla completa de $\delta$ para `a` y `b`. Ejecuta `BUSCAR(T)` para `T=babbab`: estado y reportes después de cada letra, en el orden en que salen por `dic`. Explica en particular la transición desde `bab` al leer `b`.
+
+### (b) Análisis · 3 pts
+
+**Demuestra que** el recorrido puede hacerse en $O(|T|+z)$ aun si no se materializa toda $\delta$: prueba que el número total de saltos por `fail` durante el escaneo es a lo sumo $|T|$, que `dic` cuesta $O(1)$ por ocurrencia reportada y el invariante del estado después de cada prefijo leído.
+
+### (c) Diseño · 2 pts
+
+Diseña una forma de contar ocurrencias **por patrón sin enumerarlas**, en tiempo $O(|T|+\sum_i|P_i|)$ para alfabeto fijo, independiente de $z$. Usa `vis[v]` para contar visitas al estado $v$ y propaga por `fail` en orden BFS inverso. Aplícala a `babbab`: muestra visitas, orden de propagación, sumas y los cinco conteos finales.
+
+### (d) Profundidad · 2 pts
+
+Chris propone reportar recorriendo toda la cadena de `fail` en cada posición, en lugar de usar `dic`. ¿Es correcto? Da una familia de peor caso y compara el número de nodos inspeccionados con $|T|+z$. Explica la información que conserva `dic` y que la cadena completa obliga a redescubrir.
+
+## Solución
+
+### (a) Conocimientos
+
+<Solucion>
+
+Las aristas del trie son $\varepsilon\xrightarrow{a}a\xrightarrow{b}ab\xrightarrow{b}abb$ y $\varepsilon\xrightarrow{b}b$, desde donde salen $b\xrightarrow{a}ba\xrightarrow{b}bab$ y $b\xrightarrow{b}bb$. Son ocho nodos en total. Los terminales son `b`, `ab`, `bb`, `abb` y `bab`.
+
+| Nodo | `fail` | `dic` | ¿Terminal? | $\delta(\cdot,a)$ | $\delta(\cdot,b)$ |
+| --- | --- | --- | --- | --- | --- |
+| $\varepsilon$ | $\varepsilon$ | — | no | `a` | `b` |
+| `a` | $\varepsilon$ | — | no | `a` | `ab` |
+| `b` | $\varepsilon$ | — | sí | `ba` | `bb` |
+| `ab` | `b` | `b` | sí | `ba` | `abb` |
+| `ba` | `a` | — | no | `a` | `bab` |
+| `bb` | `b` | `b` | sí | `ba` | `bb` |
+| `abb` | `bb` | `bb` | sí | `ba` | `bb` |
+| `bab` | `ab` | `ab` | sí | `ba` | `abb` |
+
+Verificación de las transiciones no directas: desde `ab` con `a`, el sufijo prefijo más largo de `aba` es `ba`; desde `ba` con `a`, el de `baa` es `a`; desde `bb` con `b`, el de `bbb` es `bb`; desde `abb` con `a`, el de `abba` es `ba`; y desde `bab` con `b`, el de `babb` es `abb`. Las restantes se leen directamente en el trie o se obtienen por el mismo criterio. En particular `fail(bab)=ab`, y `ab` sí tiene hijo `b`; por eso $\delta(\texttt{bab},b)=\texttt{abb}$.
+
+| $i$ | Letra | Estado después de $\delta$ | Reportes en orden |
+| ---: | --- | --- | --- |
+| 0 | `b` | `b` | `b` |
+| 1 | `a` | `ba` | — |
+| 2 | `b` | `bab` | `bab`, `ab`, `b` |
+| 3 | `b` | `abb` | `abb`, `bb`, `b` |
+| 4 | `a` | `ba` | — |
+| 5 | `b` | `bab` | `bab`, `ab`, `b` |
+
+El total es $1+0+3+3+0+3=\mathbf{10}$ ocurrencias. Por ejemplo, al llegar a `bab`, `dic(bab)=ab` y `dic(ab)=b`; son tres patrones distintos que terminan en la misma posición.
+
+Para comprobar los índices de inicio, un patrón de longitud $L$ reportado en $i$ ocupa $[i-L+1,i]$. En $i=2$, `bab` ocupa $[0,2]$, `ab` ocupa $[1,2]$ y `b` ocupa $[2,2]$. En $i=3$, `abb` ocupa $[1,3]$, `bb` ocupa $[2,3]$ y `b` ocupa $[3,3]$. En $i=5$, aparecen `bab` en $[3,5]$, `ab` en $[4,5]$ y `b` en $[5,5]$. Esta revisión confirma que las salidas heredadas por `dic` son ocurrencias reales, no solo sufijos del nombre del estado sin correspondencia en el texto.
+
+</Solucion>
+
+### (b) Análisis
+
+<Solucion>
+
+**Invariante.** Después de procesar $T[0..i]$, el estado $v$ es el sufijo más largo de ese texto que aparece como prefijo de algún patrón. Antes del primer carácter, la raíz $\varepsilon$ es el único sufijo pertinente. Supón el invariante para $i-1$ y lee $c=T[i]$. Si $v$ tiene hijo por $c$, ese hijo alarga el mayor sufijo posible. Si no, ningún prefijo que termine en $vc$ existe; se prueba el siguiente sufijo candidato mediante `fail(v)` y así sucesivamente. Los enlaces recorren los sufijos propios presentes en orden de longitud decreciente. El primer nodo que tiene hijo por $c$ da el sufijo prefijo más largo nuevo; si ninguno lo tiene, la raíz resuelve la transición. Eso es exactamente $\delta(v,c)$, luego el invariante se preserva por inducción. ∎
+
+**Saltos.** Si se calculan las transiciones sin la tabla completa, al leer $c$ se ejecuta `mientras v no tenga hijo c y v ≠ raíz: v ← fail(v)` y luego se avanza por el hijo si existe. Usa como potencial $\Phi=\operatorname{profundidad}(v)\ge0$. Cada carácter aumenta la profundidad a lo sumo en uno, pues avanza por a lo sumo una arista del trie. Cada salto por `fail` la reduce al menos en uno, pues va a un sufijo **propio**. Tras $|T|$ caracteres, el potencial final sigue no negativo; por lo tanto el número total de saltos no puede superar el número de incrementos, a lo sumo $|T|$. El trabajo no asociado a saltos es constante por carácter. ∎
+
+**Reportes.** Si el estado es terminal se reporta, y después `dic` lleva al próximo terminal en la cadena de fallas; si no lo es, se empieza en `dic(v)`. Cada iteración produce exactamente una ocurrencia, de modo que hay exactamente $z$ iteraciones. El recorrido cuesta $O(|T|+z)$ con o sin tabla $\delta$ completa. La construcción del trie y de los enlaces cuesta $O(\sum_i|P_i|)$ para alfabeto fijo; si se materializa una tabla para un alfabeto variable aparece el factor $|\Sigma|$. ∎
+
+</Solucion>
+
+### (c) Diseño
+
+<Solucion>
+
+Inicializa `vis[v]=0` para todo nodo. Recorre el texto con $v\leftarrow\delta(v,c)$ y aumenta **solo** `vis[v]`; no sigas `dic` ni enumeres patrones. Al terminar, recorre los nodos en orden BFS **inverso** y suma `vis[v]` a `vis[fail(v)]` para cada $v\ne\varepsilon$. Un patrón que termina en el nodo $u$ ocurre en una posición precisamente cuando el estado alcanzado es $u$ o tiene a $u$ en su cadena de fallas. La propagación acumula exactamente esas visitas en $u$. BFS inverso garantiza que todos los nodos más profundos ya entregaron sus cuentas antes de procesar $u$.
+
+En `babbab`, las visitas directas son `b:1`, `ba:2`, `bab:2`, `abb:1`; los demás nodos tienen cero. Un orden BFS posible es $\varepsilon$, `a`, `b`, `ab`, `ba`, `bb`, `abb`, `bab`. En el orden inverso, las sumas son:
+
+| Nodo procesado | Enlace | Suma que se hace | Valor nuevo del destino |
+| --- | --- | --- | ---: |
+| `bab` | `ab` | `vis[ab] += 2` | `ab:2` |
+| `abb` | `bb` | `vis[bb] += 1` | `bb:1` |
+| `bb` | `b` | `vis[b] += 1` | `b:2` |
+| `ba` | `a` | `vis[a] += 2` | `a:2` |
+| `ab` | `b` | `vis[b] += 2` | `b:4` |
+| `b` | $\varepsilon$ | `vis[ε] += 4` | raíz:4 |
+| `a` | $\varepsilon$ | `vis[ε] += 2` | raíz:6 |
+
+Los nodos terminales quedan: **`ab:2`, `bab:2`, `bb:1`, `abb:1`, `b:4`**. Su suma es $10$, igual a $z$ obtenido al enumerar. El valor de la raíz no representa un patrón y no se usa. Cada carácter requiere una transición y cada nodo participa una vez en la propagación: $O(|T|+\sum_i|P_i|)$ para alfabeto fijo, independientemente de $z$. ∎
+
+</Solucion>
+
+### (d) Profundidad
+
+<Solucion>
+
+Recorrer toda la cadena de fallas es **correcto** si se inspecciona cada nodo para reportar solo los terminales: toda ocurrencia que termina aquí es un sufijo del texto leído y, por el invariante, está en esa cadena. El problema es el tiempo perdido en nodos no terminales.
+
+Toma patrones $\{a^k,b\}$ y texto $(a^{k-1}b)^r$. En cada tramo de $a$, la búsqueda visita estados $a,a^2,\ldots,a^{k-1}$. Ninguno es terminal, y sus cadenas de fallas contienen respectivamente $1,2,\ldots,k-1$ nodos antes de la raíz. Al leer `b` se reporta un único patrón `b`; así $|T|=rk$ y $z=r$. Si se cuenta cada inspección de la cadena después de cada carácter, hay $r(1+2+\cdots+(k-1)+1)=r(k(k-1)/2+1)=\Theta(rk^2)=\Theta(|T|k)$ inspecciones, frente a $O(|T|+z)=O(rk)$ con `dic`.
+
+Con $r=100$, las comprobaciones son $k=4$: texto de $400$, **700** inspecciones y $z=100$; $k=8$: texto de $800$, **2900** inspecciones; $k=16$: texto de $1600$, **12 100** inspecciones. `dic` guarda directamente el siguiente **terminal** de la cadena y evita redescubrir en cada posición que los estados $a^j$ no terminan ningún patrón.
+
+</Solucion>
+
+## Rúbrica estimada
+
+Esta es una **estimación propia**, no la rúbrica oficial.
+
+| Parte | Qué da puntos | Error típico que los quita |
+| --- | --- | --- |
+| (a), 3 pts | Ocho nodos, enlaces, tabla $\delta$ y 10 reportes | Reportar solo el estado y olvidar patrones por `dic` |
+| (b), 3 pts | Invariante inductivo, potencial y $O(\lvert T\rvert+z)$ | Tratar cada cadena de fallas como costo independiente |
+| (c), 2 pts | Visitas directas, BFS inverso y cinco conteos | Propagar en BFS normal antes de recibir aportes profundos |
+| (d), 2 pts | Corrección y familia $\Theta(\lvert T\rvert k)$ con pocos reportes | Decir que recorrer `fail` da resultados incorrectos |
+
+## Qué repasar si fallaste
+
+- [Trie y nodos de prefijo](/strings/aho-corasick/#1-trie-guardar-prefijos-comunes-una-sola-vez).
+- [Estado y enlaces de falla](/strings/aho-corasick/#2-el-estado-y-los-enlaces-de-falla).
+- [Transiciones y enlaces de diccionario](/strings/aho-corasick/#3-construir-el-automata-completo).
+- [Conteo con visitas y BFS inverso](/strings/aho-corasick/#4-contar-sin-enumerar).

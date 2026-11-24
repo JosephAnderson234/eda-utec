@@ -1,0 +1,163 @@
+---
+title: 'Problema 6 · Descomposición por centroides'
+description: 'Separadores balanceados, cuatro lemas y conteo de caminos de longitud fija.'
+---
+
+import EnSimple from '../../../components/EnSimple.astro';
+import Solucion from '../../../components/Solucion.astro';
+
+<EnSimple titulo="Cómo usar este problema">Dedica 25 minutos, en papel y sin mirar la página del tema. Es un problema propio con el formato del simulacro del curso: contexto y procedimiento, (a) Conocimientos 3 pts, (b) Análisis 3 pts, (c) Diseño 2 pts, (d) Profundidad 2 pts. Las respuestas se verificaron con un script.</EnSimple>
+
+## Enunciado
+
+### Contexto
+
+Trabajamos con un árbol no dirigido de $13$ nodos y aristas
+
+$$1\text{–}2,\ 2\text{–}3,\ 3\text{–}4,\ 4\text{–}5,\ 2\text{–}6,\ 6\text{–}7,\ 6\text{–}8,\ 3\text{–}9,\ 9\text{–}10,\ 10\text{–}11,\ 4\text{–}12,\ 12\text{–}13.$$
+
+En una componente de $s$ nodos, un **centroide** es un nodo cuya eliminación deja solo componentes de tamaño a lo sumo $\lfloor s/2\rfloor$. Si hay dos centroides válidos, elegimos el de **menor etiqueta**. La descomposición elimina un centroide y repite sobre cada componente restante. `padre_C(v)` indica el padre de $v$ en el nuevo **árbol de centroides**, que no conserva necesariamente las aristas originales. Para hallar un centroide, enraíza temporalmente la componente, calcula tamaños de subárbol y baja al hijo cuyo tamaño exceda $s/2$ hasta que no exista tal hijo.
+
+```text
+procedimiento DESCOMPONER(C, padre)
+  calcular tamaños de subárbol en C desde cualquier raíz
+  c ← centroide de C (descenso: bajar al hijo con tamaño > |C|/2)
+  si hay dos centroides válidos elegir el de menor etiqueta
+  padre_C(c) ← padre
+  marcar c como eliminado
+  para cada componente C' de C − c hacer DESCOMPONER(C', c)
+```
+
+Una llamada sobre componente vacía no hace nada. La profundidad de la raíz del árbol de centroides es cero. La distancia entre dos nodos del árbol original es el número de aristas en su camino único.
+
+### (a) Conocimientos · 3 pts
+
+Enraíza primero el árbol original en $1$ y calcula todos los tamaños `sz`. Ejecuta el descenso hacia un centroide, muestra las componentes al retirarlo y continúa toda la descomposición con el desempate indicado. Da `padre_C` para cada nodo y la profundidad máxima.
+
+### (b) Análisis · 3 pts
+
+**Demuestra que**: (i) todo árbol tiene un centroide, hay a lo sumo dos y, si hay dos, son adyacentes; (ii) la profundidad de su árbol de centroides es a lo sumo $\lfloor\lg n\rfloor$; (iii) la construcción cuesta $O(n\lg n)$; (iv) para $u\ne v$, el primer centroide $c$ escogido en el camino original $u$–$v$ está en ese camino y es $\operatorname{LCA}(u,v)$ en el árbol de centroides. Concluye que todo camino se asigna a un único centroide.
+
+### (c) Diseño · 2 pts
+
+Diseña un algoritmo para contar pares no ordenados $\{u,v\}$ a distancia exactamente $K$ con la descomposición. Da prueba y costo $O(n\lg n)$. Aplícalo a este árbol con $K=3$: muestra las distancias desde el centroide raíz por subcomponente, los pares que cuenta cada centroide y la lista completa de pares.
+
+### (d) Profundidad · 2 pts
+
+Chris propone elegir el nodo de **mayor grado dentro de cada componente** (desempate por menor etiqueta) en lugar del centroide. ¿Sigue siendo correcta la asignación de caminos y el conteo de (c)? ¿Conserva $O(n\lg n)$? Analiza la familia de caminos $1\text{–}2\text{–}\cdots\text{–}n$.
+
+## Solución
+
+### (a) Conocimientos
+
+<Solucion>
+
+Enraizando en $1$ y sumando uno más los tamaños de los hijos, de hojas hacia arriba, se obtiene:
+
+| Nodo | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `sz` | 13 | 12 | 8 | 4 | 1 | 3 | 1 | 1 | 3 | 2 | 1 | 2 | 1 |
+
+Por ejemplo, `sz(6)=1+sz(7)+sz(8)=3`, `sz(4)=1+sz(5)+sz(12)=4`, `sz(3)=1+4+3=8`, `sz(2)=1+8+3=12`. En $1$, el hijo $2$ tiene $12>13/2=6.5$, así que se baja. En $2$, el hijo $3$ tiene $8>6.5$, así que se baja. En $3$, los hijos $4$ y $9$ tienen tamaños $4$ y $3$; la componente hacia el padre mide $13-8=5$. Todos son $\le6$, por lo que el primer centroide es **$3$**. Al quitarlo se obtienen $C_A=\{1,2,6,7,8\}$ de tamaño $5$, $C_B=\{4,5,12,13\}$ de tamaño $4$ y $C_C=\{9,10,11\}$ de tamaño $3$.
+
+En $C_A$, $6$ deja $\{1,2\}$, $\{7\}$ y $\{8\}$, de tamaños $2,1,1\le\lfloor5/2\rfloor=2$; es el centroide. En $C_B$, tanto $4$ como $12$ dejan componentes de tamaño máximo $2$, por lo que se elige **$4$** por etiqueta menor. En $C_C$, el centro de la cadena es **$10$**.
+
+| Nivel | Componente que se procesa | Centroide | Componentes restantes |
+| ---: | --- | ---: | --- |
+| 0 | todos los 13 nodos | 3 | $C_A$ de 5; $C_B$ de 4; $C_C$ de 3 |
+| 1 | $\{1,2,6,7,8\}$ | 6 | $\{1,2\}$, $\{7\}$, $\{8\}$ |
+| 1 | $\{4,5,12,13\}$ | 4 | $\{5\}$, $\{12,13\}$ |
+| 1 | $\{9,10,11\}$ | 10 | $\{9\}$, $\{11\}$ |
+| 2 | $\{1,2\}$ | 1 | $\{2\}$ |
+| 2 | $\{7\},\{8\},\{5\},\{9\},\{11\}$ | 7, 8, 5, 9, 11 | vacías |
+| 2 | $\{12,13\}$ | 12 | $\{13\}$ |
+| 3 | $\{2\},\{13\}$ | 2, 13 | vacías |
+
+En cada componente de dos nodos ambos son centroides; el desempate explica $1$ antes de $2$ y $12$ antes de $13$. El árbol de centroides queda especificado por estos padres:
+
+| Nodo | 3 | 6 | 4 | 10 | 1 | 7 | 8 | 2 | 5 | 12 | 13 | 9 | 11 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `padre_C` | raíz | 3 | 3 | 3 | 6 | 6 | 6 | 1 | 4 | 4 | 12 | 10 | 10 |
+
+La profundidad máxima es **$3$**, alcanzada por $2$ y $13$: cuatro niveles $0,1,2,3$, coherentes con $\lfloor\lg13\rfloor=3$.
+
+</Solucion>
+
+### (b) Análisis
+
+<Solucion>
+
+**Lema 1: existencia y unicidad salvo una pareja adyacente.** Enraíza una componente cualquiera de $s$ nodos y calcula `sz`. Desde la raíz, mientras un hijo tenga tamaño mayor que $s/2$, baja a él. No pueden existir dos hijos así, porque sus subárboles serían disjuntos y sumarían más de $s$. El descenso termina porque la profundidad aumenta estrictamente y el árbol es finito. En el nodo final $c$, cada componente del lado de un hijo mide a lo sumo $s/2$. Si $c$ no es la raíz temporal, se llegó a él bajando hacia un subárbol de tamaño **mayor** que $s/2$; la componente del lado del padre mide $s-\operatorname{sz}(c)\lt s/2$. Por tanto $c$ es centroide.
+
+Supón ahora que hay dos centroides distintos $c_1,c_2$. Sea $C$ la componente de $T-c_1$ que contiene a $c_2$. Por ser $c_1$ centroide, $|C|\le s/2$. Al quitar $c_2$, la componente que contiene a $c_1$ incluye los $s-|C|\ge s/2$ nodos fuera de $C$. Si hubiera un nodo interior de $C$ entre $c_1$ y $c_2$, esa componente tendría **más** de $s/2$ nodos, contradiciendo que $c_2$ sea centroide. Luego $c_1,c_2$ son adyacentes, y para que $c_2$ sea válido debe ser $|C|=s/2$. Finalmente, el argumento vale para **cualquier** par de centroides: dos centroides distintos siempre son adyacentes. Si hubiera tres, serían adyacentes dos a dos y formarían un triángulo, imposible en un árbol. Por tanto hay a lo sumo dos. ∎
+
+**Lema 2: profundidad.** En la raíz de la descomposición la componente tiene $n$ nodos. Si una llamada de nivel $i$ tiene a lo sumo $n/2^i$ nodos, cada hijo recursivo corresponde a una componente que queda tras quitar un centroide y mide a lo sumo la mitad de la componente actual; por inducción mide a lo sumo $n/2^{i+1}$. Toda llamada real tiene por lo menos un nodo, luego $1\le n/2^i$ y $i\le\lfloor\lg n\rfloor$. La profundidad máxima del árbol de centroides cumple esa cota. ∎
+
+**Lema 3: construcción.** En una componente de $s$ nodos, un recorrido para tamaños cuesta $O(s)$, el descenso recorre a lo sumo $s$ nodos y encontrar las componentes restantes también cuesta $O(s)$. En un mismo nivel de la recursión, las componentes son disjuntas: sus tamaños suman a lo sumo $n$. Por ello el trabajo total de un nivel es $O(n)$. Por el lema 2 hay a lo sumo $\lfloor\lg n\rfloor+1$ niveles; sumando, el costo es $O(n\lg n)$. Se almacena una entrada de padre por nodo y estructuras de recorrido de tamaño $O(n)$. ∎
+
+**Lema 4: primer centroide del camino.** Para $u\ne v$, sigue la llamada que contiene ambos extremos. Antes de elegir un nodo del camino único $u$–$v$, quitar cualquier otro nodo no rompe ese camino, así que ambos extremos permanecen en la misma componente recursiva. Como finalmente cada nodo es elegido, existe una primera elección $c$ sobre el camino. Si $c=u$ o $c=v$, uno de los extremos coincide con el separador. Si es interior, quitarlo separa los dos lados del camino, por lo que $u$ y $v$ pasan a llamadas recursivas distintas. Todos los centroides elegidos antes de $c$ en la llamada común son ancestros de ambos en el árbol de centroides. Después de $c$, los extremos están en ramas distintas o uno es $c$, de modo que ningún descendiente de $c$ puede ser ancestro común de los dos. Luego $c=\operatorname{LCA}(u,v)$ en ese árbol y $c$ yace en el camino original. Esta primera elección es única, así que cada camino se asigna exactamente una vez. ∎
+
+</Solucion>
+
+### (c) Diseño
+
+<Solucion>
+
+**Algoritmo.** En cada llamada de componente $C$ con centroide $c$, inicializa `cnt[0]=1` para incluir al propio $c$. Recorre una a una las componentes $H$ de $C-c$. Para cada nodo $v\in H$, calcula $d=\operatorname{dist}(c,v)$ y añade `cnt[K−d]` a la respuesta si $0\le d\le K$. **Después de consultar todos los nodos de $H$**, incorpora sus distancias incrementando `cnt[d]`. Limpia los índices usados y repite recursivamente en cada $H$.
+
+Un par contado durante $H$ tiene un extremo allí y el otro en $c$ o en una componente ya procesada. Su camino pasa por $c$, y su longitud es exactamente la suma de las dos distancias a $c$; se suma solo cuando esa suma es $K$. Como no se incorpora $H$ hasta acabar sus consultas, ningún par con ambos extremos en $H$ se cuenta en $c$; ese par queda para la llamada recursiva de $H$. Por el lema 4, cada par se cuenta precisamente en su primer centroide separador. En una llamada, recorridos y tabla de frecuencias cuestan $O(|C|)$ si se limpian solo las entradas usadas; por nivel suman $O(n)$ y por todos los niveles $O(n\lg n)$. ∎
+
+Para $c=3$, las distancias en las tres ramas son:
+
+| Componente de $T-3$ | Distancia 1 | Distancia 2 | Distancia 3 |
+| --- | --- | --- | --- |
+| $C_A=\{1,2,6,7,8\}$ | 2 | 1, 6 | 7, 8 |
+| $C_B=\{4,5,12,13\}$ | 4 | 5, 12 | 13 |
+| $C_C=\{9,10,11\}$ | 9 | 10 | 11 |
+
+Cuatro nodos a distancia $3$ forman pares con $3$: $3$–$7$, $3$–$8$, $3$–$13$, $3$–$11$. Entre ramas distintas, las distancias deben ser $(1,2)$ o $(2,1)$: $C_A$–$C_B$ da $4$ pares, $C_A$–$C_C$ da $3$ y $C_B$–$C_C$ da $3$. Así $c=3$ cuenta $4+4+3+3=14$. En $C_A$, $c=6$ cuenta los dos pares $1$–$7$ y $1$–$8$; en $C_B$, $c=4$ cuenta $5$–$13$. Los demás centroides aportan cero. Total **$14+2+1=17$**.
+
+Para dejar comprobable el conteo, los $17$ pares no ordenados son:
+
+| Primero | Segundos a distancia exactamente 3 |
+| ---: | --- |
+| 1 | 4, 7, 8, 9 |
+| 2 | 5, 10, 12 |
+| 3 | 7, 8, 11, 13 |
+| 4 | 6, 10 |
+| 5 | 9, 13 |
+| 6 | 9 |
+| 9 | 12 |
+
+Las filas contienen $4+3+4+2+2+1+1=17$ pares: $1$–$4$, $1$–$7$, $1$–$8$, $1$–$9$, $2$–$5$, $2$–$10$, $2$–$12$, $3$–$7$, $3$–$8$, $3$–$11$, $3$–$13$, $4$–$6$, $4$–$10$, $5$–$9$, $5$–$13$, $6$–$9$, $9$–$12$.
+
+</Solucion>
+
+### (d) Profundidad
+
+<Solucion>
+
+**Correctitud:** sí. Aunque se elija otro nodo, retirarlo sigue particionando una componente en las componentes conexas de su eliminación. La prueba del lema 4 solo usa que el camino original permanece entero hasta retirar un nodo suyo; no usa la propiedad de mitad. El contador por ramas de (c) también sigue evitando pares de la misma rama y contando una vez los pares entre ramas.
+
+**Costo:** la garantía de profundidad se pierde. En un camino $1$–$2$–$\cdots$–$n$, todos los nodos internos de la componente completa tienen grado $2$; el desempate escoge $2$. Quedan la hoja $\{1\}$ y el camino $3$–$\cdots$–$n$. En este último, si tiene longitud al menos tres, el primer nodo interno de grado $2$ es $4$; vuelve a quedar una hoja y un camino largo. Se eligen $2,4,6,\ldots$ antes de llegar al final. Para $n=7,15,31,63$, la profundidad máxima es respectivamente $3,7,15,31$, es decir aproximadamente $(n-1)/2$ y por tanto $\Theta(n)$.
+
+Recalcular tamaños, elegir el nodo y procesar distancias en componentes de tamaños $n,n-2,n-4,\ldots$ cuesta $\Theta(n+(n-2)+(n-4)+\cdots)=\Theta(n^2)$. El algoritmo sigue dando las respuestas correctas, pero pierde la garantía de que cada componente se reduzca a la mitad; esa es precisamente la propiedad que daba $O(\lg n)$ niveles y $O(n\lg n)$ tiempo.
+
+</Solucion>
+
+## Rúbrica estimada
+
+Esta es una **estimación propia**, no la rúbrica oficial.
+
+| Parte | Qué da puntos | Error típico que los quita |
+| --- | --- | --- |
+| (a), 3 pts | Tamaños, desempates, padres y profundidad 3 | Confundir el árbol original con el árbol de centroides |
+| (b), 3 pts | Cuatro lemas con justificación de cada implicación | Decir «se parte a la mitad» sin probar existencia ni costo por nivel |
+| (c), 2 pts | Algoritmo por ramas, prueba de unicidad y 17 pares | Incorporar una rama antes de terminar sus consultas |
+| (d), 2 pts | Correctitud del separador y familia de camino con costo cuadrático | Afirmar que mayor grado invalida el conteo |
+
+## Qué repasar si fallaste
+
+- [Existencia y criterio del centroide](/grafos/centroides/#1-el-nodo-que-separa-por-mitades).
+- [Recursión, profundidad y costo](/grafos/centroides/#2-recursion-y-arbol-de-centroides).
+- [Conteo de caminos de longitud fija](/grafos/centroides/#3-contar-caminos-de-longitud-fija).
