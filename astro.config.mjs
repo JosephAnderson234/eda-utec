@@ -30,6 +30,7 @@ export default defineConfig({
 					label: '🎯 Examen final · 6 preguntas',
 					items: [
 						{ label: 'Qué entra en el final', slug: 'final', badge: { text: 'empieza', variant: 'danger' } },
+						{ label: 'Mapa de dependencias', slug: 'dependencias', badge: { text: 'nuevo', variant: 'success' } },
 						{ label: 'P1 · Cotas de Wilber', slug: 'optimalidad/wilber' },
 						{ label: 'P2 · Modelo de memoria externa', slug: 'memoria/modelo-externo' },
 						{ label: 'P3 · X-fast y Y-fast trees', slug: 'enteros/xfast-yfast' },

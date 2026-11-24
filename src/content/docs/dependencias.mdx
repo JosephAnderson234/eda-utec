@@ -1,0 +1,59 @@
+---
+title: 'Mapa de dependencias'
+description: 'Qué tienes que saber antes de cada una de las 6 preguntas del final: conocimientos previos, páginas base de la web y las herramientas que se repiten entre temas.'
+---
+
+import EnSimple from '../../components/EnSimple.astro';
+import Pregunta from '../../components/Pregunta.astro';
+import DependenciasFig from '../../components/fig/DependenciasFig.astro';
+
+<EnSimple titulo="Para qué sirve este mapa">
+El final tiene **6 preguntas fijas**. Ninguna parte de cero: cada una usa ideas anteriores del curso o de cursos previos. Este mapa dice **qué necesitas antes de cada pregunta**, para que no te encuentres con un concepto que no conoces a mitad de un tema.
+
+Las páginas **🧱 base** no son preguntas del examen. Son apoyo: se leen solo las secciones indicadas, 10–15 minutos, justo antes de su tema.
+</EnSimple>
+
+## El grafo
+
+<DependenciasFig>
+**Cómo leerlo.** Se lee de arriba hacia abajo. Arriba están los conocimientos previos, después la página base de la web y en la tercera fila las 6 preguntas. Abajo están las herramientas que aparecen en más de un tema. Las flechas punteadas marcan algo que el tema usa por dentro, sin ser una base aparte.
+</DependenciasFig>
+
+## Tema por tema
+
+| Pregunta | Base de la web 🧱 | Qué leer de la base | Previos que usa | Herramienta transversal |
+| --- | --- | --- | --- | --- |
+| **P1 · Wilber** | [Rectángulos independientes](/optimalidad/rectangulos/) | Capítulos 1–4 | BST y costo de un acceso | Bits (bit-reversal); Tango como contexto |
+| **P2 · Memoria externa** | — | — | Búsqueda binaria, merge sort, idea de B-tree | Logaritmos en otra base |
+| **P3 · X-fast y Y-fast** | [van Emde Boas](/enteros/veb/) | §1–§4 y la idea de Sucesor | Word RAM, tabla hash, BST balanceado | Bits (prefijos) y amortización |
+| **P4 · Disjoint Sparse Table** | [Sparse Table](/estaticos/rmq-lca/) | Solo §1–§2 | Asociatividad vs idempotencia | Bits (msb de l XOR r) |
+| **P5 · Aho–Corasick** | [Función prefijo (KMP)](/strings/kmp/) | §1–§2 | Trie y BFS | Amortización (potencial = profundidad) |
+| **P6 · Centroides** | — | — | DFS y tamaños de subárbol | Inducción y recurrencias |
+
+## Qué te da cada base, en una frase
+
+- **Rectángulos → Wilber.** Wilber es cota inferior porque **cada alternancia es un rectángulo independiente más**. Sin el teorema de los rectángulos, la (b) o la (d) de Wilber no se pueden justificar.
+- **vEB → X/Y-fast.** El problema es el mismo: el predecesor en un universo de $2^w$. La idea de partir la palabra da $O(\lg w)$. X-fast y Y-fast existen para bajar el espacio $\Theta(u)$ de la vEB a $\Theta(n)$.
+- **Sparse Table → DST.** La Sparse Table cubre el rango con dos ventanas que **se superponen**. Eso sirve para el mínimo, pero no para la suma. La DST corta en un centro fijo para no repetir nada. Ese es el «Chris propone» típico.
+- **KMP → Aho–Corasick.** El enlace de falla es la función $\pi$, pero sobre un trie. La demostración de que la búsqueda es lineal es **la misma**: el potencial es la profundidad.
+
+## Las tres herramientas que se repiten
+
+Si dominas estas tres, ganas en varios temas a la vez:
+
+1. **Bits** (XOR, bit más significativo, prefijos binarios): P1, P3 y P4.
+2. **Amortización y potencial**: P3 (grupos del Y-fast) y P5 (saltos por fail).
+3. **Inducción para demostrar**: sobre todo en P6, pero también en la parte (b) de todos los temas.
+
+<Pregunta q={"¿Por qué P2 y P6 no tienen página base?"} respuesta={"Porque solo usan cosas de cursos previos: P2 se apoya en búsqueda binaria, merge sort y la idea de B-tree; P6 en DFS, tamaños de subárbol e inducción. Puedes empezarlas directamente."} />
+
+## Orden que respeta el grafo
+
+Cada tema va después de su base. Dentro de eso se sigue el [ranking de facilidad](/examen-tipo/):
+
+1. Sparse Table (10 min) → **P4 Disjoint Sparse Table**
+2. **P2 Memoria externa**
+3. KMP (15 min) → **P5 Aho–Corasick**
+4. **P6 Centroides**
+5. Rectángulos (20 min) → **P1 Wilber**
+6. vEB (15 min) → **P3 X-fast y Y-fast**

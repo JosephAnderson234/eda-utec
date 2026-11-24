@@ -1,0 +1,81 @@
+---
+const X = [64, 188, 312, 436, 560, 684];
+const W = 116;
+const Y = { pre: 62, base: 194, tema: 326, herr: 458 };
+type B = { id: string; x: number; y: number; l: string[]; c: string; h?: number };
+const boxes: B[] = [
+  { id: 'bst', x: X[0], y: Y.pre, l: ['BST y costo', 'de un acceso'], c: 'box' },
+  { id: 'busq', x: X[1], y: Y.pre, l: ['Búsq. binaria,', 'merge sort, B-tree'], c: 'box' },
+  { id: 'hash', x: X[2], y: Y.pre, l: ['Word RAM', 'y tabla hash'], c: 'box' },
+  { id: 'bits', x: X[3], y: Y.pre, l: ['Bits: XOR,', 'msb, binario'], c: 'box' },
+  { id: 'trie', x: X[4], y: Y.pre, l: ['Trie y BFS'], c: 'box' },
+  { id: 'dfs', x: X[5], y: Y.pre, l: ['DFS y tamaños', 'de subárbol'], c: 'box' },
+  { id: 'rect', x: X[0], y: Y.base, l: ['🧱 Rectángulos', 'independientes'], c: 'c2' },
+  { id: 'veb', x: X[2], y: Y.base, l: ['🧱 vEB', 'partir la palabra'], c: 'c2' },
+  { id: 'sparse', x: X[3], y: Y.base, l: ['🧱 Sparse T.', 'ventanas'], c: 'c2' },
+  { id: 'kmp', x: X[4], y: Y.base, l: ['🧱 KMP:', 'bordes y π'], c: 'c2' },
+  { id: 'p1', x: X[0], y: Y.tema, l: ['🎯 P1', 'Cotas de Wilber'], c: 'c4' },
+  { id: 'p2', x: X[1], y: Y.tema, l: ['🎯 P2', 'Memoria externa'], c: 'c4' },
+  { id: 'p3', x: X[2], y: Y.tema, l: ['🎯 P3', 'X-fast y Y-fast'], c: 'c4' },
+  { id: 'p4', x: X[3], y: Y.tema, l: ['🎯 P4', 'Disjoint Sparse T.'], c: 'c4' },
+  { id: 'p5', x: X[4], y: Y.tema, l: ['🎯 P5', 'Aho–Corasick'], c: 'c4' },
+  { id: 'p6', x: X[5], y: Y.tema, l: ['🎯 P6', 'Centroides'], c: 'c4' },
+  { id: 'amort', x: (X[2] + X[4]) / 2, y: Y.herr, l: ['Amortización', '(potencial)'], c: 'c3' },
+  { id: 'induc', x: X[5], y: Y.herr, l: ['Inducción', '(todas las (b))'], c: 'c3' },
+];
+const H = 56;
+const get = (id: string) => boxes.find((b) => b.id === id)!;
+const top = (b: B) => ({ x: b.x, y: b.y - H / 2 });
+const bot = (b: B) => ({ x: b.x, y: b.y + H / 2 });
+type E = { a: string; b: string; dash?: boolean; dx?: number };
+const edges: E[] = [
+  { a: 'bst', b: 'rect' }, { a: 'rect', b: 'p1' },
+  { a: 'busq', b: 'p2' },
+  { a: 'hash', b: 'veb' }, { a: 'veb', b: 'p3' },
+  { a: 'bits', b: 'sparse' }, { a: 'sparse', b: 'p4' },
+  { a: 'kmp', b: 'p5' },
+  { a: 'dfs', b: 'p6' },
+];
+const down = edges.map((e) => {
+  const s = bot(get(e.a)), t = top(get(e.b));
+  return `M${s.x} ${s.y} L${t.x} ${t.y - 4}`;
+});
+const curves = [
+  // Trie → P5, por la derecha de KMP
+  `M${X[4] + 60} ${Y.pre + H / 2} C ${X[4] + 78} ${Y.base - 20}, ${X[4] + 78} ${Y.base + 40}, ${X[4] + 45} ${Y.tema - H / 2 - 4}`,
+  // Bits → P3 (prefijos)
+  `M${X[3] - 60} ${Y.pre + H / 2} C ${X[3] - 80} ${Y.base + 10}, ${X[2] + 90} ${Y.base + 60}, ${X[2] + 45} ${Y.tema - H / 2 - 4}`,
+];
+const up = [
+  `M${get('amort').x - 50} ${Y.herr - H / 2} L${X[2] + 20} ${Y.tema + H / 2 + 4}`,
+  `M${get('amort').x + 50} ${Y.herr - H / 2} L${X[4] - 20} ${Y.tema + H / 2 + 4}`,
+  `M${X[5]} ${Y.herr - H / 2} L${X[5]} ${Y.tema + H / 2 + 4}`,
+];
+---
+<figure class="svgfig not-content">
+  <div class="svgfig__scroll">
+    <svg viewBox="0 0 750 530" role="img" aria-label="Grafo de dependencias: conocimientos previos, bases de la web, las seis preguntas del final y herramientas transversales">
+      <defs>
+        <marker id="dep-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="head" /></marker>
+      </defs>
+      {down.map((d) => <path d={d} class="ln" fill="none" marker-end="url(#dep-h)" />)}
+      {curves.map((d) => <path d={d} class="ln" fill="none" stroke-dasharray="6 5" marker-end="url(#dep-h)" />)}
+      {up.map((d) => <path d={d} class="ln" fill="none" stroke-dasharray="6 5" marker-end="url(#dep-h)" />)}
+      <text x="6" y={Y.pre - H / 2 - 17} class="t l s mu" style="paint-order:stroke;stroke:var(--pg-surface);stroke-width:4px;font-weight:700">PREVIOS (cursos anteriores)</text>
+      <text x="6" y={Y.base - H / 2 - 17} class="t l s mu" style="paint-order:stroke;stroke:var(--pg-surface);stroke-width:4px;font-weight:700">BASE DE LA WEB 🧱 (10–15 min cada una)</text>
+      <text x="6" y={Y.tema - H / 2 - 17} class="t l s mu" style="paint-order:stroke;stroke:var(--pg-surface);stroke-width:4px;font-weight:700">LAS 6 PREGUNTAS DEL FINAL 🎯</text>
+      <text x="6" y={Y.herr - H / 2 - 17} class="t l s mu" style="paint-order:stroke;stroke:var(--pg-surface);stroke-width:4px;font-weight:700">HERRAMIENTAS QUE SE REPITEN</text>
+      {boxes.map((b) => (
+        <>
+          <rect x={b.x - W / 2} y={b.y - H / 2} width={W} height={H} rx="10" class={b.c} />
+          {b.l.length === 1
+            ? <text x={b.x} y={b.y + 5} class="t b">{b.l[0]}</text>
+            : <><text x={b.x} y={b.y - 4} class="t b">{b.l[0]}</text><text x={b.x} y={b.y + 15} class="t s">{b.l[1]}</text></>}
+        </>
+      ))}
+      <text x={X[0]} y={Y.tema + H / 2 + 18} class="t s mu">Tango: contexto</text><text x={X[0]} y={Y.tema + H / 2 + 34} class="t s mu">bit-reversal: bits</text>
+      <text x="375" y="522" class="t s mu">Flecha continua: base directa · punteada: herramienta que el tema usa por dentro</text>
+    </svg>
+  </div>
+  <figcaption><slot /></figcaption>
+</figure>
