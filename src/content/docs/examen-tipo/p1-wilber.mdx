@@ -5,6 +5,7 @@ description: 'Alternancias en un árbol de referencia, puntos visibles y la secu
 
 import EnSimple from '../../../components/EnSimple.astro';
 import Solucion from '../../../components/Solucion.astro';
+import Wilber2Fig from '../../../components/fig/Wilber2Fig.astro';
 
 <EnSimple titulo="Cómo usar este problema">Dedica 25 minutos, en papel y sin mirar la página del tema. Es un problema propio con el formato del simulacro del curso: contexto y procedimiento, (a) Conocimientos 3 pts, (b) Análisis 3 pts, (c) Diseño 2 pts, (d) Profundidad 2 pts. Las respuestas se verificaron con un script.</EnSimple>
 
@@ -62,7 +63,22 @@ Chris propone escoger $P$ **después** de ver $X$, maximizando Wilber-1. ¿Sigue
 
 En $8$ se comparan siete pares consecutivos: cambian todos salvo el par D,D de $9,14$; por eso aporta $6$. Los nodos $2,6,14$ ven respectivamente solo $3\to\mathrm D$, $5\to\mathrm I$, $13\to\mathrm I$. El nodo $8$ no tiene acceso propio y el $4$ tampoco; los demás nodos internos no ven lados alternantes y las hojas no tienen hijos. **Total: $6+3+3+1=13$.**
 
-**Wilber-2.** Escribimos visibles de más reciente a más antiguo. En la columna de marcas, I significa que el visible tiene llave menor que la llave actual.
+**Wilber-2, la idea en simple.** Wilber-1 necesita un árbol de referencia. Wilber-2 no: mira solo el dibujo de los accesos. Cada acceso es un punto **(llave, tiempo)**. Por ejemplo, $(5,7)$ significa «en el tiempo $7$ se accedió a la llave $5$».
+
+Para cada acceso actual se hacen cuatro pasos:
+
+1. **Mira hacia atrás en el tiempo.** Considera cada acceso anterior como candidato.
+2. **Arma el rectángulo** que tiene como esquinas opuestas al candidato y al acceso actual. Horizontalmente va de una llave a la otra; verticalmente, de un tiempo al otro.
+3. **Si no hay ningún otro punto dentro, el candidato es visible.** Si hay alguno, ese punto lo tapa.
+4. **Ordena los visibles del más reciente al más antiguo** y marca cada uno con I si su llave es menor que la actual (está a la izquierda) o con D si es mayor (está a la derecha). Lo que se suma son los **cambios** entre marcas consecutivas.
+
+Wilber-2 es la suma de esos cambios en todos los tiempos.
+
+<Wilber2Fig>
+**Desde el último acceso $(5,7)$.** Arriba, el rectángulo hasta $(6,3)$ abarca las llaves $5$ y $6$. Los puntos de los tiempos $4$, $5$ y $6$ tienen llaves $1$, $7$ y $3$, todas fuera de ese rango, así que el rectángulo queda vacío y $(6,3)$ es visible. Abajo, el rectángulo hasta $(1,4)$ abarca las llaves $1$ a $5$, y el punto $(3,6)$ cae adentro: $(1,4)$ queda tapado.
+</Wilber2Fig>
+
+Con esa regla se llena la tabla, tiempo por tiempo:
 
 | $t$ | Llave | Llaves visibles | Marcas | Alternancias |
 | ---: | ---: | --- | --- | ---: |
@@ -74,9 +90,26 @@ En $8$ se comparan siete pares consecutivos: cambian todos salvo el par D,D de $
 | 6 | 3 | 7, 1, 6, 2, 4 | D I D I D | 4 |
 | 7 | 5 | 3, 7, 6, 4 | I D D I | 2 |
 
-Para $t=6$, los cinco visibles alternan D→I→D→I→D, cuatro cambios. Para $t=7$, la secuencia I→D→D→I tiene dos. El punto $(1,4)$ no es visible desde $(5,7)$: el rectángulo $[1,5]\times[4,7]$ contiene $(3,6)$. El punto $(2,2)$ tampoco: su rectángulo $[2,5]\times[2,7]$ también contiene $(3,6)$. Los puntos de llaves $6$ y $7$ sí son visibles porque los puntos intermedios quedan fuera de sus intervalos de llaves. **Wilber-2 $=4+2=6$.**
+**Cómo leer una fila.** Toma $t=7$: la llave actual es $5$. Los visibles, del más reciente al más antiguo, son $3, 7, 6, 4$. Comparados con $5$: $3$ es menor (I), $7$ mayor (D), $6$ mayor (D) y $4$ menor (I). Queda **I D D I**, con dos cambios: I→D y D→I. El par D→D no cuenta.
 
-La visibilidad se decide por un punto **dentro del rectángulo cerrado**, no por cercanía temporal o numérica tomada por separado. Para $t=6$, la llave actual es $3$: al mirar hacia atrás, $7$ y $6$ quedan a su derecha; $1$ y $2$ a la izquierda; $4$ también a la derecha. Para cada uno, los puntos aparecidos después tienen llave fuera del intervalo hasta $3$, de modo que ninguno bloquea el rectángulo. Para $t=7$, $3$ es visible por ser el acceso inmediatamente anterior; $7$ es visible porque el intermedio $3$ queda por debajo del intervalo $[5,7]$; $6$ también, ya que $3$ y $7$ no están entre $5$ y $6$; y $4$ es visible porque ninguno de los puntos posteriores tiene llave entre $4$ y $5$. Esta comprobación individual evita inferir mal la lista a partir de la sola alternancia I/D.
+**$t=7$, candidato por candidato** (llave actual $5$; un punto tapa si su llave cae entre las dos llaves del rectángulo):
+
+| Candidato | Llaves del rectángulo | Puntos de tiempos intermedios | ¿Alguno adentro? | Resultado |
+| --- | --- | --- | --- | --- |
+| $(3,6)$ | $3$ a $5$ | ninguno, es el anterior | — | visible, I |
+| $(7,5)$ | $5$ a $7$ | llave $3$ | no | visible, D |
+| $(1,4)$ | $1$ a $5$ | llaves $7$, $3$ | **sí, el $3$** | tapado |
+| $(6,3)$ | $5$ a $6$ | llaves $1$, $7$, $3$ | no | visible, D |
+| $(2,2)$ | $2$ a $5$ | llaves $6$, $1$, $7$, $3$ | **sí, el $3$** | tapado |
+| $(4,1)$ | $4$ a $5$ | llaves $2$, $6$, $1$, $7$, $3$ | no | visible, I |
+
+Esto responde la pregunta de la (a): **las llaves $1$ y $2$ no son visibles desde el último acceso porque el punto $(3,6)$ cae dentro de sus rectángulos.**
+
+**$t=6$** (llave actual $3$): los cinco anteriores son visibles, porque ningún rectángulo contiene otro punto. Del más reciente al más antiguo son $7, 1, 6, 2, 4$, que dan D I D I D: cuatro cambios.
+
+En los tiempos $1$ a $5$, todos los visibles caen del mismo lado, así que no hay cambios. **Wilber-2 $=4+2=6$.**
+
+**Error típico.** Decidir la visibilidad solo por «está cerca en el tiempo» o «está cerca en llave». Hay que mirar las dos cosas a la vez, es decir, el rectángulo completo. Por ejemplo, $(4,1)$ es el acceso más antiguo y aun así es visible desde $(5,7)$: ninguna llave intermedia cae entre $4$ y $5$.
 
 </Solucion>
 

@@ -1,0 +1,56 @@
+---
+// Wilber-2 de X' = (4,2,6,1,7,3,5): puntos (llave, tiempo) y dos rectángulos vistos desde (5,7).
+const pts: [number, number][] = [[4, 1], [2, 2], [6, 3], [1, 4], [7, 5], [3, 6], [5, 7]];
+const DX = 38, DY = 28;
+const px = (k: number) => 80 + (k - 1) * DX;
+const CX = px(4);
+type Panel = { oy: number; title: string; ok: boolean; corner: [number, number]; blocker?: [number, number]; note: string };
+const panels: Panel[] = [
+  { oy: 0, title: '✓ (6, 3) es visible desde (5, 7)', ok: true, corner: [6, 3], note: 'Llaves 5–6, tiempos 3–7: nadie adentro' },
+  { oy: 320, title: '✗ (1, 4) NO es visible desde (5, 7)', ok: false, corner: [1, 4], blocker: [3, 6], note: '(3, 6) cae adentro y lo tapa' },
+];
+const cur: [number, number] = [5, 7];
+---
+<figure class="svgfig not-content">
+  <div class="svgfig__scroll">
+    <svg viewBox="0 0 400 660" style="min-width:0;max-width:440px;margin:0 auto" role="img" aria-label="Dos cuadrículas llave por tiempo con los accesos de X' = 4,2,6,1,7,3,5. Arriba, el rectángulo entre (6,3) y (5,7) está vacío, así que (6,3) es visible. Abajo, el rectángulo entre (1,4) y (5,7) contiene el punto (3,6), así que (1,4) no es visible.">
+      {panels.map((p) => {
+        const py = (t: number) => p.oy + 86 + (t - 1) * DY;
+        const x1 = px(Math.min(p.corner[0], cur[0])), x2 = px(Math.max(p.corner[0], cur[0]));
+        const y1 = py(p.corner[1]), y2 = py(cur[1]);
+        return (
+          <g>
+            <text x={CX} y={p.oy + 22} class={`t b ${p.ok ? 'ok' : 'bad'}`}>{p.title}</text>
+            <text x={CX} y={p.oy + 48} class="t s mu">llave →</text>
+            {[1, 2, 3, 4, 5, 6, 7].map((k) => <text x={px(k)} y={p.oy + 66} class="t s mu">{k}</text>)}
+            {[1, 2, 3, 4, 5, 6, 7].map((t) => (
+              <>
+                <line x1={px(1) - 14} x2={px(7) + 14} y1={py(t)} y2={py(t)} class="sep" />
+                <text x="52" y={py(t) + 4} class="t s mu r">t={t}</text>
+              </>
+            ))}
+            <rect x={x1} y={y1} width={x2 - x1} height={y2 - y1} rx="3"
+              class={`ln dash ${p.ok ? 'ok' : 'bad'}`}
+              style={`fill:color-mix(in srgb, var(--pg-${p.ok ? 'ok' : 'bad'}) 12%, transparent)`} />
+            {pts.map(([k, t]) => {
+              const isCur = k === cur[0] && t === cur[1];
+              const isCorner = k === p.corner[0] && t === p.corner[1];
+              const isBlock = !!p.blocker && k === p.blocker[0] && t === p.blocker[1];
+              const big = isCur || isCorner || isBlock;
+              const cls = isCur ? 'c1' : isCorner ? (p.ok ? 'c4' : 'c3') : isBlock ? 'trap' : 'box';
+              return (
+                <>
+                  <circle cx={px(k)} cy={py(t)} r={big ? 9 : 6} class={cls} />
+                  {big && <text x={px(k) + 13} y={py(t) - 8} class="t s b l">({k}, {t})</text>}
+                </>
+              );
+            })}
+            <text x={CX} y={p.oy + 290} class={`t s ${p.ok ? 'ok' : 'bad'}`}>{p.note}</text>
+          </g>
+        );
+      })}
+      <text x={CX} y="650" class="t s mu">(5, 7) es el acceso actual · cada punto es (llave, tiempo)</text>
+    </svg>
+  </div>
+  <figcaption><slot /></figcaption>
+</figure>
